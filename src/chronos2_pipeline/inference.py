@@ -5,10 +5,13 @@ non-target columns and multiple targets are refused here with a Phase-2 message
 rather than passed through half-supported — the validation layer already
 understands them, but the output contract for covariates is not settled.
 
-Two upstream behaviours are asserted on every call rather than trusted:
+Four upstream behaviours are asserted on every call rather than trusted:
 
 * ``predict_df`` returns the columns the rename map expects;
-* when ``0.5`` is requested, ``predictions`` is *exactly* the ``"0.5"`` column.
+* the returned point and quantile values are finite;
+* when ``0.5`` is requested, ``predictions`` is *exactly* the ``"0.5"`` column;
+* every exported ``q<level>`` column names a level the loaded model was actually
+  trained on, so no substituted quantile can leave under a borrowed label.
 
 The second is the median oracle (RFC C-2). Upstream 2.3.1 computes it that way
 at ``chronos/chronos2/pipeline.py`` L816-818 — ``# NOTE: the median is returned
