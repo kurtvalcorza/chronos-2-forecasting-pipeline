@@ -97,10 +97,31 @@ execute arbitrary code on load, and this pipeline has no fallback to them.
 pin, so comparing the directory name against the pin is a tautology that cannot fail — the check
 an earlier revision performed. The loader now asks the Hub itself, before downloading anything,
 which commit the pin resolves to (`HfApi().model_info(...).sha`) and refuses if that is not the
-pinned commit; the snapshot directory must then agree with the Hub's answer as well. Two
-consequences worth knowing: loading makes one Hub metadata request, and if the Hub cannot be
-reached the load fails closed with `ModelIntegrityError` rather than proceeding on the file
-digests alone, because the RFC makes the revision the *primary* anchor.
+pinned commit; the snapshot directory must then agree with the Hub's answer as well. So loading
+makes one Hub metadata request.
+
+**Unavailable is not the same as disagreeing.** That lookup needs the network, and coupling every
+load to Hub reachability would break offline and cached runs — including CI, which caches
+`~/.cache/huggingface` on purpose. The two failures are therefore separated:
+
+| Situation | Default (`require_hub_confirmation=False`) | `require_hub_confirmation=True` |
+| :-- | :-- | :-- |
+| Hub answers with the pinned commit | loads; provenance records `revision_confirmed_against_hub: true` | same |
+| Hub answers with a **different** commit, a gated/missing repo, or an unknown revision (401/403/404) | `ModelIntegrityError`, nothing downloaded | same |
+| Hub **cannot be reached** (offline mode, no route, proxy/TLS failure, 429, 5xx) **and every digest matches** | loads; provenance records `revision_confirmed_against_hub: false` and the reason | `HubUnavailableError` |
+| Hub cannot be reached and **any digest or the byte count mismatches** | `ModelIntegrityError` | same |
+
+The default is the middle-availability mode, not the strict one. What it guarantees is unchanged
+for content: `config.json` and `model.safetensors` SHA-256 plus the weight byte count prove the
+snapshot's bytes independently of the Hub. What it does not guarantee on such a load is that the
+Hub still maps the pinned name to the pinned commit — so the exported metadata says so rather than
+implying a check that did not run. `HubUnavailableError` subclasses `ModelIntegrityError`, so
+callers catching the latter are unaffected.
+
+Every forecast's `model` provenance block therefore carries two extra fields:
+`revision_confirmed_against_hub` (boolean, `true` only when a Hub lookup ran on that load and
+returned the pinned commit) and `revision_confirmation_note` (the lookup that ran, or the reason it
+could not and what carried the integrity claim instead).
 
 ## Runtime pins
 

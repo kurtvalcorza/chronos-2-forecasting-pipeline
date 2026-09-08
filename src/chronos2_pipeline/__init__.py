@@ -9,6 +9,7 @@ from __future__ import annotations
 from .config import DEFAULT_QUANTILE_LEVELS, ForecastConfig
 from .errors import (
     Chronos2PipelineError,
+    HubUnavailableError,
     ModelIntegrityError,
     ModelSourceError,
     UpstreamContractError,
@@ -43,6 +44,7 @@ __all__ = [
     "Chronos2PipelineError",
     "ModelSourceError",
     "ModelIntegrityError",
+    "HubUnavailableError",
     "ValidationError",
     "UpstreamContractError",
     # model

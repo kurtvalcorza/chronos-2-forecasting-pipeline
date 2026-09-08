@@ -14,6 +14,7 @@ __all__ = [
     "Chronos2PipelineError",
     "ModelSourceError",
     "ModelIntegrityError",
+    "HubUnavailableError",
     "ValidationError",
     "UpstreamContractError",
 ]
@@ -33,6 +34,22 @@ class ModelSourceError(Chronos2PipelineError, ValueError):
 
 class ModelIntegrityError(Chronos2PipelineError, ValueError):
     """The downloaded snapshot does not match the pinned revision or digests."""
+
+
+class HubUnavailableError(ModelIntegrityError):
+    """The Hugging Face Hub could not be reached, so it said nothing at all.
+
+    Deliberately distinct from a Hub that *answered* with something other than
+    the pin: an unreachable Hub is an availability failure, a disagreeing Hub is
+    a supply-chain failure. :func:`chronos2_pipeline.model.load_pinned_model`
+    tolerates the first when every recorded digest still matches — recording in
+    provenance that the revision was not confirmed against the Hub on that load
+    — and never tolerates the second.
+
+    It subclasses :class:`ModelIntegrityError` so a caller that only wants "the
+    model could not be loaded safely" keeps working unchanged, and so
+    ``require_hub_confirmation=True`` raises the type callers already catch.
+    """
 
 
 class ValidationError(Chronos2PipelineError, ValueError):

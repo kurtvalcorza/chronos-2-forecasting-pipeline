@@ -13,6 +13,16 @@ hard refusal, not a fallback.
 The revision SHA is the primary integrity anchor (RFC C-7): it covers repository
 configuration as well as the weight file. The digests are secondary, file-level
 assertions that additionally catch a corrupted or truncated download.
+
+Check 2 asks the Hub which commit the pinned name resolves to, which means it
+needs the network. Availability and integrity are kept apart there (review round
+2): a Hub that *answers* with a different commit is a supply-chain failure and
+always fails the load, while a Hub that cannot be *reached* at all is an
+availability failure — the load proceeds on the digests, which prove the
+snapshot's content byte for byte on their own, and the exported provenance
+records ``revision_confirmed_against_hub: false`` with the reason. Pass
+``require_hub_confirmation=True`` to refuse that degraded mode; it is not the
+default, so a cached, digest-matching snapshot still loads offline.
 """
 
 from __future__ import annotations
@@ -25,7 +35,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .errors import ModelIntegrityError, ModelSourceError
+from .errors import HubUnavailableError, ModelIntegrityError, ModelSourceError
 
 __all__ = [
     "PINNED_MODEL_ID",
@@ -92,6 +102,60 @@ _URI_SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.\-]*://")
 _WINDOWS_DRIVE = re.compile(r"^[a-zA-Z]:[\\/]")
 _SHA1_HEX = re.compile(r"^[0-9a-f]{40}$")
 
+#: Exception type names that mean the request never got an answer out of the
+#: Hub: no DNS, no route, no socket, a proxy or TLS failure, or a cache that has
+#: been told not to go to the network at all (``HF_HUB_OFFLINE=1``).
+_UNREACHABLE_EXC_NAMES = frozenset(
+    {
+        "OfflineModeIsEnabled",
+        "LocalEntryNotFoundError",
+        "ConnectionError",
+        "ConnectTimeout",
+        "ReadTimeout",
+        "ConnectTimeoutError",
+        "Timeout",
+        "TimeoutError",
+        "ProxyError",
+        "SSLError",
+        "ChunkedEncodingError",
+        "socket.timeout",
+    }
+)
+
+#: HTTP statuses that are the Hub failing to serve rather than the Hub
+#: disagreeing. 401/403/404 are excluded on purpose: they are answers — the
+#: repo is gated, or the revision is not there — and must fail closed.
+_UNREACHABLE_HTTP_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+
+
+def _hub_unreachable_reason(exc: BaseException) -> str | None:
+    """Say why the Hub was unreachable, or ``None`` if it actually answered.
+
+    The distinction is the whole point of review round 2. ``None`` means the Hub
+    (or its cache of an authoritative answer) responded and the response was not
+    the pin — gated repo, missing repo, missing revision, malformed reply — which
+    is a supply-chain event and must never be downgraded to "offline".
+    """
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None)
+    if status is None:
+        status = getattr(exc, "status_code", None)
+    if isinstance(status, int):
+        # An HTTP status means something answered, so only the serving failures
+        # count as unreachable.
+        if status in _UNREACHABLE_HTTP_STATUS:
+            return f"the Hub responded HTTP {status} rather than serving the lookup"
+        return None
+
+    names = {cls.__name__ for cls in type(exc).__mro__}
+    if names & _UNREACHABLE_EXC_NAMES:
+        return f"{type(exc).__name__}: {exc}"
+    # requests' transport errors all descend from OSError; anything left that is
+    # an OSError is a socket/filesystem failure, not a Hub answer.
+    if isinstance(exc, OSError):
+        return f"{type(exc).__name__}: {exc}"
+    return None
+
 
 @dataclass(frozen=True)
 class ModelIdentity:
@@ -108,6 +172,14 @@ class ModelIdentity:
     trained_quantiles: tuple[float, ...]
     model_context_length: int
     model_prediction_length: int
+    #: True only when a Hub lookup ran on *this* load and answered with the
+    #: pinned commit. False whenever the Hub was not reached, so the exported
+    #: metadata can never imply a check that did not happen. The default is the
+    #: honest one: an identity built by hand has confirmed nothing.
+    revision_confirmed_against_hub: bool = False
+    #: How the revision was established on this load — the successful lookup, or
+    #: the reason it could not run and what carried the integrity claim instead.
+    revision_confirmation_note: str = "no Hub confirmation was attempted"
     snapshot_path: str = field(default="", compare=False)
 
     def as_dict(self) -> dict[str, Any]:
@@ -120,6 +192,8 @@ class ModelIdentity:
             "license": self.license,
             "license_source": self.license_source,
             "source_url": self.source_url,
+            "revision_confirmed_against_hub": self.revision_confirmed_against_hub,
+            "revision_confirmation_note": self.revision_confirmation_note,
             "trained_quantiles": list(self.trained_quantiles),
             "model_context_length": self.model_context_length,
             "model_prediction_length": self.model_prediction_length,
@@ -244,21 +318,31 @@ def resolve_hub_revision(model_id: str, revision: str) -> str:
 
     Raises
     ------
+    HubUnavailableError
+        The Hub was never reached — offline mode, no route, a proxy or TLS
+        failure, a rate limit, a 5xx. Nothing is claimed about the commit; the
+        caller decides whether the recorded digests are enough (they are, by
+        default: see :func:`load_pinned_model`).
     ModelIntegrityError
-        The Hub could not be asked. Failing closed is deliberate: RFC C-7 makes
-        the revision SHA the *primary* integrity anchor, so an unverifiable
-        revision is not a load that should quietly proceed on the digests alone.
+        The Hub answered and its answer was not usable as a confirmation — a
+        gated or missing repo, a revision it does not have, or a reply carrying
+        no commit SHA. This always fails closed.
     """
     from huggingface_hub import HfApi
 
     try:
         info = HfApi().model_info(repo_id=model_id, revision=revision)
-    except Exception as exc:  # noqa: BLE001 - every hub failure has the same outcome
+    except Exception as exc:  # noqa: BLE001 - classified, then re-raised
+        unreachable = _hub_unreachable_reason(exc)
+        if unreachable is not None:
+            raise HubUnavailableError(
+                f"Could not reach the Hugging Face Hub to confirm {model_id!r}@{revision}: "
+                f"{unreachable}. No claim is made about the resolved commit."
+            ) from exc
         raise ModelIntegrityError(
-            f"Could not resolve {model_id!r}@{revision} against the Hub to confirm the "
-            f"pinned commit: {type(exc).__name__}: {exc}. The revision SHA is this "
-            f"pipeline's primary supply-chain anchor (RFC C-7), so the load is refused "
-            f"rather than falling back to the file digests alone."
+            f"The Hub refused to resolve {model_id!r}@{revision}: "
+            f"{type(exc).__name__}: {exc}. The Hub answered and its answer was not the "
+            f"pinned commit, so the load is refused."
         ) from exc
     sha = getattr(info, "sha", None)
     if not isinstance(sha, str) or not sha:
@@ -405,6 +489,7 @@ def load_pinned_model(
     dtype: str = "auto",
     cache_dir: str | os.PathLike[str] | None = None,
     revision_resolver: Callable[[str, str], str] = resolve_hub_revision,
+    require_hub_confirmation: bool = False,
 ) -> LoadedModel:
     """Download, verify and load the pinned Chronos-2 checkpoint.
 
@@ -423,24 +508,50 @@ def load_pinned_model(
         Defaults to :func:`resolve_hub_revision`, which asks the Hub. Injectable
         so the mismatch path is testable without a hostile hub; production has no
         reason to pass anything else.
+    require_hub_confirmation
+        When ``True``, a Hub that cannot be reached is fatal. The default
+        ``False`` is the available mode: an unreachable Hub lets the load
+        continue on the recorded digests alone, and the resulting
+        :class:`ModelIdentity` reports ``revision_confirmed_against_hub=False``
+        with the reason. A Hub that *answers* with a different commit is refused
+        in either mode.
 
     Raises
     ------
     ModelSourceError
         The source is not the pinned pair.
+    HubUnavailableError
+        ``require_hub_confirmation=True`` and the Hub could not be reached.
     ModelIntegrityError
-        The resolved revision or a file digest does not match the pin.
+        The Hub resolved the pin to another commit, or a file digest or the
+        weight byte count does not match the pin.
     """
     check_model_source(model_id, revision)
 
     from chronos import BaseChronosPipeline
     from huggingface_hub import snapshot_download
 
-    hub_revision = revision_resolver(model_id, revision)
-    if hub_revision != PINNED_REVISION:
-        raise ModelIntegrityError(
-            f"The Hub resolved {model_id!r}@{revision} to commit {hub_revision!r}, not "
-            f"the pinned {PINNED_REVISION!r}. Nothing is downloaded and nothing is loaded."
+    hub_revision: str | None
+    try:
+        hub_revision = revision_resolver(model_id, revision)
+    except HubUnavailableError as exc:
+        if require_hub_confirmation:
+            raise
+        hub_revision = None
+        confirmation_note = (
+            f"the Hub was not consulted successfully on this load ({exc}); the "
+            f"snapshot's identity rests on the recorded {CONFIG_FILENAME} and "
+            f"{WEIGHTS_FILENAME} SHA-256 digests and the weight byte count, which "
+            f"prove its content independently of the Hub"
+        )
+    else:
+        if hub_revision != PINNED_REVISION:
+            raise ModelIntegrityError(
+                f"The Hub resolved {model_id!r}@{revision} to commit {hub_revision!r}, not "
+                f"the pinned {PINNED_REVISION!r}. Nothing is downloaded and nothing is loaded."
+            )
+        confirmation_note = (
+            f"the Hub resolved {model_id}@{revision} to {hub_revision} on this load"
         )
 
     snapshot_path = snapshot_download(
@@ -467,6 +578,8 @@ def load_pinned_model(
         license=PINNED_LICENSE,
         license_source=PINNED_LICENSE_SOURCE,
         source_url=PINNED_MODEL_URL,
+        revision_confirmed_against_hub=hub_revision is not None,
+        revision_confirmation_note=confirmation_note,
         trained_quantiles=_read_trained_quantiles(pipeline),
         model_context_length=int(pipeline.model_context_length),
         model_prediction_length=int(pipeline.model_prediction_length),
