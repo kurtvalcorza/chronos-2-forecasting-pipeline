@@ -188,7 +188,7 @@ def test_forecast_passes_the_configured_arguments_through_to_predict_df():
     assert call["freq"] == "h"
     assert call["validate_inputs"] is True
     assert call["cross_learning"] is False
-    assert call["target"] == "target"
+    assert call["target"] == ["target"]
     assert call["quantile_levels"] == [0.1, 0.5, 0.9]
 
 
@@ -315,29 +315,96 @@ def test_the_sentinel_pipeline_would_have_flagged_a_leak():
 # --------------------------------------------------------------------------
 
 
-def test_multi_target_public_api_is_refused_in_phase_1(sentinel_model):
+def test_multi_target_reaches_predict_df_as_a_list():
+    """Phase 2 Mode C. Phase 1 refused this with ``MULTI_TARGET_NOT_SUPPORTED``."""
+    frame = raw_frame(["A"], horizon=4, quantiles=[0.5], targets=["target", "target2"])
+    model = model_returning(frame)
     history = make_series()
-    history["target2"] = 1.0
-    config = ForecastConfig(target=["target", "target2"], prediction_length=8)
-    with pytest.raises(ValidationError) as exc:
-        forecast(history, config, sentinel_model)
-    assert exc.value.code == "MULTI_TARGET_NOT_SUPPORTED"
-    assert sentinel_model.pipeline.called is False
+    history["target2"] = np.arange(len(history), dtype=float)
+    config = ForecastConfig(
+        target=["target", "target2"], prediction_length=4, quantile_levels=[0.5]
+    )
+    result = forecast(history, config, model)
+    assert model.pipeline.calls[0]["target"] == ["target", "target2"]
+    assert list(result.forecast["target_name"].unique()) == ["target", "target2"]
+    assert len(result.forecast) == 2 * 4
+    assert result.inference["n_targets"] == 2
 
 
-def test_covariate_columns_are_refused_in_phase_1(sentinel_model):
+def test_a_past_only_covariate_reaches_predict_df_and_is_recorded_as_past_only():
+    """Phase 2 Mode D. Phase 1 refused any extra column with ``COVARIATES_NOT_SUPPORTED``."""
+    frame = raw_frame(["A"], horizon=4, quantiles=[0.5])
+    model = model_returning(frame)
     history = make_series()
     history["temperature"] = 20.0
+    result = forecast(
+        history, ForecastConfig(prediction_length=4, quantile_levels=[0.5]), model
+    )
+    passed = model.pipeline.calls[0]["df"]
+    assert "temperature" in passed.columns
+    assert model.pipeline.calls[0]["future_df"] is None
+    assert result.inference["past_covariate_names"] == ["temperature"]
+    assert result.inference["known_future_covariate_names"] == []
+    assert result.inference["n_covariates"] == 1
+
+
+def test_a_known_future_covariate_is_forwarded_and_recorded_as_known_future():
+    frame = raw_frame(["A"], horizon=4, quantiles=[0.5])
+    model = model_returning(frame)
+    history = make_series()
+    history["temperature"] = 20.0
+    history["holiday"] = 0.0
+    future = pd.DataFrame(
+        {
+            "series_id": "A",
+            "timestamp": pd.date_range(
+                history["timestamp"].max() + pd.Timedelta("1h"), periods=4, freq="h"
+            ),
+            "holiday": [1.0, 0.0, 0.0, 1.0],
+        }
+    )
+    result = forecast(
+        history, ForecastConfig(prediction_length=4, quantile_levels=[0.5]), model, future
+    )
+    forwarded = model.pipeline.calls[0]["future_df"]
+    assert forwarded is not None
+    assert list(forwarded["holiday"]) == [1.0, 0.0, 0.0, 1.0]
+    #: The split is the point: ``holiday`` is known across the horizon,
+    #: ``temperature`` only up to the origin, and only provenance says so.
+    assert result.inference["known_future_covariate_names"] == ["holiday"]
+    assert result.inference["past_covariate_names"] == ["temperature"]
+
+
+def test_a_future_table_carrying_no_covariate_is_refused(sentinel_model):
+    """Upstream would silently ignore it: every covariate stays past-only."""
+    history = make_series()
+    history["temperature"] = 20.0
+    future = pd.DataFrame(
+        {
+            "series_id": "A",
+            "timestamp": pd.date_range(
+                history["timestamp"].max() + pd.Timedelta("1h"), periods=4, freq="h"
+            ),
+        }
+    )
     with pytest.raises(ValidationError) as exc:
-        forecast(history, ForecastConfig(prediction_length=8), sentinel_model)
-    assert exc.value.code == "COVARIATES_NOT_SUPPORTED"
+        forecast(
+            history,
+            ForecastConfig(prediction_length=4, quantile_levels=[0.5]),
+            sentinel_model,
+            future,
+        )
+    assert exc.value.code == "FUTURE_TABLE_HAS_NO_COVARIATES"
     assert sentinel_model.pipeline.called is False
 
 
-def test_future_df_is_refused_in_phase_1(sentinel_model):
+def test_a_categorical_covariate_is_refused_before_predict_df(sentinel_model):
+    """Upstream encodes it by a route that depends on the number of targets."""
+    history = make_series()
+    history["weather"] = "sunny"
     with pytest.raises(ValidationError) as exc:
-        forecast(make_series(), ForecastConfig(prediction_length=8), sentinel_model, pd.DataFrame())
-    assert exc.value.code == "COVARIATES_NOT_SUPPORTED"
+        forecast(history, ForecastConfig(prediction_length=4), sentinel_model)
+    assert exc.value.code == "COVARIATE_NOT_NUMERIC"
     assert sentinel_model.pipeline.called is False
 
 
@@ -442,3 +509,88 @@ def test_the_median_oracle_still_fires_when_the_median_really_diverges():
     config = ForecastConfig(prediction_length=4, quantile_levels=quantiles)
     with pytest.raises(UpstreamContractError, match="0.5 quantile"):
         forecast(make_series(n=64), config, model)
+
+
+# --------------------------------------------------------------------------
+# Phase 2 — the (series, target, step) row-layout oracle
+# --------------------------------------------------------------------------
+#
+# Upstream aligns forecast values to their series and target labels by row
+# position and nothing else (``pipeline.py`` L951-957). Each mutation below
+# leaves a frame that is well-formed in every other respect — right columns,
+# right row count, finite values, ``predictions`` still equal to ``"0.5"`` —
+# and wrong only in which row a value sits on. Without the oracle every one of
+# them exports cleanly under the wrong label.
+
+
+def multi_target_setup(targets=("target", "target2"), series=("A", "B"), horizon=3):
+    history = pd.concat(
+        [make_series(sid, n=24, seed=i) for i, sid in enumerate(series)], ignore_index=True
+    )
+    for i, name in enumerate(targets):
+        if name != "target":
+            history[name] = np.arange(len(history), dtype=float) + i
+    config = ForecastConfig(
+        target=list(targets), prediction_length=horizon, quantile_levels=[0.5]
+    )
+    frame = raw_frame(
+        list(series), horizon=horizon, quantiles=[0.5], targets=list(targets)
+    )
+    return history, config, frame
+
+
+def test_the_canonical_multi_target_layout_is_accepted():
+    """The passing fixture each mutation below is a mutation of."""
+    history, config, frame = multi_target_setup()
+    result = forecast(history, config, model_returning(frame))
+    assert len(result.forecast) == 2 * 2 * 3
+    assert list(result.forecast["target_name"]) == ["target"] * 3 + ["target2"] * 3 + [
+        "target"
+    ] * 3 + ["target2"] * 3
+
+
+def test_a_swapped_target_block_is_refused():
+    """The forecasts arrive, each under the other target's name."""
+    history, config, frame = multi_target_setup()
+    frame["target_name"] = ["target2"] * 3 + ["target"] * 3 + ["target2"] * 3 + ["target"] * 3
+    with pytest.raises(UpstreamContractError, match="target_name in an unexpected order"):
+        forecast(history, config, model_returning(frame))
+
+
+def test_a_swapped_series_block_is_refused():
+    """Series B's forecast exported as series A's."""
+    history, config, frame = multi_target_setup()
+    frame["series_id"] = ["B"] * 6 + ["A"] * 6
+    with pytest.raises(UpstreamContractError, match="series ids in an unexpected order"):
+        forecast(history, config, model_returning(frame))
+
+
+def test_a_frame_with_the_wrong_row_count_is_refused():
+    """One target's rows dropped: the remaining values would shift onto it."""
+    history, config, frame = multi_target_setup()
+    with pytest.raises(UpstreamContractError, match="one row per"):
+        forecast(history, config, model_returning(frame.iloc[:-3].copy()))
+
+
+def test_the_layout_oracle_also_covers_the_single_target_case():
+    """Two series, one target: the series order still has to hold."""
+    history, config, frame = multi_target_setup(targets=("target",))
+    frame["series_id"] = ["B"] * 3 + ["A"] * 3
+    with pytest.raises(UpstreamContractError, match="series ids in an unexpected order"):
+        forecast(history, config, model_returning(frame))
+
+
+def test_integer_series_ids_survive_the_layout_oracle():
+    """The id comparison is by value; an int id must not be coerced to str."""
+    stamps = pd.date_range("2026-01-01", periods=24, freq="h")
+    history = pd.concat(
+        [
+            pd.DataFrame({"series_id": sid, "timestamp": stamps, "target": np.arange(24.0)})
+            for sid in (1, 2)
+        ],
+        ignore_index=True,
+    )
+    config = ForecastConfig(prediction_length=3, quantile_levels=[0.5])
+    frame = raw_frame([1, 2], horizon=3, quantiles=[0.5])
+    result = forecast(history, config, model_returning(frame))
+    assert list(result.forecast["series_id"]) == [1, 1, 1, 2, 2, 2]

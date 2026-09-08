@@ -2,6 +2,10 @@
 
 Phase 1 (foundation): pinned verified loader, DIMER-side validation, univariate
 multi-ID inference, deterministic output normalisation, provenance export.
+
+Phase 2 (inference): multi-target forecasting, past-only and known-future
+covariates, and the row-layout oracle that keeps a forecast attached to the
+series and target it was made for.
 """
 
 from __future__ import annotations

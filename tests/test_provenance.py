@@ -216,6 +216,8 @@ def test_build_provenance_is_json_serialisable():
         n_ids=1,
         n_targets=1,
         n_covariates=0,
+        past_covariate_names=[],
+        known_future_covariate_names=[],
         requested_context_length=None,
         effective_context_length=64,
         longest_series_length=64,

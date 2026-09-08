@@ -19,7 +19,10 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = ["PROVENANCE_SCHEMA_VERSION", "TRACKED_PACKAGES", "runtime_versions", "build_provenance"]
 
 #: Bump when the shape of the exported dict changes in a way consumers must notice.
-PROVENANCE_SCHEMA_VERSION = "1.0"
+#: 1.1 added ``past_covariate_names`` and ``known_future_covariate_names`` when
+#: Phase 2 made covariates reachable; a 1.0 consumer reading a covariate-informed
+#: forecast cannot tell the two kinds apart, so the addition is one to notice.
+PROVENANCE_SCHEMA_VERSION = "1.1"
 
 #: RFC "Runtime/dependency reproducibility": these versions travel with results.
 TRACKED_PACKAGES: tuple[str, ...] = (
@@ -54,6 +57,8 @@ def build_provenance(
     n_ids: int,
     n_targets: int,
     n_covariates: int,
+    past_covariate_names: list[str],
+    known_future_covariate_names: list[str],
     requested_context_length: int | None,
     effective_context_length: int,
     longest_series_length: int,
@@ -85,6 +90,14 @@ def build_provenance(
     a series shorter than it contributed its whole history and no more, which is
     what ``shortest_series_length`` is for.
 
+    ``past_covariate_names`` and ``known_future_covariate_names`` partition the
+    request's covariates. RFC Mode D asks that the two be distinguished, and the
+    distinction is not recoverable from the forecast frame: neither kind appears
+    in the output, so an export recording only ``n_covariates`` cannot say
+    whether a covariate was read up to the forecast origin or all the way across
+    the horizon — which is the difference between a forecast that could have
+    been made in advance and one that could not.
+
     ``latency_seconds`` times the scored ``predict_df`` call only.
     ``warm_up_performed`` says whether a discarded warm-up call preceded it; a
     cold first call includes lazy CUDA/kernel initialisation and is not a
@@ -103,6 +116,8 @@ def build_provenance(
             "n_ids": n_ids,
             "n_targets": n_targets,
             "n_covariates": n_covariates,
+            "past_covariate_names": list(past_covariate_names),
+            "known_future_covariate_names": list(known_future_covariate_names),
             "requested_context_length": requested_context_length,
             "effective_context_length": effective_context_length,
             "model_context_length": identity.model_context_length,

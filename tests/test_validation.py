@@ -738,3 +738,137 @@ def test_non_dataframe_history_rejected():
     with pytest.raises(ValidationError) as exc:
         run([{"series_id": "A"}])
     assert code_of(exc) == "HISTORY_NOT_A_DATAFRAME"
+
+
+# --------------------------------------------------------------------------
+# Phase 2 — covariate columns (RFC Mode D, rules 4 and 19 extended)
+# --------------------------------------------------------------------------
+
+
+def one_covariate_history(values, name: str = "temperature", n: int = 12) -> pd.DataFrame:
+    """A valid single series carrying one covariate column."""
+    history = make_series(n=n)
+    history[name] = values
+    return history
+
+
+def test_a_numeric_covariate_is_accepted_and_classified_as_past_only():
+    """The passing fixture the rejections below are mutations of."""
+    result = run(one_covariate_history(np.arange(12, dtype=float)))
+    assert result.covariate_names == ["temperature"]
+    assert result.past_covariate_names == ["temperature"]
+    assert result.known_future_covariate_names == []
+    assert result.n_past_covariates == 1
+    assert result.n_known_future_covariates == 0
+
+
+def test_a_covariate_with_a_null_is_rejected():
+    values = np.arange(12, dtype=float)
+    values[3] = np.nan
+    with pytest.raises(ValidationError) as exc:
+        run(one_covariate_history(values))
+    assert code_of(exc) == "COVARIATE_MISSING_VALUES"
+
+
+def test_a_covariate_with_an_infinity_is_rejected():
+    values = np.arange(12, dtype=float)
+    values[3] = np.inf
+    with pytest.raises(ValidationError) as exc:
+        run(one_covariate_history(values))
+    assert code_of(exc) == "COVARIATE_NOT_FINITE"
+
+
+def test_a_string_covariate_is_rejected_rather_than_encoded():
+    """Upstream would encode it, by a route that differs with the target count."""
+    with pytest.raises(ValidationError) as exc:
+        run(one_covariate_history(["sunny"] * 12))
+    assert code_of(exc) == "COVARIATE_NOT_NUMERIC"
+
+
+def test_a_boolean_covariate_is_coerced_to_float_not_left_categorical():
+    """Upstream classes ``bool`` as *categorical* (``preprocess.py`` L188).
+
+    Left alone, a holiday flag would take the target-count-dependent encoding
+    path. Coercing it here pins it to the numeric one, so the same column means
+    the same thing in a single-target and a multi-target request.
+    """
+    result = run(one_covariate_history([True, False] * 6))
+    passed = result.history["temperature"]
+    assert passed.dtype == float
+    assert list(passed) == [1.0, 0.0] * 6
+
+
+def test_a_future_covariate_with_a_null_is_rejected():
+    history = one_covariate_history(np.arange(12, dtype=float))
+    stamps = history["timestamp"]
+    future = pd.DataFrame(
+        {
+            "series_id": "A",
+            "timestamp": pd.date_range(stamps.max() + pd.Timedelta("1h"), periods=2, freq="h"),
+            "temperature": [1.0, np.nan],
+        }
+    )
+    with pytest.raises(ValidationError) as exc:
+        run(history, ForecastConfig(prediction_length=2), future_df=future)
+    assert code_of(exc) == "COVARIATE_MISSING_VALUES"
+
+
+def test_a_future_covariate_makes_that_column_known_future_and_leaves_the_rest_past():
+    history = one_covariate_history(np.arange(12, dtype=float))
+    history["holiday"] = 0.0
+    stamps = history["timestamp"]
+    future = pd.DataFrame(
+        {
+            "series_id": "A",
+            "timestamp": pd.date_range(stamps.max() + pd.Timedelta("1h"), periods=2, freq="h"),
+            "holiday": [1.0, 0.0],
+        }
+    )
+    result = run(history, ForecastConfig(prediction_length=2), future_df=future)
+    assert result.known_future_covariate_names == ["holiday"]
+    assert result.past_covariate_names == ["temperature"]
+    #: The two partition the covariates — nothing is counted twice or dropped.
+    assert sorted(
+        result.past_covariate_names + result.known_future_covariate_names
+    ) == sorted(result.covariate_names)
+
+
+def test_a_future_table_with_no_covariate_column_is_rejected_not_ignored():
+    history = one_covariate_history(np.arange(12, dtype=float))
+    stamps = history["timestamp"]
+    future = pd.DataFrame(
+        {
+            "series_id": "A",
+            "timestamp": pd.date_range(stamps.max() + pd.Timedelta("1h"), periods=2, freq="h"),
+        }
+    )
+    with pytest.raises(ValidationError) as exc:
+        run(history, ForecastConfig(prediction_length=2), future_df=future)
+    assert code_of(exc) == "FUTURE_TABLE_HAS_NO_COVARIATES"
+
+
+def test_a_covariate_of_numeric_strings_is_coerced_like_a_target():
+    """Judged by whether coercion loses a value, not by dtype: a CSV column read
+    as ``object`` but holding only numbers is not a categorical covariate."""
+    result = run(one_covariate_history([str(float(v)) for v in range(12)]))
+    assert result.history["temperature"].dtype == float
+    assert list(result.history["temperature"]) == [float(v) for v in range(12)]
+
+
+def test_a_covariate_with_one_non_numeric_value_among_numbers_is_rejected():
+    values = [str(float(v)) for v in range(12)]
+    values[5] = "unknown"
+    with pytest.raises(ValidationError) as exc:
+        run(one_covariate_history(values))
+    assert code_of(exc) == "COVARIATE_NOT_NUMERIC"
+    assert exc.value.details["examples"] == ["unknown"]
+
+
+def test_a_datetime_covariate_is_rejected_not_read_as_nanoseconds():
+    """``pd.to_numeric`` would turn it into nanoseconds since the epoch and the
+    model would receive a ~1.8e18 covariate without anything objecting."""
+    stamps = pd.date_range("2020-01-01", periods=12, freq="D")
+    with pytest.raises(ValidationError) as exc:
+        run(one_covariate_history(stamps))
+    assert code_of(exc) == "COVARIATE_NOT_NUMERIC"
+    assert "nanoseconds" in exc.value.message
