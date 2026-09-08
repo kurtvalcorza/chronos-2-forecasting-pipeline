@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+.env
+.env.local
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Local model / data caches (never commit weights)
+.hf_cache/
+*.safetensors
+*.bin
+*.ckpt
+
+# OS
+.DS_Store
+Thumbs.db
