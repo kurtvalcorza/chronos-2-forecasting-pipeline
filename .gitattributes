@@ -1,0 +1,15 @@
+# Normalise every text file to LF in the repository and in the working tree.
+# core.autocrlf=true is set globally on the authoring machine; without this file
+# the checked-out bytes would be CRLF and every SHA-256 asserted in tests or in
+# MODEL_CARD.md would be wrong on Windows but right on Linux.
+* text=auto eol=lf
+
+# Files whose byte content is asserted somewhere (tests, model card, provenance)
+# get -text: no conversion at all, in either direction, on any platform.
+docs/rfc/0001-chronos-2.md -text
+examples/sample-data/** -text
+
+# Binary
+*.png binary
+*.safetensors binary
+*.parquet binary
