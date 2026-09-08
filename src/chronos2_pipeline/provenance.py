@@ -56,6 +56,8 @@ def build_provenance(
     n_covariates: int,
     requested_context_length: int | None,
     effective_context_length: int,
+    longest_series_length: int,
+    shortest_series_length: int,
     requested_prediction_length: int,
     effective_prediction_length: int,
     autoregressive_unrolled: bool,
@@ -76,6 +78,12 @@ def build_provenance(
     always equals ``requested_quantiles``, because out-of-grid levels are refused
     rather than clamped — but both are exported so a future release that permits
     clamping cannot do it invisibly.
+
+    ``effective_context_length`` is the context bound actually in force: the
+    request, the model's limit and the longest series in the request, whichever
+    binds first. It is not a promise that every series contributed that much —
+    a series shorter than it contributed its whole history and no more, which is
+    what ``shortest_series_length`` is for.
 
     ``latency_seconds`` times the scored ``predict_df`` call only.
     ``warm_up_performed`` says whether a discarded warm-up call preceded it; a
@@ -98,6 +106,8 @@ def build_provenance(
             "requested_context_length": requested_context_length,
             "effective_context_length": effective_context_length,
             "model_context_length": identity.model_context_length,
+            "longest_series_length": longest_series_length,
+            "shortest_series_length": shortest_series_length,
             "requested_prediction_length": requested_prediction_length,
             "effective_prediction_length": effective_prediction_length,
             "model_prediction_length": identity.model_prediction_length,

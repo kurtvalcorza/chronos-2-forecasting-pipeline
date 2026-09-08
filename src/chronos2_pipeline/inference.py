@@ -290,7 +290,13 @@ def forecast(
 
     model_ctx = model.model_context_length
     requested_ctx = config.context_length
-    effective_ctx = min(requested_ctx or model_ctx, model_ctx)
+    #: The context bound actually in force. ``min(requested, model)`` alone reported a
+    #: ceiling rather than an effective value: a 100-observation series with
+    #: ``context_length=None`` exported the model's full context length, a number larger
+    #: than the history that existed. Upstream can only consume what a series holds, so
+    #: the longest series caps it too (RFC C-6). Series shorter than this contributed
+    #: less, which is why both observed lengths are exported alongside it.
+    effective_ctx = min(requested_ctx or model_ctx, model_ctx, validated.max_series_length)
     effective_horizon = config.prediction_length
 
     provenance = build_provenance(
@@ -302,6 +308,8 @@ def forecast(
         n_covariates=validated.n_covariates,
         requested_context_length=requested_ctx,
         effective_context_length=effective_ctx,
+        longest_series_length=validated.max_series_length,
+        shortest_series_length=validated.min_series_length,
         requested_prediction_length=config.prediction_length,
         effective_prediction_length=effective_horizon,
         autoregressive_unrolled=effective_horizon > model.model_prediction_length,

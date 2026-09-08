@@ -77,25 +77,64 @@ def test_context_semantics_requested_effective_and_model():
     assert inf["model_context_length"] == 8192
 
 
-def test_context_length_none_becomes_the_model_default():
-    result = forecast(make_series(), ForecastConfig(prediction_length=4), model_for(4))
+def test_context_length_none_is_bounded_by_the_history_not_the_model_limit():
+    """With no request, the data is what binds -- not the model's ceiling.
+
+    This used to export ``effective_context_length: 8192`` for a 64-observation
+    series: a number larger than the history that existed. RFC C-6 asks for the
+    *effective* context, and no series can contribute more than it holds.
+    """
+    result = forecast(make_series(n=64), ForecastConfig(prediction_length=4), model_for(4))
     inf = result.provenance["inference"]
     assert inf["requested_context_length"] is None
-    assert inf["effective_context_length"] == 8192
+    assert inf["effective_context_length"] == 64
+    assert inf["model_context_length"] == 8192
+    assert inf["longest_series_length"] == 64
+
+
+def test_effective_context_never_exceeds_the_available_history():
+    """Whichever of request, model limit and data binds first, it is never the data."""
+    for requested in (None, 32, 4096, 8192):
+        config = ForecastConfig(prediction_length=4, context_length=requested)
+        inf = forecast(make_series(n=64), config, model_for(4)).provenance["inference"]
+        assert inf["effective_context_length"] <= inf["longest_series_length"]
+        assert inf["effective_context_length"] <= inf["model_context_length"]
+        if requested is not None:
+            assert inf["effective_context_length"] <= requested
+
+
+def test_mixed_length_series_report_both_ends():
+    """``effective_context_length`` is a ceiling across the request, so a shorter
+    series contributed less. Both observed lengths ship so that is legible."""
+    history = pd.concat(
+        [make_series("A", n=64), make_series("B", n=40)], ignore_index=True
+    )
+    model = FakeLoadedModel(
+        pipeline=FakePipeline(raw_frame(["A", "B"], horizon=4, quantiles=[0.1, 0.5, 0.9])),
+        identity=make_identity(),
+    )
+    inf = forecast(history, ForecastConfig(prediction_length=4), model).provenance["inference"]
+    assert inf["longest_series_length"] == 64
+    assert inf["shortest_series_length"] == 40
+    assert inf["effective_context_length"] == 64
 
 
 def test_requested_context_above_the_model_limit_is_recorded_as_clamped():
     """Upstream resets context to the model limit (pipeline.py L610-617 in 2.3.1);
-    provenance must show the clamp rather than echoing the request."""
+    provenance must show the clamp rather than echoing the request.
+
+    Both series here are longer than the model limit, so the model ceiling is what
+    binds and the clamp is what is under test -- not the history bound above.
+    """
     config = ForecastConfig(prediction_length=4, context_length=8192)
-    result = forecast(make_series(), config, model_for(4))
+    result = forecast(make_series(n=9000), config, model_for(4))
     inf = result.provenance["inference"]
     assert inf["requested_context_length"] == 8192
     assert inf["effective_context_length"] == 8192
 
     small_model = model_for(4, model_context_length=512)
     config = ForecastConfig(prediction_length=4, context_length=4096)
-    result = forecast(make_series(), config, small_model)
+    result = forecast(make_series(n=600), config, small_model)
     inf = result.provenance["inference"]
     assert inf["requested_context_length"] == 4096
     assert inf["effective_context_length"] == 512
@@ -178,7 +217,9 @@ def test_build_provenance_is_json_serialisable():
         n_targets=1,
         n_covariates=0,
         requested_context_length=None,
-        effective_context_length=8192,
+        effective_context_length=64,
+        longest_series_length=64,
+        shortest_series_length=64,
         requested_prediction_length=24,
         effective_prediction_length=24,
         autoregressive_unrolled=False,
