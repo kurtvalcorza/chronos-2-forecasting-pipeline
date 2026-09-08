@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 
@@ -261,3 +262,47 @@ def test_resolve_device_is_cuda_when_cuda_is_available(monkeypatch):
 
     monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
     assert model_mod.resolve_device("auto") == "cuda"
+
+
+# --------------------------------------------------------------------------
+# Review round 1 — R-5: the resolved-revision check must be able to fail
+# --------------------------------------------------------------------------
+
+
+def test_verify_snapshot_refuses_a_hub_resolution_that_differs_from_the_pin(tmp_path):
+    """R-5: the directory name alone is a tautology, so pass the Hub's answer.
+
+    ``snapshot_download`` lays the snapshot out under ``snapshots/<requested>``,
+    and the requested revision has already been forced equal to the pin, so the
+    old ``root.name == expected`` comparison could not fail in production.
+    """
+    snapshot = build_snapshot(tmp_path)
+    with pytest.raises(ModelIntegrityError, match="The Hub resolved this model"):
+        verify_snapshot(snapshot, resolved_revision=OTHER_SHA, **expectations(snapshot))
+    # the honest answer must still verify, or the test proves nothing
+    verified = verify_snapshot(
+        snapshot, resolved_revision=PINNED_REVISION, **expectations(snapshot)
+    )
+    assert verified["revision"] == PINNED_REVISION
+
+
+def test_load_pinned_model_refuses_a_hub_that_resolves_the_pin_to_another_commit(monkeypatch):
+    """A hub serving a different commit under the pinned name is detected."""
+    import huggingface_hub
+
+    def explode(*args, **kwargs):  # pragma: no cover - must not run
+        raise AssertionError("snapshot_download was called despite a revision mismatch")
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", explode)
+    with pytest.raises(ModelIntegrityError, match=OTHER_SHA):
+        model_mod.load_pinned_model(revision_resolver=lambda *_: OTHER_SHA)
+
+
+def test_the_hub_resolver_is_the_default_and_is_not_the_requested_revision():
+    """The default resolver must be an independent lookup, not the input echoed."""
+    default = inspect.signature(model_mod.load_pinned_model).parameters[
+        "revision_resolver"
+    ].default
+    assert default is model_mod.resolve_hub_revision
+    source = inspect.getsource(model_mod.resolve_hub_revision)
+    assert "model_info" in source

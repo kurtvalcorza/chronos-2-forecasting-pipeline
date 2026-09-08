@@ -70,14 +70,22 @@ These are contract items from the RFC, each backed by a test rather than by docu
 
 - **One model source.** `load_pinned_model` accepts only `amazon/chronos-2` at revision
   `95a9710e...`. `main`, `latest`, any other revision, local paths, `s3://` and `hf://` raise
-  `ModelSourceError`. After download, the resolved commit, the `model.safetensors` SHA-256 and
-  byte size, and the `config.json` SHA-256 are all checked; `.bin` weights are refused outright.
+  `ModelSourceError`. Before anything is downloaded the Hub is asked which commit the pin names,
+  and a different answer refuses the load; after download, the `model.safetensors` SHA-256 and
+  byte size and the `config.json` SHA-256 are checked; `.bin` weights are refused outright.
 - **Validation is ours, and runs first.** All 21 RFC validation rules are enforced before
-  `predict_df` is called, and supplying `frequency=` does not bypass the regularity, gap,
-  same-frequency or minimum-length checks.
-- **Out-of-grid quantiles hard-fail.** Upstream silently clamps a request for `0.001` to the
-  nearest trained quantile. This pipeline rejects it, because a column labelled `q0.001` that
-  actually holds `q0.01` is a false export.
+  `predict_df` is called. Supplying `frequency=` does not bypass the regularity, gap,
+  same-frequency or minimum-length checks, *and* it does not reach `predict_df` unless it has been
+  confirmed equal to the interval observed in the data — upstream uses `freq` as-is to lay out the
+  horizon, so an unchecked value silently moves the forecast onto another time axis.
+- **Fixed-width frequencies only.** Regularity is diff equality, so `15min`, `h`, `D`, `7D` are in
+  scope and **monthly, quarterly, yearly and business-daily data are rejected**
+  (`CALENDAR_FREQUENCY_UNSUPPORTED`). Calendar-frequency support is Phase 2. See
+  [Frequency, gaps, and why validation is duplicated](MODEL_CARD.md#frequency-gaps-and-why-validation-is-duplicated).
+- **Out-of-grid quantiles hard-fail, with no opt-out.** Upstream silently clamps a request for
+  `0.001` to the nearest trained quantile. This pipeline rejects it, because a column labelled
+  `q0.001` that actually holds `q0.01` is a false export. Membership is exact float identity, the
+  same gate upstream uses.
 - **The rename map is deterministic and tested.** Upstream raw columns map to
   `series_id, timestamp, target_name, prediction, q<level>` by an explicit table.
 - **Provenance travels with the forecast.** Requested and effective context and horizon, model

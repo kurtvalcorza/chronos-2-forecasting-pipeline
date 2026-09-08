@@ -23,6 +23,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from .config import ForecastConfig
@@ -117,18 +118,63 @@ def _assert_raw_contract(raw: pd.DataFrame, config: ForecastConfig) -> None:
         )
 
 
+def _assert_finite(raw: pd.DataFrame, config: ForecastConfig) -> None:
+    """A non-finite forecast is a distinct failure, and must be named as one.
+
+    Checked before the median oracle: ``NaN == NaN`` is ``False``, so a
+    NaN-valued output used to surface as "the median contract broke", sending a
+    maintainer to the wrong upstream line for a condition that has nothing to do
+    with the median (review R-9).
+    """
+    columns = [RAW_POINT_COLUMN, *(str(q) for q in config.quantile_levels)]
+    offenders = {}
+    for column in columns:
+        values = pd.to_numeric(raw[column], errors="coerce").to_numpy(dtype=float)
+        n_bad = int((~np.isfinite(values)).sum())
+        if n_bad:
+            offenders[column] = n_bad
+    if offenders:
+        raise UpstreamContractError(
+            f"predict_df returned non-finite values (NaN/inf) in column(s) {offenders}. "
+            f"A forecast frame containing NaN is not a forecast; v1 refuses it rather "
+            f"than exporting it."
+        )
+
+
 def _assert_median_oracle(raw: pd.DataFrame, config: ForecastConfig) -> None:
     if 0.5 not in [float(q) for q in config.quantile_levels]:
         return
     point = raw[RAW_POINT_COLUMN].to_numpy()
     median = raw["0.5"].to_numpy()
-    if point.shape != median.shape or not (point == median).all():
+    if point.shape != median.shape or not np.array_equal(point, median, equal_nan=True):
         n_diff = int((point != median).sum()) if point.shape == median.shape else -1
         raise UpstreamContractError(
             f"Upstream `predictions` is no longer exactly the 0.5 quantile "
             f"({n_diff} differing row(s)). This pipeline labels the point forecast "
             f"`prediction` on the recorded basis that it is the median; that basis "
             f"has changed and the label would now be wrong."
+        )
+
+
+def _assert_quantile_labels(
+    config: ForecastConfig, trained_quantiles: tuple[float, ...] | list[float]
+) -> None:
+    """No ``q<level>`` column may be exported for a level the model cannot produce.
+
+    Validation already hard-fails an out-of-grid request, so this can only fire
+    if that gate is ever weakened or bypassed. It is here because the failure it
+    guards against is silent: upstream substitutes the nearest trained level and
+    returns it under the requested name, so a mislabelled column looks exactly
+    like a correct one (RFC C-5, review R-2).
+    """
+    grid = {float(q) for q in trained_quantiles}
+    mislabelled = [float(q) for q in config.quantile_levels if float(q) not in grid]
+    if mislabelled:
+        raise UpstreamContractError(
+            f"Refusing to export quantile column(s) "
+            f"{[quantile_column_name(q) for q in mislabelled]}: level(s) {mislabelled} "
+            f"are not members of the trained grid {sorted(grid)}, so upstream can only "
+            f"have substituted a different level under that name."
         )
 
 
@@ -140,7 +186,6 @@ def forecast(
     *,
     limits: ResourceLimits = DEFAULT_LIMITS,
     allow_unroll: bool = False,
-    allow_out_of_grid: bool = False,
     target_policy: str = "strict",
     measure_latency: bool = False,
 ) -> ForecastResult:
@@ -162,9 +207,6 @@ def forecast(
         Permit ``prediction_length`` beyond the model's native horizon, which
         upstream satisfies by autoregressive unrolling. Off by default; when on,
         ``autoregressive_unrolled`` is recorded in provenance.
-    allow_out_of_grid
-        Permit quantile levels outside the trained grid, which upstream clamps
-        to the nearest trained level. Off by default (RFC C-5).
     measure_latency
         Run one discarded warm-up ``predict_df`` before the scored call. Doubles
         the cost; off by default, in which case ``latency_seconds`` is a cold
@@ -200,7 +242,6 @@ def forecast(
         future_df=None,
         limits=limits,
         target_policy=target_policy,
-        allow_out_of_grid=allow_out_of_grid,
         allow_unroll=allow_unroll,
     )
 
@@ -223,7 +264,10 @@ def forecast(
         "context_length": config.context_length,
         "cross_learning": config.cross_learning,
         "validate_inputs": True,
-        "freq": config.frequency,
+        #: Only an alias validation affirmatively confirmed against the observed
+        #: interval, never the raw request: upstream uses ``freq`` as-is to lay
+        #: out the horizon and does not check it against the data (review R-1).
+        "freq": validated.confirmed_frequency,
     }
 
     if measure_latency:
@@ -234,7 +278,9 @@ def forecast(
     latency_seconds = time.perf_counter() - started
 
     _assert_raw_contract(raw, config)
+    _assert_finite(raw, config)
     _assert_median_oracle(raw, config)
+    _assert_quantile_labels(config, model.trained_quantiles)
 
     rename_map = build_rename_map(config)
     normalized = raw.rename(columns=rename_map)[normalized_columns(config)].reset_index(drop=True)

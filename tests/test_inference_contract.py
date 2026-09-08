@@ -6,6 +6,8 @@ exactly, so the rename map and the oracles are exercised without weights.
 
 from __future__ import annotations
 
+import inspect
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -18,7 +20,8 @@ from chronos2_pipeline import (
     forecast,
     normalized_columns,
 )
-from chronos2_pipeline.inference import quantile_column_name
+from chronos2_pipeline.inference import _assert_quantile_labels, quantile_column_name
+from chronos2_pipeline.model import EXPECTED_TRAINED_QUANTILES
 from conftest import FakeLoadedModel, SentinelPipeline, make_identity, make_series
 
 
@@ -349,3 +352,93 @@ def test_evaluation_is_an_explicit_phase_3_stub():
     for fn in stubs:
         with pytest.raises(NotImplementedError, match="Phase 3"):
             fn()
+
+
+# --------------------------------------------------------------------------
+# Review round 1 — R-1, R-2, R-9
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("declared", ["W", "ME", "B", "QS", "YE"])
+def test_a_calendar_frequency_never_reaches_predict_df(declared):
+    """R-1: upstream builds the horizon index from ``freq`` without checking it.
+
+    Before the fix, hourly history declared ``frequency="ME"`` was validated as
+    hourly, forwarded as ``freq="ME"``, and came back stamped at month ends —
+    a valid-looking DIMER export on the wrong time axis, with no error.
+    """
+    sentinel = SentinelPipeline()
+    model = FakeLoadedModel(pipeline=sentinel, identity=make_identity())
+    config = ForecastConfig(prediction_length=4, frequency=declared)
+    with pytest.raises(ValidationError) as exc:
+        forecast(make_series(n=64), config, model)
+    assert exc.value.code == "FREQUENCY_NOT_FIXED_WIDTH"
+    assert not sentinel.called
+
+
+@pytest.mark.parametrize("declared", [None, "h", "60min"])
+def test_only_a_confirmed_frequency_is_forwarded_to_predict_df(declared):
+    """Whatever reaches ``freq`` must have been compared against the data first."""
+    quantiles = [0.1, 0.5, 0.9]
+    pipeline = FakePipeline(raw_frame(["A"], 4, quantiles))
+    model = FakeLoadedModel(pipeline=pipeline, identity=make_identity())
+    config = ForecastConfig(
+        prediction_length=4, quantile_levels=quantiles, frequency=declared
+    )
+    forecast(make_series(n=64), config, model)
+    assert pipeline.calls[0]["freq"] == declared
+
+
+def test_forecast_has_no_out_of_grid_escape_hatch():
+    """R-2: the flag that produced a mislabelled ``q<requested>`` column is gone."""
+    assert "allow_out_of_grid" not in inspect.signature(forecast).parameters
+    pipeline = FakePipeline(raw_frame(["A"], 4, [0.001, 0.5]))
+    model = FakeLoadedModel(pipeline=pipeline, identity=make_identity())
+    config = ForecastConfig(prediction_length=4, quantile_levels=[0.001, 0.5])
+    with pytest.raises(TypeError, match="allow_out_of_grid"):
+        forecast(make_series(n=64), config, model, allow_out_of_grid=True)
+    with pytest.raises(ValidationError) as exc:
+        forecast(make_series(n=64), config, model)
+    assert exc.value.code == "QUANTILE_NOT_IN_GRID"
+    assert not pipeline.calls
+
+
+def test_no_quantile_column_may_be_labelled_with_a_level_outside_the_trained_grid():
+    """R-2: the label guard, exercised directly.
+
+    Upstream substitutes the nearest trained level and returns it under the
+    requested name, so a mislabelled column is indistinguishable from a correct
+    one downstream. This guard makes the export refuse rather than rename.
+    """
+    config = ForecastConfig(quantile_levels=[0.001, 0.5])
+    with pytest.raises(UpstreamContractError, match="q0.001"):
+        _assert_quantile_labels(config, EXPECTED_TRAINED_QUANTILES)
+    # the in-grid case must not fire, or the guard proves nothing
+    _assert_quantile_labels(ForecastConfig(quantile_levels=[0.1, 0.5, 0.9]),
+                            EXPECTED_TRAINED_QUANTILES)
+
+
+def test_a_nan_forecast_is_reported_as_non_finite_not_as_a_broken_median():
+    """R-9: ``NaN == NaN`` is ``False``, which used to read as a median break."""
+    quantiles = [0.1, 0.5, 0.9]
+    frame = raw_frame(["A"], 4, quantiles)
+    frame.loc[0, "predictions"] = np.nan
+    frame.loc[0, "0.5"] = np.nan
+    pipeline = FakePipeline(frame)
+    model = FakeLoadedModel(pipeline=pipeline, identity=make_identity())
+    config = ForecastConfig(prediction_length=4, quantile_levels=quantiles)
+    with pytest.raises(UpstreamContractError) as exc:
+        forecast(make_series(n=64), config, model)
+    message = str(exc.value)
+    assert "non-finite" in message
+    assert "0.5 quantile" not in message
+
+
+def test_the_median_oracle_still_fires_when_the_median_really_diverges():
+    """The R-9 change must not blunt the oracle it sits in front of."""
+    quantiles = [0.1, 0.5, 0.9]
+    pipeline = FakePipeline(raw_frame(["A"], 4, quantiles, point_equals_median=False))
+    model = FakeLoadedModel(pipeline=pipeline, identity=make_identity())
+    config = ForecastConfig(prediction_length=4, quantile_levels=quantiles)
+    with pytest.raises(UpstreamContractError, match="0.5 quantile"):
+        forecast(make_series(n=64), config, model)

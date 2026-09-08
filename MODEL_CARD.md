@@ -88,10 +88,19 @@ additionally catch a corrupted or truncated download.
 `load_pinned_model()` refuses, before any network call, anything other than `amazon/chronos-2` at
 the pinned commit: mutable refs (`main`, `master`, `latest`, `HEAD`), any other commit SHA, local
 filesystem paths, and URI schemes including `s3://`, `hf://`, `https://` and `file://`. After
-download it checks that the directory Hugging Face resolved is that commit's snapshot, verifies
-both digests and the weight file's byte size, and refuses outright if any `.bin`, `.pt`, `.pth`,
-`.ckpt` or `.pkl` file is present in the snapshot — pickle checkpoints execute arbitrary code on
-load, and this pipeline has no fallback to them.
+download it verifies both digests and the weight file's byte size, and refuses outright if any
+`.bin`, `.pt`, `.pth`, `.ckpt` or `.pkl` file is present in the snapshot — pickle checkpoints
+execute arbitrary code on load, and this pipeline has no fallback to them.
+
+**How the resolved revision is checked.** `snapshot_download` lays a snapshot out under
+`snapshots/<requested-revision>/`, and the requested revision has already been forced equal to the
+pin, so comparing the directory name against the pin is a tautology that cannot fail — the check
+an earlier revision performed. The loader now asks the Hub itself, before downloading anything,
+which commit the pin resolves to (`HfApi().model_info(...).sha`) and refuses if that is not the
+pinned commit; the snapshot directory must then agree with the Hub's answer as well. Two
+consequences worth knowing: loading makes one Hub metadata request, and if the Hub cannot be
+reached the load fails closed with `ModelIntegrityError` rather than proceeding on the file
+digests alone, because the RFC makes the revision the *primary* anchor.
 
 ## Runtime pins
 
@@ -137,7 +146,18 @@ the pinned `config.json`:
 ```
 
 The pipeline reads this grid off the loaded model at runtime and rejects any requested level that
-is not an exact member (`allow_out_of_grid=False`, the default).
+is not an exact member. There is **no opt-out**: `forecast()` has no `allow_out_of_grid`
+parameter, and passing one is a `TypeError`. An earlier revision had that flag; it exported a
+column named for the *requested* level while holding the substituted one, and recorded
+`effective_quantile_levels == requested_quantile_levels` in provenance, so the substitution was
+invisible in the export. Phase 1 has no consumer for the escape hatch, so it was removed rather
+than repaired.
+
+Membership is **exact float identity**, matching upstream's own gate
+(`set(quantile_levels).issubset(training_quantile_levels)`, `pipeline.py` L797). A tolerance would
+accept `0.1 * 7 == 0.7000000000000001`, which upstream then routes to `interpolate_quantiles`
+instead of indexing the trained `0.7` — the same silent substitution, one grid step smaller. When a
+rejected level is within `1e-6` of a grid member the error names that member.
 
 **Why rejection rather than the upstream default.** Asked for a level outside the trained range,
 upstream 2.3.1 substitutes the nearest trained level and emits a warning
@@ -165,6 +185,14 @@ opts in, and provenance then records `autoregressive_unrolled: true`. Requested,
 model values are recorded for both context and horizon on every call, whether or not clamping
 happened.
 
+Two guards bound the horizon and the order matters. `ResourceLimits.max_prediction_length`
+(**4,096** by default) is DIMER's own resource guard and is deliberately set *above* the model's
+native 1,024 so that the unroll gate, not the resource guard, is what answers a request beyond the
+model's capacity. When the two were equal, `PREDICTION_LENGTH_LIMIT` always won and `allow_unroll`
+— and therefore `autoregressive_unrolled: true` — was unreachable on the shipped configuration.
+So: 1,025-4,096 needs `allow_unroll=True` and is flagged in provenance; above 4,096 is refused
+outright as `PREDICTION_LENGTH_LIMIT`.
+
 ## Point-forecast semantics
 
 **`prediction` is the median (q0.5), never a mean.**
@@ -188,10 +216,39 @@ even when `validate_inputs=True`". A gappy or irregular series passed with `freq
 and forecast.
 
 This pipeline validates regularity, gaps, shared frequency and minimum length itself, before
-`predict_df`, and a declared `frequency` does not suppress any of those checks. Regularity is
-established by explicit diff equality per series, not by `pd.infer_freq`. Series with fewer than
-three observations are rejected: upstream's own inference needs three points
-(`chronos/df_utils.py` L30), and below that regularity is unfalsifiable.
+`predict_df`. Regularity is established by explicit diff equality per series, not by
+`pd.infer_freq`. Series with fewer than three observations are rejected: upstream's own inference
+needs three points (`chronos/df_utils.py` L30), and below that regularity is unfalsifiable.
+
+**A declared `frequency` neither suppresses those checks nor reaches upstream unchecked.** The
+checks are only half the protection: `freq` also *lays out the forecast horizon*, so a value that
+passes the checks but contradicts the data still moves the output onto a different time axis. An
+earlier revision compared only fixed-width aliases and let calendar aliases fall through, so
+hourly history declared `frequency="ME"` was validated as hourly and came back stamped at month
+ends, with no error. Now every declared alias is resolved before `predict_df` and only one that
+has been affirmatively confirmed equal to the observed interval is forwarded:
+
+| Declared, on strictly hourly data | Outcome |
+| :-- | :-- |
+| `"h"`, `"60min"` | accepted, forwarded to `predict_df` |
+| `"D"`, `"15min"` | `FREQUENCY_MISMATCH` |
+| `"W"`, `"ME"`, `"B"`, `"QS"`, `"YE"` | `FREQUENCY_NOT_FIXED_WIDTH` |
+| not declared | accepted; `freq=None`, upstream infers from the validated data |
+
+### Fixed-width frequencies only
+
+**v1 supports fixed-width frequencies only** — those where one period is always the same
+`Timedelta`: `15min`, `h`, `D`, `7D`. This follows directly from diff equality, which calendar
+frequencies can never satisfy, and it is a real limitation: **monthly, quarterly, yearly and
+business-daily data cannot be forecast by this pipeline.** Such a series is rejected with
+`CALENDAR_FREQUENCY_UNSUPPORTED`, which names the alias `pd.infer_freq` recognised, rather than
+being called `IRREGULAR_FREQUENCY` — regular monthly data is not irregular, and the earlier
+message said it was. Widening the rule to calendar offsets is a Phase-2 design decision, not a
+Phase-1 patch.
+
+Weekly data *is* in scope: a week is a constant seven days. Declare it as `"7D"`; the pandas alias
+`W` is anchored and therefore not fixed-width, so it is refused as a declaration even where the
+data itself passes.
 
 v1 rejects gaps and missing target values rather than interpolating them. Silent interpolation of
 irregular or gappy input is explicitly out of scope.

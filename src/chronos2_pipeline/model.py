@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,7 @@ __all__ = [
     "sha256_file",
     "check_model_source",
     "verify_snapshot",
+    "resolve_hub_revision",
     "load_pinned_model",
 ]
 
@@ -230,6 +232,43 @@ def check_model_source(model_id: Any, revision: Any) -> None:
         )
 
 
+def resolve_hub_revision(model_id: str, revision: str) -> str:
+    """Ask the Hub which commit ``revision`` names, independently of the download.
+
+    This is the oracle the revision check needs. ``snapshot_download`` lays a
+    snapshot out under ``snapshots/<requested-sha>/``, so when the request *is* a
+    SHA the directory name is that SHA by construction and comparing the two
+    proves nothing (review R-5). ``model_info(...).sha`` is the commit the Hub
+    itself says it served, so a hub answering the pinned name with a different
+    commit is detectable.
+
+    Raises
+    ------
+    ModelIntegrityError
+        The Hub could not be asked. Failing closed is deliberate: RFC C-7 makes
+        the revision SHA the *primary* integrity anchor, so an unverifiable
+        revision is not a load that should quietly proceed on the digests alone.
+    """
+    from huggingface_hub import HfApi
+
+    try:
+        info = HfApi().model_info(repo_id=model_id, revision=revision)
+    except Exception as exc:  # noqa: BLE001 - every hub failure has the same outcome
+        raise ModelIntegrityError(
+            f"Could not resolve {model_id!r}@{revision} against the Hub to confirm the "
+            f"pinned commit: {type(exc).__name__}: {exc}. The revision SHA is this "
+            f"pipeline's primary supply-chain anchor (RFC C-7), so the load is refused "
+            f"rather than falling back to the file digests alone."
+        ) from exc
+    sha = getattr(info, "sha", None)
+    if not isinstance(sha, str) or not sha:
+        raise ModelIntegrityError(
+            f"The Hub returned no commit SHA for {model_id!r}@{revision}; the resolved "
+            f"revision cannot be verified against the pin."
+        )
+    return sha
+
+
 def verify_snapshot(
     snapshot_path: str | os.PathLike[str],
     *,
@@ -238,12 +277,21 @@ def verify_snapshot(
     expected_weights_sha256: str = PINNED_WEIGHTS_SHA256,
     expected_weights_bytes: int = PINNED_WEIGHTS_BYTES,
     check_resolved_revision: bool = True,
+    resolved_revision: str | None = None,
 ) -> dict[str, Any]:
     """Prove a downloaded snapshot directory is the pinned revision, byte for byte.
 
-    ``huggingface_hub`` lays snapshots out as ``.../snapshots/<commit-sha>/``, so
-    the directory name is the commit the download actually resolved to. That is
-    checked first, then the two file digests.
+    Parameters
+    ----------
+    resolved_revision
+        The commit an *independent* resolution says was served — normally
+        :func:`resolve_hub_revision`'s answer. When given, it is compared against
+        ``expected_revision`` and the snapshot directory name must agree with it
+        too. When omitted, the directory name is used alone, which is the weaker
+        check: ``huggingface_hub`` names the directory after the *requested*
+        revision, so with a SHA request that comparison is a tautology and cannot
+        fail (review R-5). Production goes through :func:`load_pinned_model`,
+        which always supplies it.
 
     Returns
     -------
@@ -254,12 +302,20 @@ def verify_snapshot(
     if not root.is_dir():
         raise ModelIntegrityError(f"Model snapshot path is not a directory: {root}")
 
-    resolved_revision = root.name
-    if check_resolved_revision and resolved_revision != expected_revision:
-        raise ModelIntegrityError(
-            f"Resolved model revision {resolved_revision!r} does not match the "
-            f"pinned revision {expected_revision!r} (snapshot at {root})."
-        )
+    if check_resolved_revision:
+        if resolved_revision is not None and resolved_revision != expected_revision:
+            raise ModelIntegrityError(
+                f"The Hub resolved this model to revision {resolved_revision!r}, which "
+                f"does not match the pinned revision {expected_revision!r}. The pinned "
+                f"commit is the primary supply-chain invariant, so a different commit is "
+                f"refused whatever its contents."
+            )
+        if root.name != expected_revision:
+            raise ModelIntegrityError(
+                f"Resolved model revision {root.name!r} does not match the "
+                f"pinned revision {expected_revision!r} (snapshot at {root})."
+            )
+    resolved_revision = resolved_revision or root.name
 
     refused = sorted(
         p.name
@@ -348,6 +404,7 @@ def load_pinned_model(
     device: str = "auto",
     dtype: str = "auto",
     cache_dir: str | os.PathLike[str] | None = None,
+    revision_resolver: Callable[[str, str], str] = resolve_hub_revision,
 ) -> LoadedModel:
     """Download, verify and load the pinned Chronos-2 checkpoint.
 
@@ -361,6 +418,11 @@ def load_pinned_model(
     dtype
         Passed to ``BaseChronosPipeline.from_pretrained``; ``"auto"`` follows the
         checkpoint. The dtype actually in effect is read back off the weights.
+    revision_resolver
+        How the resolved commit is established, independently of the download.
+        Defaults to :func:`resolve_hub_revision`, which asks the Hub. Injectable
+        so the mismatch path is testable without a hostile hub; production has no
+        reason to pass anything else.
 
     Raises
     ------
@@ -374,12 +436,19 @@ def load_pinned_model(
     from chronos import BaseChronosPipeline
     from huggingface_hub import snapshot_download
 
+    hub_revision = revision_resolver(model_id, revision)
+    if hub_revision != PINNED_REVISION:
+        raise ModelIntegrityError(
+            f"The Hub resolved {model_id!r}@{revision} to commit {hub_revision!r}, not "
+            f"the pinned {PINNED_REVISION!r}. Nothing is downloaded and nothing is loaded."
+        )
+
     snapshot_path = snapshot_download(
         repo_id=model_id,
         revision=revision,
         cache_dir=cache_dir,
     )
-    verified = verify_snapshot(snapshot_path)
+    verified = verify_snapshot(snapshot_path, resolved_revision=hub_revision)
 
     resolved_device = resolve_device(device)
     pipeline = BaseChronosPipeline.from_pretrained(

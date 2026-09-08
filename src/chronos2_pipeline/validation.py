@@ -15,6 +15,23 @@ Frequency is established by explicit diff equality — ``diff(timestamps)`` must
 have exactly one distinct value per series — not by ``pd.infer_freq``, which
 tolerates patterns this contract rejects and needs three points before it will
 say anything at all.
+
+**Phase 1 supports fixed-width frequencies only.** A frequency is fixed-width
+when one period is always the same ``Timedelta``: "15min", "h", "D", "7D". Data
+spaced monthly, quarterly, yearly or business-daily has no constant period, so
+diff equality can never hold for it; it is rejected with
+``CALENDAR_FREQUENCY_UNSUPPORTED`` rather than mislabelled "irregular".
+Widening the rule to calendar offsets is a Phase-2 design decision; see
+``MODEL_CARD.md`` and ``README.md``, which state the limitation. Weekly data is
+in scope — a week is a constant seven days — even though the pandas *alias*
+``W`` is anchored and therefore not fixed-width; declare it as ``"7D"``.
+
+The same rule governs a *declared* ``frequency``: an alias that is not
+fixed-width cannot be compared against the observed ``Timedelta``, and upstream
+would use it as-is to build the horizon index, so it is rejected
+(``FREQUENCY_NOT_FIXED_WIDTH``) rather than forwarded unchecked. Only a declared
+alias that has been affirmatively confirmed equal to the observed interval is
+passed to ``predict_df`` (see :attr:`ValidationResult.confirmed_frequency`).
 """
 
 from __future__ import annotations
@@ -35,6 +52,7 @@ __all__ = [
     "MIN_OBSERVATIONS",
     "validate_forecast_request",
     "quantiles_in_grid",
+    "nearest_grid_level",
 ]
 
 #: RFC rule 10. Upstream's own frequency inference needs three points
@@ -42,10 +60,10 @@ __all__ = [
 #: interval to validate, so regularity is unfalsifiable below three.
 MIN_OBSERVATIONS = 3
 
-#: Tolerance for float quantile comparison. Quantile levels are short decimals;
-#: 1e-9 separates 0.1 from 0.100000001 without ever merging two grid levels
-#: (the tightest gap in the trained grid is 0.04).
-_QUANTILE_TOL = 1e-9
+#: How close a rejected level has to be to a grid member before the error
+#: message names that member as the probable intent. Purely cosmetic: it never
+#: widens what is accepted (see :func:`quantiles_in_grid`).
+_QUANTILE_HINT_TOL = 1e-6
 
 
 @dataclass(frozen=True)
@@ -61,7 +79,12 @@ class ResourceLimits:
     max_covariates: int = 64
     max_rows: int = 5_000_000
     max_context_length: int = 8192
-    max_prediction_length: int = 1024
+    #: Deliberately **above** the model's native horizon (1024) so that the
+    #: unroll gate below, not this guard, is what answers a request beyond the
+    #: model's capacity. With the two equal, ``allow_unroll`` was unreachable
+    #: under the default limits and ``autoregressive_unrolled`` could never be
+    #: ``True`` on the shipped configuration (review R-4).
+    max_prediction_length: int = 4096
     min_observations: int = MIN_OBSERVATIONS
 
 
@@ -82,6 +105,12 @@ class ValidationResult:
     max_series_length: int
     min_series_length: int
     requested_quantiles: list[float] = field(default_factory=list)
+    #: The caller's declared ``frequency`` alias, and **only** when it was
+    #: affirmatively confirmed equal to ``frequency``. ``None`` whenever the
+    #: caller declared nothing. Nothing else may be forwarded to ``predict_df``,
+    #: whose own docstring says ``freq`` "is used as-is and is not checked
+    #: against the data, even when ``validate_inputs=True``" (review R-1).
+    confirmed_frequency: str | None = None
 
     @property
     def n_ids(self) -> int:
@@ -99,13 +128,28 @@ class ValidationResult:
 def quantiles_in_grid(
     requested: list[float], grid: tuple[float, ...] | list[float]
 ) -> list[float]:
-    """Return the requested levels that are *not* in the trained grid."""
+    """Return the requested levels that are *not* in the trained grid.
+
+    Membership is **exact float identity**, matching the gate upstream itself
+    uses (``set(quantile_levels).issubset(training_quantile_levels)`` at
+    ``chronos/chronos2/pipeline.py`` L797 in 2.3.1). A tolerance here would
+    accept levels that upstream then routes to ``interpolate_quantiles``
+    silently — e.g. ``0.1 * 7 == 0.7000000000000001`` is not ``0.7`` — which is
+    exactly the silent substitution RFC C-5 exists to prevent (review R-7).
+    """
+    grid_set = {float(g) for g in grid}
+    return [float(q) for q in requested if float(q) not in grid_set]
+
+
+def nearest_grid_level(level: float, grid: tuple[float, ...] | list[float]) -> float | None:
+    """The grid member a rejected level was probably meant to be, if any is close."""
+    if len(grid) == 0:
+        return None
     grid_array = np.asarray(grid, dtype=float)
-    missing: list[float] = []
-    for q in requested:
-        if not np.any(np.abs(grid_array - float(q)) <= _QUANTILE_TOL):
-            missing.append(float(q))
-    return missing
+    nearest = float(grid_array[int(np.argmin(np.abs(grid_array - float(level))))])
+    if abs(nearest - float(level)) <= _QUANTILE_HINT_TOL:
+        return nearest
+    return None
 
 
 def _fail(code: str, message: str, **details: Any) -> None:
@@ -209,6 +253,40 @@ def _coerce_targets(df: pd.DataFrame, targets: list[str], policy: str) -> pd.Dat
 # --------------------------------------------------------------------------
 
 
+def _fixed_width(offset: Any) -> pd.Timedelta | None:
+    """One period of ``offset`` as a ``Timedelta``, or ``None`` if it has no fixed width.
+
+    ``to_offset("h").nanos`` is 3.6e12; ``to_offset("ME").nanos`` raises, because
+    a month is not a constant duration. That distinction is the whole Phase-1
+    frequency contract.
+    """
+    try:
+        return pd.Timedelta(offset.nanos, unit="ns")
+    except (ValueError, AttributeError):
+        return None
+
+
+def _calendar_alias(timestamps: pd.Series) -> str | None:
+    """The pandas alias of a series that is calendar-regular but not fixed-width.
+
+    Used only to give monthly/quarterly/business-daily data an honest error
+    instead of calling it "irregular" (review R-3). Returns ``None`` for
+    anything ``pd.infer_freq`` cannot name, and for anything it names that *is*
+    fixed-width (which diff equality would already have accepted).
+    """
+    try:
+        alias = pd.infer_freq(pd.DatetimeIndex(timestamps))
+    except (ValueError, TypeError):
+        return None
+    if alias is None:
+        return None
+    try:
+        offset = pd.tseries.frequencies.to_offset(alias)
+    except (ValueError, TypeError):  # pragma: no cover - infer_freq returns parseable aliases
+        return None
+    return None if _fixed_width(offset) is not None else alias
+
+
 def _series_frequency(timestamps: pd.Series, series_id: Any, min_observations: int) -> pd.Timedelta:
     """One series' frequency, by explicit diff equality. Rules 7, 9 and 10."""
     n = len(timestamps)
@@ -226,6 +304,19 @@ def _series_frequency(timestamps: pd.Series, series_id: Any, min_observations: i
     distinct = pd.Series(diffs.unique())
     if len(distinct) != 1:
         deltas = sorted(pd.Timedelta(d) for d in distinct)
+        calendar = _calendar_alias(timestamps)
+        if calendar is not None:
+            _fail(
+                "CALENDAR_FREQUENCY_UNSUPPORTED",
+                f"series {series_id!r} is regular on the calendar frequency {calendar!r}, "
+                f"which has no fixed period ({[str(d) for d in deltas]}). Phase 1 supports "
+                f"fixed-width frequencies only (e.g. '15min', 'h', 'D', '7D'); calendar "
+                f"frequencies such as monthly, quarterly, yearly and business-daily are "
+                f"out of scope for v1 and are documented as such in MODEL_CARD.md.",
+                series_id=str(series_id),
+                inferred_alias=calendar,
+                observed_intervals=[str(d) for d in deltas],
+            )
         base = deltas[0]
         is_gapped = base > pd.Timedelta(0) and all(
             (d % base) == pd.Timedelta(0) for d in deltas
@@ -281,15 +372,23 @@ def _shared_frequency(
     return next(iter(frequencies.values())), max(lengths), min(lengths)
 
 
-def _check_declared_frequency(declared: str | None, observed: pd.Timedelta) -> None:
+def _check_declared_frequency(declared: str | None, observed: pd.Timedelta) -> str | None:
     """A declared ``frequency`` must agree with the data — it may not override it.
 
-    Only fixed-width offsets ("h", "15min", "D") can be compared to a Timedelta.
-    Calendar offsets ("ME", "QS") have no fixed width; those are left to the
-    per-series diff check, which has already passed by this point.
+    Returns the alias only when it has been affirmatively confirmed equal to
+    ``observed``; the caller forwards nothing else to ``predict_df``.
+
+    Every path either confirms or fails. A non-fixed calendar alias ("W", "ME",
+    "QS", "B", "YE") used to fall through this function untouched and was then
+    handed to ``predict_df``, which builds the horizon index from it without
+    checking it against the data — an hourly series declared ``frequency="ME"``
+    came back stamped at month ends, with no error (review R-1). Since the
+    observed frequency is always a fixed ``Timedelta`` by construction (see
+    :func:`_series_frequency`), a non-fixed alias can never agree with it, so
+    the answer is always rejection.
     """
     if declared is None:
-        return
+        return None
     try:
         offset = pd.tseries.frequencies.to_offset(declared)
     except (ValueError, TypeError) as exc:
@@ -298,10 +397,20 @@ def _check_declared_frequency(declared: str | None, observed: pd.Timedelta) -> N
             f"frequency {declared!r} is not a valid pandas offset alias: {exc}",
             frequency=declared,
         )
-    try:
-        declared_delta = pd.Timedelta(offset.nanos, unit="ns")
-    except (ValueError, AttributeError):
-        return  # non-fixed calendar offset; nothing to compare against
+    declared_delta = _fixed_width(offset)
+    if declared_delta is None:
+        _fail(
+            "FREQUENCY_NOT_FIXED_WIDTH",
+            f"declared frequency {declared!r} is a calendar offset with no fixed period, "
+            f"so it cannot agree with the interval observed in the data ({observed}). "
+            f"Upstream would use it as-is to lay out the forecast horizon without "
+            f"checking it against the data, moving the forecast onto a different time "
+            f"axis. Phase 1 supports fixed-width frequencies only, so declare the "
+            f"interval the data actually has ({observed}) as a fixed-width alias "
+            f"instead (RFC C-3).",
+            declared=declared,
+            observed_interval=str(observed),
+        )
     if declared_delta != observed:
         _fail(
             "FREQUENCY_MISMATCH",
@@ -312,6 +421,7 @@ def _check_declared_frequency(declared: str | None, observed: pd.Timedelta) -> N
             declared_interval=str(declared_delta),
             observed_interval=str(observed),
         )
+    return declared
 
 
 # --------------------------------------------------------------------------
@@ -363,16 +473,20 @@ def _validate_future(
             table="future",
         )
 
-    future_ids = sorted({str(v) for v in future[config.id_column].unique()})
-    history_ids = sorted({str(v) for v in series_ids})
+    #: Compared as values, not as ``str``. Stringifying made historical id ``1``
+    #: and future id ``"1"`` equal, which they are not: upstream joins the two
+    #: tables on the raw values and would find no match (review R-13).
+    future_ids = set(future[config.id_column].unique())
+    history_ids = set(series_ids)
     if future_ids != history_ids:
+        future_only = sorted(str(v) for v in future_ids - history_ids)
+        history_only = sorted(str(v) for v in history_ids - future_ids)
         _fail(
             "FUTURE_ID_MISMATCH",
-            f"future table ids must equal historical ids exactly. "
-            f"Only in future: {sorted(set(future_ids) - set(history_ids))[:5]}; "
-            f"only in history: {sorted(set(history_ids) - set(future_ids))[:5]}.",
-            future_only=sorted(set(future_ids) - set(history_ids))[:20],
-            history_only=sorted(set(history_ids) - set(future_ids))[:20],
+            f"future table ids must equal historical ids exactly, compared by value and "
+            f"type. Only in future: {future_only[:5]}; only in history: {history_only[:5]}.",
+            future_only=future_only[:20],
+            history_only=history_only[:20],
         )
 
     future = future.sort_values(
@@ -428,7 +542,6 @@ def validate_forecast_request(
     future_df: pd.DataFrame | None = None,
     limits: ResourceLimits = DEFAULT_LIMITS,
     target_policy: str = "strict",
-    allow_out_of_grid: bool = False,
     allow_unroll: bool = False,
 ) -> ValidationResult:
     """Run RFC validation rules 1-21 and return the normalised request.
@@ -533,7 +646,7 @@ def validate_forecast_request(
 
     # Rules 7, 8, 9, 10 ------------------------------------------------------
     frequency, max_len, min_len = _shared_frequency(history, config, limits)
-    _check_declared_frequency(config.frequency, frequency)
+    confirmed_frequency = _check_declared_frequency(config.frequency, frequency)
 
     # Rule 11 (minimum context) and rule 20 (context guard) -------------------
     if config.context_length is not None:
@@ -577,16 +690,33 @@ def validate_forecast_request(
         )
 
     # Rules 13 and 14 --------------------------------------------------------
+    #: Hard-fail, with no opt-out. There was an ``allow_out_of_grid`` escape
+    #: hatch; it exported a column named for the *requested* level while holding
+    #: the substituted one, and recorded ``effective == requested`` in
+    #: provenance, so the substitution the RFC exists to surface was invisible
+    #: in the export (review R-2). Phase 1 has no consumer for it.
     out_of_grid = quantiles_in_grid(config.quantile_levels, trained_quantiles)
-    if out_of_grid and not allow_out_of_grid:
+    if out_of_grid:
+        hints = {
+            str(q): nearest_grid_level(q, trained_quantiles)
+            for q in out_of_grid
+            if nearest_grid_level(q, trained_quantiles) is not None
+        }
+        hint = (
+            f" Level(s) {list(hints)} are within 1e-6 of grid member(s) "
+            f"{list(hints.values())}; membership is exact, so pass the grid value itself."
+            if hints
+            else ""
+        )
         _fail(
             "QUANTILE_NOT_IN_GRID",
             f"requested quantile level(s) {out_of_grid} are outside the grid the pinned "
             f"model was trained on. Upstream would silently substitute the nearest trained "
             f"level, producing a column labelled with a level it does not contain, so this "
-            f"request is rejected (RFC C-5).",
+            f"request is rejected (RFC C-5).{hint}",
             out_of_grid=out_of_grid,
             trained_quantiles=[float(q) for q in trained_quantiles],
+            nearest_grid_levels=hints,
         )
 
     # Rule 21 ----------------------------------------------------------------
@@ -621,4 +751,5 @@ def validate_forecast_request(
         max_series_length=max_len,
         min_series_length=min_len,
         requested_quantiles=[float(q) for q in config.quantile_levels],
+        confirmed_frequency=confirmed_frequency,
     )

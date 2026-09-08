@@ -8,6 +8,8 @@ to the fixture being malformed in some other way.
 
 from __future__ import annotations
 
+import inspect
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -15,6 +17,7 @@ import pytest
 from chronos2_pipeline import ForecastConfig, ValidationError
 from chronos2_pipeline.model import EXPECTED_TRAINED_QUANTILES
 from chronos2_pipeline.validation import (
+    DEFAULT_LIMITS,
     MIN_OBSERVATIONS,
     ResourceLimits,
     quantiles_in_grid,
@@ -309,6 +312,31 @@ def test_rule12_prediction_length_at_the_guard_passes(univariate_history):
     assert run(univariate_history, ForecastConfig(prediction_length=12), limits=limits).n_ids == 1
 
 
+def test_the_unroll_gate_owns_the_horizon_under_the_shipped_limits(univariate_history):
+    """R-4: with ``DEFAULT_LIMITS``, not a hand-raised guard.
+
+    ``max_prediction_length`` used to equal the model's native 1024 and was
+    evaluated first, so ``PREDICTION_LENGTH_LIMIT`` always won and
+    ``allow_unroll`` — and therefore ``autoregressive_unrolled`` — could never
+    be exercised on the shipped configuration.
+    """
+    assert DEFAULT_LIMITS.max_prediction_length > MODEL_PREDICTION_LENGTH
+    config = ForecastConfig(prediction_length=MODEL_PREDICTION_LENGTH + 1)
+
+    with pytest.raises(ValidationError) as exc:
+        run(univariate_history, config)
+    assert code_of(exc) == "PREDICTION_LENGTH_EXCEEDS_MODEL"
+
+    assert run(univariate_history, config, allow_unroll=True).n_ids == 1
+
+
+def test_the_resource_guard_still_bites_above_the_default_limit(univariate_history):
+    config = ForecastConfig(prediction_length=DEFAULT_LIMITS.max_prediction_length + 1)
+    with pytest.raises(ValidationError) as exc:
+        run(univariate_history, config, allow_unroll=True)
+    assert code_of(exc) == "PREDICTION_LENGTH_LIMIT"
+
+
 def test_horizon_beyond_the_model_native_length_rejected_by_default(univariate_history):
     config = ForecastConfig(prediction_length=MODEL_PREDICTION_LENGTH + 1)
     with pytest.raises(ValidationError) as exc:
@@ -354,10 +382,42 @@ def test_rule13_in_grid_quantiles_pass(univariate_history, level):
     assert run(univariate_history, config).requested_quantiles == [level]
 
 
-def test_rule14_out_of_grid_can_be_opted_into_explicitly(univariate_history):
+def test_rule14_out_of_grid_has_no_opt_out(univariate_history):
+    """R-2: the escape hatch is gone, and nothing can re-open it by keyword.
+
+    ``allow_out_of_grid=True`` used to let an out-of-grid level through, after
+    which the export carried a ``q<requested>`` column holding the substituted
+    trained level and provenance recorded ``effective == requested``.
+    """
+    assert "allow_out_of_grid" not in inspect.signature(validate_forecast_request).parameters
     config = ForecastConfig(quantile_levels=[0.001, 0.5])
-    result = run(univariate_history, config, allow_out_of_grid=True)
-    assert result.requested_quantiles == [0.001, 0.5]
+    with pytest.raises(TypeError, match="allow_out_of_grid"):
+        run(univariate_history, config, allow_out_of_grid=True)
+    with pytest.raises(ValidationError) as exc:
+        run(univariate_history, config)
+    assert code_of(exc) == "QUANTILE_NOT_IN_GRID"
+
+
+def test_grid_membership_is_exact_not_tolerant():
+    """R-7: match upstream's ``issubset`` gate exactly.
+
+    ``0.1 * 7`` is ``0.7000000000000001``. A 1e-9 tolerance called that a member
+    of the grid; upstream's exact ``issubset`` does not, and silently routes it
+    to ``interpolate_quantiles`` instead of indexing the trained level — the
+    silent substitution RFC C-5 exists to prevent.
+    """
+    almost = 0.1 * 7
+    assert almost != 0.7
+    assert quantiles_in_grid([almost], EXPECTED_TRAINED_QUANTILES) == [almost]
+    assert quantiles_in_grid([0.7], EXPECTED_TRAINED_QUANTILES) == []
+
+
+def test_a_near_miss_level_names_the_grid_member_it_probably_meant(univariate_history):
+    config = ForecastConfig(quantile_levels=[0.5, 0.1 * 7])
+    with pytest.raises(ValidationError) as exc:
+        run(univariate_history, config)
+    assert code_of(exc) == "QUANTILE_NOT_IN_GRID"
+    assert exc.value.details["nearest_grid_levels"] == {str(0.1 * 7): 0.7}
 
 
 def test_grid_membership_uses_the_grid_it_is_given_not_a_constant(univariate_history):
@@ -574,6 +634,70 @@ def test_explicit_frequency_does_not_bypass_regularity_rules(mutate, expected_co
     assert code_of(exc) == expected_code
 
 
+#: R-1. Hourly data, one declared alias each. ``h`` is the only one that agrees
+#: with the data; every other entry must be refused *before* ``predict_df``,
+#: including the calendar aliases that used to fall straight through
+#: ``_check_declared_frequency`` and be handed to upstream unchecked.
+DECLARED_FREQUENCY_OUTCOMES = [
+    ("h", None),
+    ("60min", None),
+    ("D", "FREQUENCY_MISMATCH"),
+    ("15min", "FREQUENCY_MISMATCH"),
+    ("W", "FREQUENCY_NOT_FIXED_WIDTH"),
+    ("ME", "FREQUENCY_NOT_FIXED_WIDTH"),
+    ("B", "FREQUENCY_NOT_FIXED_WIDTH"),
+    ("QS", "FREQUENCY_NOT_FIXED_WIDTH"),
+    ("YE", "FREQUENCY_NOT_FIXED_WIDTH"),
+]
+
+
+@pytest.mark.parametrize(("declared", "expected_code"), DECLARED_FREQUENCY_OUTCOMES)
+def test_declared_frequency_is_checked_against_the_data(
+    univariate_history, declared, expected_code
+):
+    config = ForecastConfig(frequency=declared)
+    if expected_code is None:
+        result = run(univariate_history, config)
+        assert result.confirmed_frequency == declared
+        return
+    with pytest.raises(ValidationError) as exc:
+        run(univariate_history, config)
+    assert code_of(exc) == expected_code
+
+
+def test_only_a_confirmed_frequency_is_carried_forward(univariate_history):
+    """Nothing unconfirmed may reach ``predict_df``'s ``freq`` (RFC C-3)."""
+    assert run(univariate_history, ForecastConfig()).confirmed_frequency is None
+    assert run(univariate_history, ForecastConfig(frequency="h")).confirmed_frequency == "h"
+
+
+@pytest.mark.parametrize(
+    ("freq", "n"), [("MS", 24), ("ME", 24), ("QS", 12), ("YE", 8), ("B", 40)]
+)
+def test_calendar_regular_series_are_named_as_unsupported_not_irregular(freq, n):
+    """R-3: a regular monthly series is not 'irregular', and should not say so."""
+    history = make_series(n=n, freq=freq)
+    with pytest.raises(ValidationError) as exc:
+        run(history, ForecastConfig(prediction_length=2))
+    assert code_of(exc) == "CALENDAR_FREQUENCY_UNSUPPORTED"
+    assert exc.value.details["inferred_alias"]
+
+
+def test_anchored_weekly_data_is_fixed_width_and_still_passes():
+    """A week *is* a constant 7 days, so weekly data is in scope for Phase 1."""
+    result = run(make_series(n=20, freq="W-MON"), ForecastConfig(prediction_length=2))
+    assert result.frequency == pd.Timedelta(days=7)
+
+
+def test_genuinely_irregular_data_is_still_irregular():
+    """The R-3 message must not swallow real irregularity."""
+    history = make_series(n=48)
+    history.loc[20, "timestamp"] += pd.Timedelta(minutes=17)
+    with pytest.raises(ValidationError) as exc:
+        run(history, ForecastConfig())
+    assert code_of(exc) == "IRREGULAR_FREQUENCY"
+
+
 def test_declared_frequency_that_contradicts_the_data_is_rejected(univariate_history):
     with pytest.raises(ValidationError) as exc:
         run(univariate_history, ForecastConfig(frequency="D"))
@@ -589,6 +713,25 @@ def test_unparseable_declared_frequency_is_rejected(univariate_history):
     with pytest.raises(ValidationError) as exc:
         run(univariate_history, ForecastConfig(frequency="every-other-tuesday"))
     assert code_of(exc) == "FREQUENCY_UNPARSEABLE"
+
+
+def test_future_ids_are_compared_by_value_not_by_string():
+    """R-13: historical id ``1`` and future id ``"1"`` are not the same series."""
+    stamps = pd.date_range("2026-01-01", periods=12, freq="h")
+    history = pd.DataFrame(
+        {"series_id": 1, "timestamp": stamps, "target": range(12), "temperature": 1.0}
+    )
+    future = pd.DataFrame(
+        {
+            "series_id": "1",
+            "timestamp": pd.date_range(stamps[-1] + pd.Timedelta(hours=1), periods=2, freq="h"),
+            "temperature": 1.0,
+        }
+    )
+    config = ForecastConfig(prediction_length=2)
+    with pytest.raises(ValidationError) as exc:
+        run(history, config, future_df=future)
+    assert code_of(exc) == "FUTURE_ID_MISMATCH"
 
 
 def test_non_dataframe_history_rejected():

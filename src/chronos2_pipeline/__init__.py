@@ -26,6 +26,7 @@ from .model import (
     LoadedModel,
     ModelIdentity,
     load_pinned_model,
+    resolve_hub_revision,
     verify_snapshot,
 )
 from .provenance import build_provenance, runtime_versions
@@ -47,6 +48,7 @@ __all__ = [
     # model
     "load_pinned_model",
     "verify_snapshot",
+    "resolve_hub_revision",
     "LoadedModel",
     "ModelIdentity",
     "PINNED_MODEL_ID",
