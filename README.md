@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-amazon%2Fchronos--2-ffcc4d?style=flat)](https://huggingface.co/amazon/chronos-2)
 [![Upstream](https://img.shields.io/badge/Upstream-amazon%2Fchronos--forecasting-181717?style=flat&logo=github&logoColor=white)](https://github.com/amazon-science/chronos-forecasting)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 A DIMER pipeline that runs **zero-shot time-series forecasting** with
 [Chronos-2](https://huggingface.co/amazon/chronos-2), a pretrained forecasting foundation model
@@ -108,5 +108,5 @@ tests/                        contract/unit tests (no network) + integration tes
 
 ## Licence
 
-Pipeline code: [MIT](LICENSE), Copyright (c) 2026 Kurt Valcorza. The Chronos-2 model weights
+Pipeline code: [Apache-2.0](LICENSE), Copyright 2026 Kurt Valcorza. The Chronos-2 model weights
 carry their own licence, recorded in [MODEL_CARD.md](MODEL_CARD.md).

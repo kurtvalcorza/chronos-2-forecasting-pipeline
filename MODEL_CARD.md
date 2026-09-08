@@ -151,7 +151,7 @@ exported provenance:
 > 95a9710e2596287d08352589f42634fa5abdf0a7; the repository contains no LICENSE file at that
 > revision
 
-Pipeline code in this repository is [MIT](LICENSE), Copyright (c) 2026 Kurt Valcorza. Data you
+Pipeline code in this repository is [Apache-2.0](LICENSE), Copyright 2026 Kurt Valcorza. Data you
 forecast carries its own licence, which this repository makes no claim about.
 
 # Capabilities and limits
