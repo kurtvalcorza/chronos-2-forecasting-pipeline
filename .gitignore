@@ -22,6 +22,12 @@ venv/
 *.bin
 *.ckpt
 
+# Tutorial/runtime outputs
+outputs/
+examples/sample-data/chronos_multi_series.csv
+examples/sample-data/chronos_covariates_history.csv
+examples/sample-data/chronos_covariates_future.csv
+
 # OS
 .DS_Store
 Thumbs.db
