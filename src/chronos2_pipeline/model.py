@@ -182,6 +182,11 @@ class ModelIdentity:
     revision_confirmation_note: str = "no Hub confirmation was attempted"
     snapshot_path: str = field(default="", compare=False)
 
+    @property
+    def model_id(self) -> str:
+        """Alias for name for compatibility with downstream loaders."""
+        return self.name
+
     def as_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,

@@ -116,6 +116,7 @@ def csv_bytes(frame: pd.DataFrame) -> bytes:
         index=False,
         date_format="%Y-%m-%dT%H:%M:%S",
         float_format="%.4f",
+        lineterminator="\n",
     )
     return text.encode("utf-8")
 

@@ -17,6 +17,7 @@ venv/
 .ipynb_checkpoints/
 
 # Local model / data caches (never commit weights)
+weights/
 .hf_cache/
 *.safetensors
 *.bin
