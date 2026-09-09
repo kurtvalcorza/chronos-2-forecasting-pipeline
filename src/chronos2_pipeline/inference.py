@@ -1,19 +1,33 @@
 """Forecast entry point: validate, predict, normalise, record.
 
-Phase 1 exposes **univariate, multi-ID** forecasting (RFC Modes A and B). Extra
-non-target columns and multiple targets are refused here with a Phase-2 message
-rather than passed through half-supported — the validation layer already
-understands them, but the output contract for covariates is not settled.
+Covers all four RFC forecasting modes: A (univariate), B (multiple independent
+series), C (multivariate / multi-target) and D (covariate-informed, past-only
+and known-future). Phase 2 lifted the multi-target and covariate refusals that
+Phase 1 carried; the validation layer already implemented the rules for both.
 
-Four upstream behaviours are asserted on every call rather than trusted:
+**Numeric covariates only.** See :func:`chronos2_pipeline.validation
+._coerce_covariates` for why a categorical covariate is refused rather than
+handed to an encoder whose route depends on the number of targets.
+
+Five upstream behaviours are asserted on every call rather than trusted:
 
 * ``predict_df`` returns the columns the rename map expects;
+* it returns one row per (series, target, step), in that order — so a forecast
+  cannot be exported under the wrong series or target label;
 * the returned point and quantile values are finite;
 * when ``0.5`` is requested, ``predictions`` is *exactly* the ``"0.5"`` column;
 * every exported ``q<level>`` column names a level the loaded model was actually
   trained on, so no substituted quantile can leave under a borrowed label.
 
-The second is the median oracle (RFC C-2). Upstream 2.3.1 computes it that way
+The second matters only once there is more than one target, and it is the
+multi-target half of RFC C-1: upstream lays the frame out as ``target_name =
+np.tile(np.repeat(target, prediction_length), n_inputs)``
+(``chronos/chronos2/pipeline.py`` L955 in 2.3.1) and the values arrive in that
+same order from a ravelled array. Nothing in the frame ties a row's number back
+to the series it came from, so a change to either order would relabel forecasts
+silently rather than fail.
+
+The fourth is the median oracle (RFC C-2). Upstream 2.3.1 computes it that way
 at ``chronos/chronos2/pipeline.py`` L816-818 — ``# NOTE: the median is returned
 as the mean here`` — while its own docstrings call the value a mean. If a future
 release makes it an actual mean, this assertion fails loudly instead of
@@ -30,7 +44,7 @@ import numpy as np
 import pandas as pd
 
 from .config import ForecastConfig
-from .errors import UpstreamContractError, ValidationError
+from .errors import UpstreamContractError
 from .model import LoadedModel
 from .provenance import build_provenance
 from .validation import DEFAULT_LIMITS, ResourceLimits, validate_forecast_request
@@ -121,6 +135,59 @@ def _assert_raw_contract(raw: pd.DataFrame, config: ForecastConfig) -> None:
         )
 
 
+def _assert_row_layout(
+    raw: pd.DataFrame, config: ForecastConfig, series_ids: list[Any], horizon: int
+) -> None:
+    """One row per (series, target, step), in that order.
+
+    Upstream builds the frame by ravelling a ``[n_tasks, n_variates, horizon]``
+    array against row labels it generates separately — ``target_name`` from
+    ``np.tile(np.repeat(target, prediction_length), n_inputs)`` and the id/
+    timestamp block from ``future.iloc[np.repeat(item_rows, n_variates)]``
+    (``chronos/chronos2/pipeline.py`` L951-957 in 2.3.1). The labels and the
+    values are therefore aligned by construction and by nothing else: if a
+    future release reorders either, every forecast still arrives, each one
+    attached to the wrong series or the wrong target, and no column in the frame
+    would contradict it.
+
+    Series order is upstream's ``PreparedInput`` order, "the order in which
+    item_ids first appear in df" (``preprocess.py`` L164). The validated history
+    is sorted by id, so first appearance is that sorted order — the same list
+    :func:`validate_forecast_request` returns.
+    """
+    targets = config.target_names
+    expected_rows = len(series_ids) * len(targets) * horizon
+    if len(raw) != expected_rows:
+        raise UpstreamContractError(
+            f"predict_df returned {len(raw)} row(s); the pinned contract is one row per "
+            f"(series, target, step) = {len(series_ids)} x {len(targets)} x {horizon} = "
+            f"{expected_rows}. The recorded upstream layout no longer holds, and rows "
+            f"cannot be attributed to a series and target by position."
+        )
+
+    expected_targets = np.tile(np.repeat(targets, horizon), len(series_ids))
+    observed_targets = raw[NORMALIZED_TARGET_COLUMN].to_numpy()
+    if not np.array_equal(observed_targets, expected_targets):
+        first = int(np.argmax(observed_targets != expected_targets))
+        raise UpstreamContractError(
+            f"predict_df returned target_name in an unexpected order: row {first} is "
+            f"{observed_targets[first]!r}, the pinned layout puts "
+            f"{expected_targets[first]!r} there. Values are aligned to these labels by "
+            f"position alone, so a reordering would relabel forecasts silently."
+        )
+
+    expected_ids = np.repeat(np.asarray(series_ids, dtype=object), len(targets) * horizon)
+    observed_ids = raw[config.id_column].to_numpy(dtype=object)
+    if not np.array_equal(observed_ids, expected_ids):
+        first = int(np.argmax(observed_ids != expected_ids))
+        raise UpstreamContractError(
+            f"predict_df returned series ids in an unexpected order: row {first} is "
+            f"{observed_ids[first]!r}, the pinned layout puts {expected_ids[first]!r} "
+            f"there. Values are aligned to these labels by position alone, so a "
+            f"reordering would attribute forecasts to the wrong series."
+        )
+
+
 def _assert_finite(raw: pd.DataFrame, config: ForecastConfig) -> None:
     """A non-finite forecast is a distinct failure, and must be named as one.
 
@@ -192,20 +259,23 @@ def forecast(
     target_policy: str = "strict",
     measure_latency: bool = False,
 ) -> ForecastResult:
-    """Forecast one univariate target across one or more series.
+    """Forecast one or more targets across one or more series.
 
     Parameters
     ----------
     history_df
-        Long-format history: id column, timestamp column, one target column.
-        Any other column is a covariate and is refused in Phase 1.
+        Long-format history: id column, timestamp column, one column per target.
+        Every remaining column is a covariate — past-only unless it also appears
+        in ``future_df``. Covariates must be numeric.
     config
-        User parameters. ``config.target`` must name exactly one column.
+        User parameters. ``config.target`` names one column or several.
     model
         The result of :func:`chronos2_pipeline.model.load_pinned_model`.
     future_df
-        Known-future covariates. Validated if supplied, but Phase 1 has no
-        covariate path, so supplying it is refused.
+        Known-future covariate values: the id and timestamp columns, plus at
+        least one covariate that also exists in ``history_df``, with exactly
+        ``prediction_length`` rows per series starting at the forecast origin.
+        Target columns here are refused as leakage.
     allow_unroll
         Permit ``prediction_length`` beyond the model's native horizon, which
         upstream satisfies by autoregressive unrolling. Off by default; when on,
@@ -218,49 +288,30 @@ def forecast(
     Raises
     ------
     ValidationError
-        Any of RFC rules 1-21, or a Phase-2 feature.
+        Any of RFC rules 1-21.
     UpstreamContractError
         ``predict_df`` no longer matches the recorded pinned contract.
     """
-    if config.n_targets != 1:
-        raise ValidationError(
-            "MULTI_TARGET_NOT_SUPPORTED",
-            f"Phase 1 supports one target per request; got {config.n_targets} "
-            f"({config.target_names}). Multi-target forecasting is Phase 2.",
-            {"target": config.target_names},
-        )
-    if future_df is not None:
-        raise ValidationError(
-            "COVARIATES_NOT_SUPPORTED",
-            "Phase 1 has no known-future covariate path; future_df is Phase 2.",
-            {},
-        )
-
     validated = validate_forecast_request(
         history_df,
         config,
         trained_quantiles=model.trained_quantiles,
         model_context_length=model.model_context_length,
         model_prediction_length=model.model_prediction_length,
-        future_df=None,
+        future_df=future_df,
         limits=limits,
         target_policy=target_policy,
         allow_unroll=allow_unroll,
     )
 
-    if validated.n_covariates:
-        raise ValidationError(
-            "COVARIATES_NOT_SUPPORTED",
-            f"Phase 1 supports the id, timestamp and target columns only; found extra "
-            f"column(s) {validated.covariate_names}, which upstream would silently treat "
-            f"as past covariates. Covariate support is Phase 2.",
-            {"covariates": validated.covariate_names},
-        )
-
     predict_kwargs: dict[str, Any] = {
+        "future_df": validated.future,
         "id_column": config.id_column,
         "timestamp_column": config.timestamp_column,
-        "target": config.target_names[0],
+        #: Always a list, even for one target. Upstream wraps a bare string in a
+        #: list anyway (``pipeline.py`` L900-901), so passing one is the same
+        #: request with the shape stated rather than inferred.
+        "target": list(config.target_names),
         "prediction_length": config.prediction_length,
         "quantile_levels": [float(q) for q in config.quantile_levels],
         "batch_size": config.batch_size,
@@ -281,6 +332,7 @@ def forecast(
     latency_seconds = time.perf_counter() - started
 
     _assert_raw_contract(raw, config)
+    _assert_row_layout(raw, config, validated.series_ids, config.prediction_length)
     _assert_finite(raw, config)
     _assert_median_oracle(raw, config)
     _assert_quantile_labels(config, model.trained_quantiles)
@@ -306,6 +358,8 @@ def forecast(
         n_ids=validated.n_ids,
         n_targets=validated.n_targets,
         n_covariates=validated.n_covariates,
+        past_covariate_names=list(validated.past_covariate_names),
+        known_future_covariate_names=list(validated.known_future_covariate_names),
         requested_context_length=requested_ctx,
         effective_context_length=effective_ctx,
         longest_series_length=validated.max_series_length,

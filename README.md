@@ -15,24 +15,23 @@ complete runtime provenance. Nothing is trained or fine-tuned.
 Chronos-2 is a forecasting **specialist**, not a general-purpose time-series model. See
 [MODEL_CARD.md](MODEL_CARD.md) for capabilities, limits, supply-chain pins, and licence.
 
-## Status: Phase 1 foundation
+## Status: Phase 2 inference
 
 This repository is being built in the phases defined by the RFC
 ([`docs/rfc/0001-chronos-2.md`](docs/rfc/0001-chronos-2.md), issue
-[#1](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/issues/1)). Phase 1 is the
-foundation layer only:
+[#1](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/issues/1)):
 
 | Phase | Scope | State |
 | :-- | :-- | :-- |
-| 1 | RFC in version control, locked environment, pinned + verified loader, model card, DIMER-side validation, univariate inference, raw/normalised output contract tests, real CPU smoke test | **this phase** |
-| 2 | Multi-target, past and known-future covariates, effective context/horizon provenance | not started |
+| 1 | RFC in version control, locked environment, pinned + verified loader, model card, DIMER-side validation, univariate inference, raw/normalised output contract tests, real CPU smoke test | complete |
+| 2 | Multi-target, past and known-future covariates, effective context/horizon provenance | **this phase** |
 | 3 | Sample datasets and cards, BYOD, Colab tutorial, visualisation, evaluation and baselines, export | not started |
 | 4 | Stable serving API, resource limits, latency instrumentation, DIMER packaging contract | not started |
 
-**What works today:** univariate, multi-ID forecasting (RFC Modes A and B). Multi-target and
-covariates are validated and rejected by the public API in Phase 1 — the upstream multi-target
-raw schema is exercised by a contract test, but is not yet a supported entry point.
-`evaluation.py` raises `NotImplementedError` until Phase 3.
+**What works today:** all four RFC forecasting modes — A (univariate), B (multiple independent
+series), C (multi-target) and D (covariate-informed, past-only and known-future). Covariates must
+be numeric; see [Design commitments](#design-commitments). `evaluation.py` raises
+`NotImplementedError` until Phase 3.
 
 ## Quickstart
 
@@ -64,6 +63,18 @@ result.provenance    # model pins, resolved runtime versions, context/horizon se
 `prediction` is the **median (q0.5)** point forecast, never a mean — see
 [Point-forecast semantics](MODEL_CARD.md#point-forecast-semantics).
 
+Several targets, and a covariate whose future values you know, are the same call:
+
+```python
+config = ForecastConfig(target=["demand", "price"], prediction_length=24)
+result = forecast(history, config, model, future_df=known_future)
+```
+
+`history` carries one column per target plus any covariate columns; `known_future` carries the id
+and timestamp columns plus the covariates you know across the horizon, exactly
+`prediction_length` rows per series. Every covariate not in `known_future` is past-only, and
+`result.provenance["inference"]` names both sets separately.
+
 ## Design commitments
 
 These are contract items from the RFC, each backed by a test rather than by documentation:
@@ -88,6 +99,15 @@ These are contract items from the RFC, each backed by a test rather than by docu
   same gate upstream uses.
 - **The rename map is deterministic and tested.** Upstream raw columns map to
   `series_id, timestamp, target_name, prediction, q<level>` by an explicit table.
+- **Rows are checked against the layout, not trusted.** Upstream ties a forecast value to its
+  series and target by row position alone. Every call asserts the frame is one row per
+  `(series, target, step)` in that order, so a reordering upstream fails loudly instead of
+  exporting each forecast under a neighbouring label.
+- **Numeric covariates only.** Upstream accepts a categorical covariate but encodes it by a route
+  that differs between a single-target and a multi-target request, so the same column would mean
+  different things in two otherwise identical exports. Non-numeric covariates are refused
+  (`COVARIATE_NOT_NUMERIC`); `bool` is coerced to `0.0`/`1.0` rather than left on that path.
+  Nulls and non-finite covariate values are refused, as they are for targets.
 - **Provenance travels with the forecast.** Requested and effective context and horizon, model
   limits, `autoregressive_unrolled`, requested and effective quantiles, resolved library
   versions, device and dtype.

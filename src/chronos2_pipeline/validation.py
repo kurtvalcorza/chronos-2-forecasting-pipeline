@@ -41,6 +41,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pandas.api.types as ptypes
 
 from .config import ForecastConfig
 from .errors import ValidationError
@@ -105,6 +106,15 @@ class ValidationResult:
     max_series_length: int
     min_series_length: int
     requested_quantiles: list[float] = field(default_factory=list)
+    #: Covariates whose future values the caller supplied, i.e. the covariate
+    #: columns present in the future table. Upstream decides this the same way:
+    #: ``[c for c in covariate_columns if c in future_df.columns]``
+    #: (``chronos/chronos2/preprocess.py`` L195).
+    known_future_covariate_names: list[str] = field(default_factory=list)
+    #: Covariates the model may read up to the forecast origin and no further.
+    #: Every covariate is one or the other, so these two partition
+    #: :attr:`covariate_names` (RFC Mode D asks that they be distinguished).
+    past_covariate_names: list[str] = field(default_factory=list)
     #: The caller's declared ``frequency`` alias, and **only** when it was
     #: affirmatively confirmed equal to ``frequency``. ``None`` whenever the
     #: caller declared nothing. Nothing else may be forwarded to ``predict_df``,
@@ -123,6 +133,14 @@ class ValidationResult:
     @property
     def n_covariates(self) -> int:
         return len(self.covariate_names)
+
+    @property
+    def n_known_future_covariates(self) -> int:
+        return len(self.known_future_covariate_names)
+
+    @property
+    def n_past_covariates(self) -> int:
+        return len(self.past_covariate_names)
 
 
 def quantiles_in_grid(
@@ -242,6 +260,110 @@ def _coerce_targets(df: pd.DataFrame, targets: list[str], policy: str) -> pd.Dat
             _fail(
                 "TARGET_NOT_FINITE",
                 f"target column {col!r} contains non-finite values (inf/-inf).",
+                column=col,
+            )
+        out[col] = coerced.astype(float)
+    return out
+
+
+def _coerce_covariates(
+    df: pd.DataFrame, covariates: list[str], policy: str, table: str
+) -> pd.DataFrame:
+    """Rules 4 and 19 applied to covariate columns (Phase 2).
+
+    **Phase 2 admits numeric covariates only.** Upstream would accept a string
+    or categorical covariate, but it encodes one by a route that depends on how
+    many targets the request has: ``target_encode = use_target_encoding and
+    n_targets == 1`` (``chronos/chronos2/preprocess.py`` L415), so the same
+    holiday-name column is target-encoded in a single-target request and
+    ordinal-encoded in a two-target one. A covariate whose meaning changes with
+    an unrelated field of the request is not a contract this phase can export
+    honestly, so non-numeric covariates are refused by name
+    (``COVARIATE_NOT_NUMERIC``) rather than silently encoded. "Numeric" is
+    judged the way :func:`_coerce_targets` judges it — by whether coercion loses
+    a value, not by dtype — so a column of numeric strings from a CSV is
+    accepted and a column of category labels is not. Temporal columns are named
+    separately, before that coercion can turn them into nanoseconds.
+
+    ``bool`` is deliberately treated as numeric and coerced to ``0.0``/``1.0``.
+    Upstream classes it as *categorical* (``is_numeric_dtype(c) and not
+    is_bool_dtype(c)`` at preprocess.py L188), so an unconverted boolean flag
+    would take exactly the target-count-dependent path above. Coercing it here
+    pins it to the numeric path in both cases, which is also the reading the
+    RFC's own covariate example uses (``holiday,0``).
+
+    Nulls and non-finite values are refused for the same reason they are in
+    targets: v1 does not impute, and upstream would carry a NaN covariate into
+    the forecast without complaint.
+    """
+    if policy != "strict":
+        _fail(
+            "TARGET_POLICY_UNSUPPORTED",
+            f"covariate coercion policy {policy!r} is not supported in v1; only 'strict' is.",
+            policy=policy,
+        )
+    reason = (
+        "upstream would encode a categorical covariate by a route that differs between a "
+        "single-target and a multi-target request, so its exported meaning would depend on "
+        "how many targets were asked for"
+    )
+    out = df.copy()
+    for col in covariates:
+        original = out[col]
+        if ptypes.is_bool_dtype(original):
+            coerced = original.astype(float)
+        elif ptypes.is_numeric_dtype(original):
+            coerced = pd.to_numeric(original, errors="coerce")
+        elif ptypes.is_datetime64_any_dtype(original) or ptypes.is_timedelta64_dtype(original):
+            #: Named before the coercion below, which would turn a temporal column into
+            #: nanoseconds-since-epoch and accept it as an ordinary numeric covariate.
+            _fail(
+                "COVARIATE_NOT_NUMERIC",
+                f"{table} covariate column {col!r} has dtype {original.dtype}. A temporal "
+                f"column is not a numeric covariate; coercing it would feed the model "
+                f"nanoseconds since the epoch. Derive the feature you mean (hour of day, "
+                f"days to event) as a numeric column instead.",
+                table=table,
+                column=col,
+                dtype=str(original.dtype),
+            )
+        else:
+            #: Same policy as targets: a column of numeric strings is coerced, a column
+            #: that is genuinely categorical is refused. Judged by whether coercion loses
+            #: a value, not by dtype, so a CSV read as ``object`` is not refused for it.
+            coerced = pd.to_numeric(original, errors="coerce")
+            newly_bad = coerced.isna() & original.notna()
+            if newly_bad.any():
+                offenders = original[newly_bad].unique()[:5].tolist()
+                _fail(
+                    "COVARIATE_NOT_NUMERIC",
+                    f"{table} covariate column {col!r} contains "
+                    f"{int(newly_bad.sum())} value(s) that are not numeric-coercible; e.g. "
+                    f"{offenders}. Phase 2 supports numeric covariates only: {reason}. "
+                    f"Encode it yourself (e.g. 0/1 indicator columns) to pin the "
+                    f"representation.",
+                    table=table,
+                    column=col,
+                    dtype=str(original.dtype),
+                    n_offending=int(newly_bad.sum()),
+                    examples=[str(v) for v in offenders],
+                )
+        if coerced.isna().any():
+            _fail(
+                "COVARIATE_MISSING_VALUES",
+                f"{table} covariate column {col!r} contains "
+                f"{int(coerced.isna().sum())} missing value(s). v1 rejects gaps and nulls "
+                f"rather than interpolating them; upstream would carry the NaN into the "
+                f"forecast without complaint.",
+                table=table,
+                column=col,
+                n_missing=int(coerced.isna().sum()),
+            )
+        if not np.isfinite(coerced.to_numpy(dtype=float)).all():
+            _fail(
+                "COVARIATE_NOT_FINITE",
+                f"{table} covariate column {col!r} contains non-finite values (inf/-inf).",
+                table=table,
                 column=col,
             )
         out[col] = coerced.astype(float)
@@ -435,7 +557,9 @@ def _validate_future(
     config: ForecastConfig,
     frequency: pd.Timedelta,
     series_ids: list[Any],
-) -> pd.DataFrame:
+    covariates: list[str],
+    target_policy: str,
+) -> tuple[pd.DataFrame, list[str]]:
     _require_columns(
         future_df,
         [config.id_column, config.timestamp_column],
@@ -463,8 +587,28 @@ def _validate_future(
             historical_columns=list(history.columns),
         )
 
+    #: Which covariates the future table actually carries — upstream's own rule
+    #: (``preprocess.py`` L195). A future table that carries none is a no-op
+    #: upstream: every covariate stays past-only and the table changes nothing
+    #: but the cost of validating it. Supplying one is a statement that some
+    #: covariate is known ahead, so an empty one is refused rather than
+    #: silently ignored.
+    known_future = [c for c in covariates if c in future_df.columns]
+    if not known_future:
+        _fail(
+            "FUTURE_TABLE_HAS_NO_COVARIATES",
+            f"future table carries no covariate column: it has "
+            f"{sorted(set(future_df.columns) - {config.id_column, config.timestamp_column})!r} "
+            f"beyond the id and timestamp columns, and the historical covariates are "
+            f"{covariates!r}. Upstream would treat every covariate as past-only and the "
+            f"table would change nothing, so it is refused rather than silently ignored.",
+            future_columns=list(future_df.columns),
+            historical_covariates=covariates,
+        )
+
     future = future_df.copy()
     future[config.timestamp_column] = _parse_timestamps(future, config.timestamp_column, "future")
+    future = _coerce_covariates(future, known_future, target_policy, "future")
 
     if future[config.id_column].isna().any():
         _fail(
@@ -524,7 +668,7 @@ def _validate_future(
                 observed_last=str(observed[-1]) if len(observed) else None,
             )
 
-    return future
+    return future, known_future
 
 
 # --------------------------------------------------------------------------
@@ -644,6 +788,12 @@ def validate_forecast_request(
                 limit=limit,
             )
 
+    #: Rules 4 and 19 for covariates. After the guards above so that a request
+    #: with more covariates than the limit allows is still reported as a
+    #: resource-limit breach rather than as whichever of them is first
+    #: non-numeric.
+    history = _coerce_covariates(history, covariates, target_policy, "historical")
+
     # Rules 7, 8, 9, 10 ------------------------------------------------------
     frequency, max_len, min_len = _shared_frequency(history, config, limits)
     confirmed_frequency = _check_declared_frequency(config.frequency, frequency)
@@ -735,8 +885,11 @@ def validate_forecast_request(
 
     # Rules 15-18 ------------------------------------------------------------
     future = None
+    known_future_covariates: list[str] = []
     if future_df is not None:
-        future = _validate_future(future_df, history, config, frequency, series_ids)
+        future, known_future_covariates = _validate_future(
+            future_df, history, config, frequency, series_ids, covariates, target_policy
+        )
 
     _ = model_context_length  # recorded by provenance; no DIMER-side rule needs it here
 
@@ -751,5 +904,7 @@ def validate_forecast_request(
         max_series_length=max_len,
         min_series_length=min_len,
         requested_quantiles=[float(q) for q in config.quantile_levels],
+        known_future_covariate_names=known_future_covariates,
+        past_covariate_names=[c for c in covariates if c not in known_future_covariates],
         confirmed_frequency=confirmed_frequency,
     )

@@ -158,8 +158,11 @@ def test_cpu_smoke_predictions_are_in_the_neighbourhood_of_the_history(smoke_res
 
 
 def test_raw_multi_target_output_preserves_target_name(loaded):
-    """Guardrail 5 / RFC C-1. The public API is univariate in Phase 1, so this
-    calls ``predict_df`` directly on a 2-target frame."""
+    """Guardrail 5 / RFC C-1, asserted against ``predict_df`` directly.
+
+    Phase 2 reaches the same path through :func:`forecast`; this stays on the
+    raw call so the recorded upstream schema is checked without the normalising
+    layer in between."""
     history = pd.concat(
         [make_series("A", n=64, seed=1), make_series("B", n=64, seed=2)], ignore_index=True
     )
@@ -261,3 +264,134 @@ def test_loader_still_refuses_a_mutable_revision_with_the_cache_warm():
 
     with pytest.raises(ModelSourceError):
         load_pinned_model(revision="main", device="cpu")
+
+
+# --------------------------------------------------------------------------
+# Phase 2 — Modes C and D against the real weights
+# --------------------------------------------------------------------------
+
+
+def covariate_history(n: int = 64) -> pd.DataFrame:
+    """Two series, one target, one covariate that genuinely drives the target."""
+    frames = []
+    for i, sid in enumerate(("A", "B")):
+        block = make_series(sid, n=n, seed=i + 1)
+        temperature = 20.0 + 5.0 * np.sin(np.arange(n) / 6.0)
+        block["temperature"] = temperature
+        block["target"] = block["target"] + 2.0 * temperature
+        frames.append(block)
+    return pd.concat(frames, ignore_index=True)
+
+
+def future_table(history: pd.DataFrame, horizon: int, column: str) -> pd.DataFrame:
+    """Known-future values for one covariate, aligned to the forecast origin."""
+    blocks = []
+    for sid, block in history.groupby("series_id", sort=True):
+        stamps = pd.date_range(
+            block["timestamp"].max() + pd.Timedelta("1h"), periods=horizon, freq="h"
+        )
+        blocks.append(
+            pd.DataFrame({"series_id": sid, "timestamp": stamps, column: 20.0})
+        )
+    return pd.concat(blocks, ignore_index=True)
+
+
+def test_multi_target_through_the_public_api(loaded):
+    """Mode C end to end: two targets, two series, real weights."""
+    history = pd.concat(
+        [make_series("A", n=64, seed=1), make_series("B", n=64, seed=2)], ignore_index=True
+    )
+    history["target2"] = history["target"] * 1.5
+    horizon = 8
+    config = ForecastConfig(target=["target", "target2"], prediction_length=horizon)
+
+    result = forecast(history, config, loaded)
+
+    assert list(result.forecast.columns) == normalized_columns(config)
+    assert len(result.forecast) == 2 * 2 * horizon
+    #: The layout oracle already ran inside forecast(); this states the
+    #: consequence it protects — each block is the target it is labelled with.
+    assert list(result.forecast["target_name"][:horizon].unique()) == ["target"]
+    assert list(result.forecast["target_name"][horizon : 2 * horizon].unique()) == ["target2"]
+    by_target = result.forecast.groupby("target_name")["prediction"].mean()
+    assert by_target["target2"] > by_target["target"]
+    assert result.inference["n_targets"] == 2
+    assert result.inference["n_covariates"] == 0
+
+
+def test_a_past_only_covariate_runs_and_is_recorded_as_past_only(loaded):
+    """Mode D, past-only: no future table, so the covariate stops at the origin."""
+    history = covariate_history()
+    config = ForecastConfig(prediction_length=8)
+
+    result = forecast(history, config, loaded)
+
+    assert len(result.forecast) == 2 * 8
+    assert np.isfinite(result.forecast["prediction"]).all()
+    assert result.inference["past_covariate_names"] == ["temperature"]
+    assert result.inference["known_future_covariate_names"] == []
+
+
+def test_a_known_future_covariate_runs_and_is_recorded_as_known_future(loaded):
+    """Mode D, known-future: the same column, now supplied across the horizon."""
+    history = covariate_history()
+    horizon = 8
+    future = future_table(history, horizon, "temperature")
+    config = ForecastConfig(prediction_length=horizon)
+
+    result = forecast(history, config, loaded, future)
+
+    assert len(result.forecast) == 2 * horizon
+    assert np.isfinite(result.forecast["prediction"]).all()
+    assert result.inference["known_future_covariate_names"] == ["temperature"]
+    assert result.inference["past_covariate_names"] == []
+
+
+def test_the_known_future_covariate_actually_changes_the_forecast(loaded):
+    """Otherwise the whole Mode D path could be a no-op and every test above
+    would still pass. The covariate drives the target at ``+2.0`` per unit, so
+    two future tables differing by 10 degrees must not produce one forecast."""
+    history = covariate_history()
+    horizon = 8
+    config = ForecastConfig(prediction_length=horizon)
+
+    cold = future_table(history, horizon, "temperature")
+    hot = cold.copy()
+    hot["temperature"] = 30.0
+
+    cold_result = forecast(history, config, loaded, cold)
+    hot_result = forecast(history, config, loaded, hot)
+
+    assert not np.allclose(
+        cold_result.forecast["prediction"].to_numpy(),
+        hot_result.forecast["prediction"].to_numpy(),
+    )
+
+
+def test_upstream_accepts_a_categorical_covariate_that_dimer_refuses(loaded):
+    """Documents WHY the covariate contract is numeric-only.
+
+    Upstream takes a string covariate without complaint and encodes it — by
+    target encoding for a single target and ordinal encoding for several
+    (``preprocess.py`` L415). DIMER refuses it before ``predict_df`` rather than
+    export a column whose meaning depends on how many targets were requested.
+    """
+    history = covariate_history()
+    history["weather"] = np.where(history["temperature"] > 20.0, "warm", "cool")
+    config = ForecastConfig(prediction_length=8)
+
+    with pytest.raises(ValidationError) as exc:
+        forecast(history, config, loaded)
+    assert exc.value.code == "COVARIATE_NOT_NUMERIC"
+
+    #: Upstream, called directly with the same frame, does not object.
+    raw = loaded.pipeline.predict_df(
+        history,
+        id_column="series_id",
+        timestamp_column="timestamp",
+        target="target",
+        prediction_length=8,
+        quantile_levels=[0.5],
+        validate_inputs=True,
+    )
+    assert len(raw) == 2 * 8

@@ -274,11 +274,53 @@ data itself passes.
 v1 rejects gaps and missing target values rather than interpolating them. Silent interpolation of
 irregular or gappy input is explicitly out of scope.
 
+## Covariates
+
+Phase 2 supports both covariate kinds the RFC distinguishes:
+
+- **past-only** — any numeric column in the history that is not the id, the timestamp, or a
+  target. The model reads it up to the forecast origin and no further.
+- **known-future** — a past covariate whose values you also supply across the horizon, in a
+  future table carrying the id and timestamp columns plus that covariate, exactly
+  `prediction_length` rows per series starting at the forecast origin. Target columns there are
+  refused as leakage; a future table carrying no covariate at all is refused rather than
+  silently ignored, because upstream would treat every covariate as past-only and the table
+  would change nothing.
+
+`provenance["inference"]` records `past_covariate_names` and `known_future_covariate_names`
+separately. The distinction is not recoverable from the forecast frame — neither kind appears in
+the output — and it is the difference between a forecast that could have been made in advance and
+one that could not.
+
+**Covariates must be numeric.** Upstream accepts a string or categorical covariate, but encodes
+it by a route that depends on the request: `target_encode = use_target_encoding and n_targets == 1`
+(`chronos/chronos2/preprocess.py` L415), so the same column is target-encoded in a single-target
+request and ordinal-encoded in a two-target one. A covariate whose representation changes with an
+unrelated field of the request cannot be exported honestly, so this pipeline refuses it
+(`COVARIATE_NOT_NUMERIC`) rather than encoding it silently. `bool` is coerced to `0.0`/`1.0`,
+because upstream classes it as categorical (`preprocess.py` L188) and it would otherwise take
+exactly that route. Nulls and non-finite covariate values are refused on the same basis as
+targets: v1 does not impute, and upstream would carry a NaN covariate into the forecast without
+complaint.
+
+Causal interpretation remains out of scope — see below.
+
+## Row layout
+
+Upstream builds the output frame by ravelling a `[n_tasks, n_variates, horizon]` array against
+row labels it generates separately (`chronos/chronos2/pipeline.py` L951-957). Values and labels
+are therefore aligned by row position and by nothing else: were either order to change, every
+forecast would still arrive, each attached to the wrong series or the wrong target, and no column
+in the frame would contradict it. Every call asserts the frame is one row per
+`(series, target, step)` in that order, against the series list validation resolved, and refuses
+it otherwise (`UpstreamContractError`).
+
 ## Not supported
 
 - Fine-tuning or pretraining — zero-shot inference only.
 - Online or streaming weight updates.
 - Causal interpretation of covariates. A covariate that helps the forecast is not thereby a cause.
+- Categorical or string covariates — see [Covariates](#covariates).
 - Calibration guarantees. Quantiles are the model's, uncalibrated for your data.
 - Chronos-Bolt or older Chronos checkpoints.
 - `cross_learning=true` as a default or tutorial workflow. When enabled, results depend on batch
