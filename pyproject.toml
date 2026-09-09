@@ -54,3 +54,9 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebook cells execute independently and the tutorial bootstrap intentionally keeps
+# stdlib imports grouped for readability. Runtime correctness is enforced by the
+# executable notebook CI gate rather than import-order cosmetics.
+"*.ipynb" = ["I001"]
