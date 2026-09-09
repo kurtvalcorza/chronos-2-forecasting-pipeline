@@ -166,7 +166,13 @@ def test_pinball_loss_uses_requested_quantile_semantics() -> None:
 
     result = evaluate_forecast(forecast, truth, config)
 
-    losses = dict(zip(result.quantiles["quantile"], result.quantiles["pinball_loss"]))
+    losses = dict(
+        zip(
+            result.quantiles["quantile"],
+            result.quantiles["pinball_loss"],
+            strict=True,
+        )
+    )
     assert losses[0.1] == pytest.approx(0.2)
     assert losses[0.5] == pytest.approx(0.0)
     assert losses[0.9] == pytest.approx(0.2)
