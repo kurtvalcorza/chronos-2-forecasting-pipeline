@@ -17,10 +17,17 @@ venv/
 .ipynb_checkpoints/
 
 # Local model / data caches (never commit weights)
+weights/
 .hf_cache/
 *.safetensors
 *.bin
 *.ckpt
+
+# Tutorial/runtime outputs
+outputs/
+examples/sample-data/chronos_multi_series.csv
+examples/sample-data/chronos_covariates_history.csv
+examples/sample-data/chronos_covariates_future.csv
 
 # OS
 .DS_Store

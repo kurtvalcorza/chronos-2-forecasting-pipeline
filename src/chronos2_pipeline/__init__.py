@@ -6,6 +6,9 @@ multi-ID inference, deterministic output normalisation, provenance export.
 Phase 2 (inference): multi-target forecasting, past-only and known-future
 covariates, and the row-layout oracle that keeps a forecast attached to the
 series and target it was made for.
+
+Phase 3 (tutorial/evaluation): chronological holdout evaluation, naive
+baselines, deterministic sample assets, and the live tutorial path.
 """
 
 from __future__ import annotations
@@ -18,6 +21,14 @@ from .errors import (
     ModelSourceError,
     UpstreamContractError,
     ValidationError,
+)
+from .evaluation import (
+    EvaluationResult,
+    HoldoutSplit,
+    chronological_holdout,
+    evaluate_forecast,
+    last_value_baseline,
+    seasonal_naive_baseline,
 )
 from .inference import ForecastResult, build_rename_map, forecast, normalized_columns
 from .model import (
@@ -73,6 +84,13 @@ __all__ = [
     "ForecastResult",
     "build_rename_map",
     "normalized_columns",
+    # evaluation
+    "chronological_holdout",
+    "evaluate_forecast",
+    "last_value_baseline",
+    "seasonal_naive_baseline",
+    "HoldoutSplit",
+    "EvaluationResult",
     # provenance
     "build_provenance",
     "runtime_versions",

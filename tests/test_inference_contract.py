@@ -59,7 +59,6 @@ def raw_frame(
     frame["predictions"] = (
         frame[median_col].to_numpy() if point_equals_median else frame[median_col].to_numpy() + 1.0
     )
-    # Upstream appends `predictions` before the quantile columns; reorder to match.
     ordered = [
         id_column,
         timestamp_column,
@@ -158,7 +157,6 @@ def test_forecast_normalises_the_raw_frame():
     assert list(result.forecast.columns) == normalized_columns(config)
     assert len(result.forecast) == 2 * 8
     assert sorted(result.forecast["series_id"].unique()) == ["A", "B"]
-    # Values are carried, not recomputed.
     np.testing.assert_array_equal(
         result.forecast["prediction"].to_numpy(), frame["predictions"].to_numpy()
     )
@@ -199,7 +197,7 @@ def test_predict_df_receives_the_sorted_normalised_history():
     forecast(history, ForecastConfig(prediction_length=4, quantile_levels=[0.5]), model)
     passed = model.pipeline.calls[0]["df"]
     assert list(passed["series_id"].unique()) == ["A", "B"]
-    assert passed["timestamp"].is_monotonic_increasing is False  # two series, resets at B
+    assert passed["timestamp"].is_monotonic_increasing is False
     assert passed.groupby("series_id")["timestamp"].apply(lambda s: s.is_monotonic_increasing).all()
 
 
@@ -261,9 +259,6 @@ def test_missing_raw_column_raises_upstream_contract_error(dropped):
 
 
 def test_raw_multi_target_frame_keeps_target_name():
-    """Guardrail 5: the multi-target raw schema is a Phase 1 contract even though
-    the public API is univariate. The shape is asserted here; the real upstream
-    frame is asserted in the integration suite."""
     frame = raw_frame(["A", "B"], horizon=4, quantiles=[0.5], targets=["y1", "y2"])
     assert "target_name" in frame.columns
     assert len(frame) == 2 * 2 * 4
@@ -279,10 +274,8 @@ def test_irregular_series_with_explicit_frequency_never_reaches_predict_df(senti
     history = make_series(n=48)
     history.loc[20, "timestamp"] += pd.Timedelta(minutes=17)
     config = ForecastConfig(prediction_length=8, frequency="h")
-
     with pytest.raises(ValidationError) as exc:
         forecast(history, config, sentinel_model)
-
     assert exc.value.code == "IRREGULAR_FREQUENCY"
     assert sentinel_model.pipeline.called is False
 
@@ -304,19 +297,17 @@ def test_out_of_grid_quantile_never_reaches_predict_df(sentinel_model):
 
 
 def test_the_sentinel_pipeline_would_have_flagged_a_leak():
-    """Proves the sentinel is a real oracle: calling it fails loudly."""
     sentinel = SentinelPipeline()
     with pytest.raises(AssertionError, match="predict_df was called"):
         sentinel.predict_df(pd.DataFrame())
 
 
 # --------------------------------------------------------------------------
-# Phase 1 boundaries
+# Phase 2 supported modes
 # --------------------------------------------------------------------------
 
 
 def test_multi_target_reaches_predict_df_as_a_list():
-    """Phase 2 Mode C. Phase 1 refused this with ``MULTI_TARGET_NOT_SUPPORTED``."""
     frame = raw_frame(["A"], horizon=4, quantiles=[0.5], targets=["target", "target2"])
     model = model_returning(frame)
     history = make_series()
@@ -332,7 +323,6 @@ def test_multi_target_reaches_predict_df_as_a_list():
 
 
 def test_a_past_only_covariate_reaches_predict_df_and_is_recorded_as_past_only():
-    """Phase 2 Mode D. Phase 1 refused any extra column with ``COVARIATES_NOT_SUPPORTED``."""
     frame = raw_frame(["A"], horizon=4, quantiles=[0.5])
     model = model_returning(frame)
     history = make_series()
@@ -369,14 +359,11 @@ def test_a_known_future_covariate_is_forwarded_and_recorded_as_known_future():
     forwarded = model.pipeline.calls[0]["future_df"]
     assert forwarded is not None
     assert list(forwarded["holiday"]) == [1.0, 0.0, 0.0, 1.0]
-    #: The split is the point: ``holiday`` is known across the horizon,
-    #: ``temperature`` only up to the origin, and only provenance says so.
     assert result.inference["known_future_covariate_names"] == ["holiday"]
     assert result.inference["past_covariate_names"] == ["temperature"]
 
 
 def test_a_future_table_carrying_no_covariate_is_refused(sentinel_model):
-    """Upstream would silently ignore it: every covariate stays past-only."""
     history = make_series()
     history["temperature"] = 20.0
     future = pd.DataFrame(
@@ -399,26 +386,12 @@ def test_a_future_table_carrying_no_covariate_is_refused(sentinel_model):
 
 
 def test_a_categorical_covariate_is_refused_before_predict_df(sentinel_model):
-    """Upstream encodes it by a route that depends on the number of targets."""
     history = make_series()
     history["weather"] = "sunny"
     with pytest.raises(ValidationError) as exc:
         forecast(history, ForecastConfig(prediction_length=4), sentinel_model)
     assert exc.value.code == "COVARIATE_NOT_NUMERIC"
     assert sentinel_model.pipeline.called is False
-
-
-def test_evaluation_is_an_explicit_phase_3_stub():
-    from chronos2_pipeline import evaluation
-
-    stubs = (
-        evaluation.evaluate_forecast,
-        evaluation.seasonal_naive_baseline,
-        evaluation.last_value_baseline,
-    )
-    for fn in stubs:
-        with pytest.raises(NotImplementedError, match="Phase 3"):
-            fn()
 
 
 # --------------------------------------------------------------------------
@@ -428,12 +401,6 @@ def test_evaluation_is_an_explicit_phase_3_stub():
 
 @pytest.mark.parametrize("declared", ["W", "ME", "B", "QS", "YE"])
 def test_a_calendar_frequency_never_reaches_predict_df(declared):
-    """R-1: upstream builds the horizon index from ``freq`` without checking it.
-
-    Before the fix, hourly history declared ``frequency="ME"`` was validated as
-    hourly, forwarded as ``freq="ME"``, and came back stamped at month ends —
-    a valid-looking DIMER export on the wrong time axis, with no error.
-    """
     sentinel = SentinelPipeline()
     model = FakeLoadedModel(pipeline=sentinel, identity=make_identity())
     config = ForecastConfig(prediction_length=4, frequency=declared)
@@ -445,7 +412,6 @@ def test_a_calendar_frequency_never_reaches_predict_df(declared):
 
 @pytest.mark.parametrize("declared", [None, "h", "60min"])
 def test_only_a_confirmed_frequency_is_forwarded_to_predict_df(declared):
-    """Whatever reaches ``freq`` must have been compared against the data first."""
     quantiles = [0.1, 0.5, 0.9]
     pipeline = FakePipeline(raw_frame(["A"], 4, quantiles))
     model = FakeLoadedModel(pipeline=pipeline, identity=make_identity())
@@ -457,7 +423,6 @@ def test_only_a_confirmed_frequency_is_forwarded_to_predict_df(declared):
 
 
 def test_forecast_has_no_out_of_grid_escape_hatch():
-    """R-2: the flag that produced a mislabelled ``q<requested>`` column is gone."""
     assert "allow_out_of_grid" not in inspect.signature(forecast).parameters
     pipeline = FakePipeline(raw_frame(["A"], 4, [0.001, 0.5]))
     model = FakeLoadedModel(pipeline=pipeline, identity=make_identity())
@@ -471,22 +436,15 @@ def test_forecast_has_no_out_of_grid_escape_hatch():
 
 
 def test_no_quantile_column_may_be_labelled_with_a_level_outside_the_trained_grid():
-    """R-2: the label guard, exercised directly.
-
-    Upstream substitutes the nearest trained level and returns it under the
-    requested name, so a mislabelled column is indistinguishable from a correct
-    one downstream. This guard makes the export refuse rather than rename.
-    """
     config = ForecastConfig(quantile_levels=[0.001, 0.5])
     with pytest.raises(UpstreamContractError, match="q0.001"):
         _assert_quantile_labels(config, EXPECTED_TRAINED_QUANTILES)
-    # the in-grid case must not fire, or the guard proves nothing
-    _assert_quantile_labels(ForecastConfig(quantile_levels=[0.1, 0.5, 0.9]),
-                            EXPECTED_TRAINED_QUANTILES)
+    _assert_quantile_labels(
+        ForecastConfig(quantile_levels=[0.1, 0.5, 0.9]), EXPECTED_TRAINED_QUANTILES
+    )
 
 
 def test_a_nan_forecast_is_reported_as_non_finite_not_as_a_broken_median():
-    """R-9: ``NaN == NaN`` is ``False``, which used to read as a median break."""
     quantiles = [0.1, 0.5, 0.9]
     frame = raw_frame(["A"], 4, quantiles)
     frame.loc[0, "predictions"] = np.nan
@@ -502,7 +460,6 @@ def test_a_nan_forecast_is_reported_as_non_finite_not_as_a_broken_median():
 
 
 def test_the_median_oracle_still_fires_when_the_median_really_diverges():
-    """The R-9 change must not blunt the oracle it sits in front of."""
     quantiles = [0.1, 0.5, 0.9]
     pipeline = FakePipeline(raw_frame(["A"], 4, quantiles, point_equals_median=False))
     model = FakeLoadedModel(pipeline=pipeline, identity=make_identity())
@@ -514,13 +471,6 @@ def test_the_median_oracle_still_fires_when_the_median_really_diverges():
 # --------------------------------------------------------------------------
 # Phase 2 — the (series, target, step) row-layout oracle
 # --------------------------------------------------------------------------
-#
-# Upstream aligns forecast values to their series and target labels by row
-# position and nothing else (``pipeline.py`` L951-957). Each mutation below
-# leaves a frame that is well-formed in every other respect — right columns,
-# right row count, finite values, ``predictions`` still equal to ``"0.5"`` —
-# and wrong only in which row a value sits on. Without the oracle every one of
-# them exports cleanly under the wrong label.
 
 
 def multi_target_setup(targets=("target", "target2"), series=("A", "B"), horizon=3):
@@ -540,7 +490,6 @@ def multi_target_setup(targets=("target", "target2"), series=("A", "B"), horizon
 
 
 def test_the_canonical_multi_target_layout_is_accepted():
-    """The passing fixture each mutation below is a mutation of."""
     history, config, frame = multi_target_setup()
     result = forecast(history, config, model_returning(frame))
     assert len(result.forecast) == 2 * 2 * 3
@@ -550,7 +499,6 @@ def test_the_canonical_multi_target_layout_is_accepted():
 
 
 def test_a_swapped_target_block_is_refused():
-    """The forecasts arrive, each under the other target's name."""
     history, config, frame = multi_target_setup()
     frame["target_name"] = ["target2"] * 3 + ["target"] * 3 + ["target2"] * 3 + ["target"] * 3
     with pytest.raises(UpstreamContractError, match="target_name in an unexpected order"):
@@ -558,7 +506,6 @@ def test_a_swapped_target_block_is_refused():
 
 
 def test_a_swapped_series_block_is_refused():
-    """Series B's forecast exported as series A's."""
     history, config, frame = multi_target_setup()
     frame["series_id"] = ["B"] * 6 + ["A"] * 6
     with pytest.raises(UpstreamContractError, match="series ids in an unexpected order"):
@@ -566,14 +513,12 @@ def test_a_swapped_series_block_is_refused():
 
 
 def test_a_frame_with_the_wrong_row_count_is_refused():
-    """One target's rows dropped: the remaining values would shift onto it."""
     history, config, frame = multi_target_setup()
     with pytest.raises(UpstreamContractError, match="one row per"):
         forecast(history, config, model_returning(frame.iloc[:-3].copy()))
 
 
 def test_the_layout_oracle_also_covers_the_single_target_case():
-    """Two series, one target: the series order still has to hold."""
     history, config, frame = multi_target_setup(targets=("target",))
     frame["series_id"] = ["B"] * 3 + ["A"] * 3
     with pytest.raises(UpstreamContractError, match="series ids in an unexpected order"):
@@ -581,7 +526,6 @@ def test_the_layout_oracle_also_covers_the_single_target_case():
 
 
 def test_integer_series_ids_survive_the_layout_oracle():
-    """The id comparison is by value; an int id must not be coerced to str."""
     stamps = pd.date_range("2026-01-01", periods=24, freq="h")
     history = pd.concat(
         [

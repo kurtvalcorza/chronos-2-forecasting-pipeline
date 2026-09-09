@@ -37,18 +37,19 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
 
-      # No network, no model weights. These must pass on every push and PR.
+      # No network, no model weights. Includes sample reproducibility,
+      # evaluation leakage oracles and notebook source/structure checks.
       - name: Contract and unit tests
         run: uv run pytest -m "not integration"
 
   integration:
-    name: CPU smoke against the pinned weights
-    # Downloads ~478 MB of weights, so it does not run on every PR. It is the
-    # only job that checks the pinned upstream contract still holds, so it must
-    # run before anything ships from main.
+    name: CPU smoke + live tutorial against pinned weights
+    # Downloads ~478 MB of weights, so it does not run on every PR. This job
+    # checks both the library integration suite and the exact notebook code-cell
+    # path before anything ships from main.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -73,3 +74,15 @@ jobs:
 
       - name: Integration tests (CPU)
         run: uv run pytest -m integration
+
+      - name: Execute live tutorial code cells top-to-bottom
+        run: >-
+          uv run python tools/run_notebook.py
+          tutorials/chronos_2_forecasting_colab.ipynb
+
+      - name: Upload tutorial evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: chronos-2-live-tutorial-${{ github.sha }}
+          path: outputs/
+          if-no-files-found: error

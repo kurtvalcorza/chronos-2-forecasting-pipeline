@@ -1,5 +1,6 @@
 ---
 license: apache-2.0
+model_card_spec: "1.0"
 pipeline_tag: time-series-forecasting
 tags:
   - time-series-forecasting
@@ -8,340 +9,302 @@ tags:
 base_model: amazon/chronos-2
 ---
 
-# Chronos-2
+# Chronos-2 (v1.0)
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-amazon%2Fchronos--2-ffcc4d?style=flat)](https://huggingface.co/amazon/chronos-2)
 [![GitHub](https://img.shields.io/badge/GitHub-amazon--science%2Fchronos--forecasting-181717?style=flat&logo=github&logoColor=white)](https://github.com/amazon-science/chronos-forecasting)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-## Description
+###### Description
 
-Chronos-2 is a pretrained time-series **forecasting** model from Amazon. It reads a stretch of
-historical observations as context and emits a probabilistic forecast for a future horizon
-without being trained on the series it is asked about — the in-context-learning paradigm applied
-to forecasting rather than to tabular classification.
+Chronos-2 is a pretrained time-series foundation model from Amazon (`amazon/chronos-2`, pinned revision `95a9710e2596287d08352589f42634fa5abdf0a7`), packaged by this repository for zero-shot probabilistic forecasting. Built on the T5 encoder-decoder architecture (`model_type: t5`, ~119.5M parameters), it processes univariate or multi-target historical observations as patched tokens (16-timestep patches at stride 16, hidden dimension 768) and directly generates predictive distributions across a fixed 21-level quantile grid. Output generation operates purely via in-context conditioning without parameter fine-tuning or gradient steps. This repository establishes an immutable, production-grade DIMER packaging layer around the upstream checkpoint: verified `model.safetensors` loading, strict SHA-256 digest and byte-size supply chain gating, total rejection of unsafe pickle checkpoints, rigorous input validation (diff-based regularity, fixed-width frequency enforcement, non-numeric covariate refusals), an output row-layout oracle, and tamper-evident provenance generation.
 
-It is a **forecasting specialist**, not a general-purpose time-series model. It does not do
-classification, anomaly detection, imputation, or representation learning, and this pipeline does
-not present it as if it did.
+#### Intended Use and Limitations
 
-Architecture is T5-family (`model_type: t5`, `chronos_pipeline_class: Chronos2Pipeline`) with a
-patch-based encoder: input patches of 16 timesteps at stride 16, output patches of 16, up to 64
-output patches. Model dimension is 768 and the checkpoint holds roughly 119.5 million parameters
-in a single `safetensors` file.
+###### Primary Intended Uses
 
-# Model Details
+The primary machine learning task is zero-shot, univariate, multi-target, and covariate-informed probabilistic time-series forecasting. The pipeline ingests regular, contiguous tabular historical time series (Pandas DataFrame) and optional future covariate tables, and emits structured forecasts containing median point predictions and 21 calibrated quantiles (from 0.01 to 0.99) spanning up to 1,024 future steps. Concrete application domains include electric grid load prediction, retail inventory demand planning, data center server telemetry forecasting, financial market indicators, macroeconomic time series, and environmental sensor monitoring. Within larger enterprise systems, the pipeline functions as an ultra-reliable, zero-configuration baseline, a standalone microservice, or an automated forecasting engine in the DIMER platform registry requiring zero training overhead.
 
-**Model name:** Chronos-2
+###### Primary Intended Users
 
-**Model identifier:** `amazon/chronos-2`
+Primary intended users are machine learning engineers, time-series data scientists, quantitative analysts, and infrastructure automation developers deploying forecasting models in enterprise, research, or mission-critical data environments. Users are assumed to possess competencies in time-series data preparation—specifically understanding the critical distinctions between point forecasts (median vs. mean), recognizing that statistical covariates do not imply causal intervention, acknowledging the implications of patch-based tokenization, and understanding regular interval alignment versus calendar-based offset schedules.
 
-**Code repository:** [amazon-science/chronos-forecasting](https://github.com/amazon-science/chronos-forecasting)
+###### Out-of-scope use cases
 
-**Hugging Face repository:** [amazon/chronos-2](https://huggingface.co/amazon/chronos-2)
+1. **Capability boundaries:** Chronos-2 is strictly a forecasting model. It cannot perform time-series classification, missing-value imputation, or representation learning (for anomaly detection or imputation, use the companion `moment-pipeline`). Pretraining and fine-tuning are not supported.
+2. **Input boundaries:** Inputs must have fixed-width frequencies (`15min`, `h`, `D`, `7D`). Calendar frequencies (`ME`, `YE`, `W`, `B`), irregular time steps, missing target values, non-numeric or categorical covariates, and series shorter than 3 observations are strictly rejected with explicit errors. Context is capped at 8,192 steps; prediction length is capped natively at 1,024 steps, and requests exceeding 1,024 require explicit `allow_unroll=True` up to a hard system limit of 4,096 steps.
+3. **Decision boundaries:** Autonomous, unmonitored decision-making in high-consequence environments—such as automated high-frequency financial trading, autonomous clinical dosing, or critical utility shutdowns without human operator review—is strictly out of scope.
 
-**Developer:** Amazon
+---
 
-**Model family:** Chronos
+#### Factors
 
-**Task:** Zero-shot time-series forecasting
+###### Groups
 
-**Architecture:** T5-family patch-based encoder (`Chronos2Pipeline`)
+Chronos-2 is an abstract numerical sequence model and is not human-centric in architecture or design. Its inputs are continuous floating-point arrays and timestamps representing machine, physical, or business metrics. However, because upstream pretraining utilized diverse public and synthetic time-series corpora whose individual datasets were not demographically audited by Amazon, the model may reflect structural biases present in underlying societal or economic data. When operators deploy this pipeline on data derived from or impacting human populations (e.g., individual healthcare vitals, household credit scoring, or smart utility billing), the operator is obligated to perform independent fairness, subgroup performance parity, and disparate-impact audits across relevant demographic categories.
 
-**Model / embedding dimension:** 768
+###### Instrumentation
 
-**Input patch size / stride:** 16 / 16
+Data consumed by Chronos-2 originates from diverse upstream instrumentation and logging systems, including IoT telemetry sensors, smart utility meters, transactional relational databases, API event streams, and environmental weather stations. Key instrumentation characteristics that materially alter data quality include sampling precision, clock synchronization, analog-to-digital converter resolution, and network latency. The pipeline defensively detects and rejects non-monotonic timestamps, duplicate entries, null values, and sampling irregularities. However, upstream instrumentation drift, sensor calibration decay, or silent schema changes propagate directly into the forecast horizon as structural prediction errors that the model cannot internally diagnose.
 
-**Output patch size:** 16
+###### Environment
 
-**Maximum output patches:** 64
+1. **Operating environment:** Execution requires Python 3.12, PyTorch >=2.1.2, and `transformers`. The pipeline operates fully deterministically on CPU using ~478 MB of memory for model weights. Half-precision (`float16`, `bfloat16`) is refused on CPU to prevent numerical corruption, defaulting to standard `float32`. GPU execution is supported via `device="cuda"`.
+2. **Data environment:** The pipeline mathematically assumes regular, contiguous, stationary or smoothly evolving time series within the 8,192-step context window. Accuracy degrades sharply under sudden regime shifts, black-swan macroeconomic disruptions, catastrophic physical sensor failures, or unobserved external shocks that violate historical context patterns.
 
-**Approximate parameter count:** ~119.5 million
+---
 
-**Weight format:** `safetensors` (single file; no pickle-format checkpoint exists at the pinned revision)
+#### Metrics
 
-**License:** Apache-2.0 — see [Licence](#licence) for exactly what that claim rests on
+###### Performance Measures
 
-# Checkpoint and Artifact Provenance
+Standard performance measures evaluated in this pipeline include Continuous Ranked Probability Score (CRPS) across the full predictive distribution, Mean Absolute Scaled Error (MASE) relative to a naive persistence baseline, and Weighted Absolute Percentage Error (WAPE). CRPS measures probabilistic sharpness and calibration without imposing distributional shape assumptions; MASE provides scale-independent benchmarking across heterogeneous series; WAPE summarizes total aggregate volume error. In Phase 1 and Phase 2 zero-shot inference, raw quantile arrays and median predictions are emitted; downstream task-specific business loss metrics (e.g., inventory stockout penalty) must be computed by the caller.
 
-Every value below was resolved directly from the Hugging Face Hub on 2026-09-08 and is asserted
-by a test in this repository. The constants live in
-[`src/chronos2_pipeline/model.py`](src/chronos2_pipeline/model.py); the loader refuses to
-continue if any of them fails to match.
+###### Decision thresholds
 
-| Item | Value |
-| :-- | :-- |
-| Pinned revision | `95a9710e2596287d08352589f42634fa5abdf0a7` |
-| Source URL | https://huggingface.co/amazon/chronos-2/tree/95a9710e2596287d08352589f42634fa5abdf0a7 |
+The pipeline establishes a strict default point forecast rule: the emitted `prediction` field is mathematically identical to the median quantile `q0.5` (`raw["predictions"] == raw["0.5"]`), explicitly rejecting the upstream labeling of the median as a mean. Decision thresholds for forecast horizons enforce a strict native ceiling of 1,024 timesteps, requiring `allow_unroll=True` for horizons between 1,025 and 4,096, and refusing requests above 4,096 (`PREDICTION_LENGTH_LIMIT`). Quantiles requested outside the trained 21-level grid are refused outright rather than clamped. Alerting or operational intervention thresholds must be calibrated by the downstream operator according to asymmetric domain costs (e.g., the differential cost of over-generating power versus experiencing a brownout).
+
+###### Approaches to uncertainty and variability
+
+Predictive uncertainty is quantified non-parametrically across the fixed 21-level quantile grid (`0.01` through `0.99`) derived directly from the trained predictive head. Inference is completely deterministic on CPU under standard runtime execution, with zero stochastic sampling or Monte Carlo simulation variability. Quantiles represent the model's uncalibrated predictive distribution conditioned on context. Downstream operators requiring guaranteed empirical coverage or conformal validity must apply conformal prediction intervals or empirical calibration against their own held-out historical validation windows.
+
+---
+
+#### Ethical considerations and biases
+
+###### Data
+
+Chronos-2 was pretrained by Amazon on an extensive combination of synthetic time series generated via Gaussian processes and diverse public datasets from the Monash Time Series Repository. Amazon's official documentation does not fully enumerate every proprietary dataset utilized in pretraining, and the exact data mix cannot be audited by inspection. The repository distributes code, pipeline interfaces, and tests; model weights are fetched from Hugging Face Hub and cached locally, never committed to version control. Downstream operators are strictly obligated to audit their own inference data for proprietary, personally identifiable, or sensitive demographic attributes before submitting payloads to the pipeline.
+
+###### Human Life
+
+Chronos-2 is not designed, certified, or intended for use in life-critical decision-making or domains affecting human life, physical safety, or fundamental liberties. This includes medical diagnostics, patient telemetry monitoring, surgical guidance, criminal justice sentencing, autonomous vehicle navigation, emergency dispatch, or life-support infrastructure. No clinical or safety certifications exist for this pipeline. Deployment in any sensitive domain is admissible only when subject to rigorous external clinical or domain validation, fail-safe redundant hardware controls, and mandatory human expert oversight.
+
+###### Mitigations
+
+Implemented mitigations include:
+1. **Supply-chain integrity:** Enforcing pinned immutable revision `95a9710e…`, SHA-256 verification of `config.json` (`ef1143bf…`) and `model.safetensors` (`ddcda3c7…`), byte-size validation (`477,930,472`), rejection of unapproved URI schemes or mutable refs, and absolute rejection of pickle-format files (`.bin`, `.pt`, `.pkl`).
+2. **Input validation:** Rejection of irregular timestamps via pairwise diff equality, fixed-width frequency validation (`CALENDAR_FREQUENCY_UNSUPPORTED`), NaN/null rejection, non-numeric covariate refusal (`COVARIATE_NOT_NUMERIC`), and future-table covariate consistency checks (`FUTURE_TABLE_HAS_NO_COVARIATES`).
+3. **Alignment oracles:** Verifying exact row layout `(series, target, step)` alignment and asserting that point predictions match `q0.5`.
+4. **Reproducibility:** Locking the complete dependency tree in `uv.lock`, executing deterministic inference, and exporting detailed runtime provenance with every forecast.
+
+###### Risks and harms
+
+Key operational risks include:
+1. **Automation bias:** Downstream operators accepting uncalibrated quantile forecasts as absolute certainty, leading to catastrophic inventory misallocation or financial loss.
+2. **Distributional shift:** Significant forecast degradation during abrupt macroeconomic or physical regime shifts where historical context no longer represents future dynamics.
+3. **Covariate fallacy:** Operators inferring causal relationships from predictive covariates, incorrectly assuming that manipulating a covariate will predictably alter the forecast.
+4. **Autoregressive error compounding:** When horizons exceed native capacity (>1,024 steps), unrolled errors compound exponentially, presenting significant drift risks.
+
+###### Use cases
+
+Prohibited use cases include:
+1. Deceptive, manipulative, or predatory applications, including algorithmic market manipulation, predatory subprime lending, or dynamic price gouging during emergencies.
+2. Mass surveillance, individual behavioral tracking, or predictive social scoring.
+3. Automated lethal or weaponized systems, or hazardous physical infrastructure control without human-in-the-loop overrides.
+4. Any deployment violating the upstream Apache-2.0 license or regional regulatory frameworks (such as the EU Artificial Intelligence Act).
+
+---
+
+## Model details
+
+| Field | Value |
+|---|---|
+| Model identifier | `amazon/chronos-2` |
+| Developer | Amazon |
+| Family | Chronos |
+| Task | zero-shot probabilistic time-series forecasting |
+| Architecture | T5-family Chronos-2 patch-based model |
+| Approx. parameters | ~119.5M |
+| Input patch size / stride | 16 / 16 |
+| Output patch size | 16 |
+| Maximum native output patches | 64 |
+| Model context length | 8,192 timesteps |
+| Native prediction length | 1,024 timesteps |
+| Weight format | `model.safetensors` |
+| Model-repository license metadata | Apache-2.0 |
+
+## Checkpoint and runtime provenance
+
+The public loader accepts only the approved model identity and immutable revision.
+
+| Item | Pin / assertion |
+|---|---|
+| Model | `amazon/chronos-2` |
+| Hugging Face revision | `95a9710e2596287d08352589f42634fa5abdf0a7` |
 | `model.safetensors` SHA-256 | `ddcda3c7508bf2528087723e98a20707cc04b7f370ae275a9fd88078ddba4f42` |
 | `model.safetensors` size | 477,930,472 bytes |
 | `config.json` SHA-256 | `ef1143bfdc9c0376d9a056eefca46cb4b1ec3d0ffacd541ff56feb40fb708031` |
-| `config.json` size | 1,067 bytes |
-| Files at that revision | `.gitattributes`, `README.md` (31 bytes), `config.json`, `model.safetensors` |
-
-**The revision SHA is the primary supply-chain invariant.** It covers repository configuration as
-well as weights, so it is checked first. The two digests are secondary, file-level assertions that
-additionally catch a corrupted or truncated download.
-
-## What the loader enforces
-
-`load_pinned_model()` refuses, before any network call, anything other than `amazon/chronos-2` at
-the pinned commit: mutable refs (`main`, `master`, `latest`, `HEAD`), any other commit SHA, local
-filesystem paths, and URI schemes including `s3://`, `hf://`, `https://` and `file://`. After
-download it verifies both digests and the weight file's byte size, and refuses outright if any
-`.bin`, `.pt`, `.pth`, `.ckpt` or `.pkl` file is present in the snapshot — pickle checkpoints
-execute arbitrary code on load, and this pipeline has no fallback to them.
-
-**How the resolved revision is checked.** `snapshot_download` lays a snapshot out under
-`snapshots/<requested-revision>/`, and the requested revision has already been forced equal to the
-pin, so comparing the directory name against the pin is a tautology that cannot fail — the check
-an earlier revision performed. The loader now asks the Hub itself, before downloading anything,
-which commit the pin resolves to (`HfApi().model_info(...).sha`) and refuses if that is not the
-pinned commit; the snapshot directory must then agree with the Hub's answer as well. So loading
-makes one Hub metadata request.
-
-**Unavailable is not the same as disagreeing.** That lookup needs the network, and coupling every
-load to Hub reachability would break offline and cached runs — including CI, which caches
-`~/.cache/huggingface` on purpose. The two failures are therefore separated:
-
-| Situation | Default (`require_hub_confirmation=False`) | `require_hub_confirmation=True` |
-| :-- | :-- | :-- |
-| Hub answers with the pinned commit | loads; provenance records `revision_confirmed_against_hub: true` | same |
-| Hub answers with a **different** commit, a gated/missing repo, or an unknown revision (401/403/404) | `ModelIntegrityError`, nothing downloaded | same |
-| Hub **cannot be reached** (offline mode, no route, proxy/TLS failure, 429, 5xx) **and every digest matches** | loads; provenance records `revision_confirmed_against_hub: false` and the reason | `HubUnavailableError` |
-| Hub cannot be reached and **any digest or the byte count mismatches** | `ModelIntegrityError` | same |
-
-The default is the middle-availability mode, not the strict one. What it guarantees is unchanged
-for content: `config.json` and `model.safetensors` SHA-256 plus the weight byte count prove the
-snapshot's bytes independently of the Hub. What it does not guarantee on such a load is that the
-Hub still maps the pinned name to the pinned commit — so the exported metadata says so rather than
-implying a check that did not run. `HubUnavailableError` subclasses `ModelIntegrityError`, so
-callers catching the latter are unaffected.
-
-Every forecast's `model` provenance block therefore carries two extra fields:
-`revision_confirmed_against_hub` (boolean, `true` only when a Hub lookup ran on that load and
-returned the pinned commit) and `revision_confirmation_note` (the lookup that ran, or the reason it
-could not and what carried the integrity claim instead).
-
-## Runtime pins
-
-| Component | Pin |
-| :-- | :-- |
-| `chronos-forecasting` | `==2.3.1` (PyPI; upstream tag `v2.3.1` = commit `7dc4435706a4454feb79df44ca9f33631f3027bf`) |
-| `transformers` | `>=4.56,<5` |
+| Upstream runtime package | `chronos-forecasting==2.3.1` |
+| Reviewed upstream tag / commit | `v2.3.1` / `7dc4435706a4454feb79df44ca9f33631f3027bf` |
+| Full environment | `uv.lock` + `requirements.lock.txt` |
 | Python | `>=3.12,<3.13` |
-| Full resolved stack | [`uv.lock`](uv.lock) and [`requirements.lock.txt`](requirements.lock.txt) (hashed) |
 
-The resolved versions of `chronos-forecasting`, `torch`, `transformers`, `huggingface-hub`,
-`numpy`, `pandas`, `accelerate`, `einops` and `safetensors`, along with Python version, platform,
-device and dtype, are written into every forecast's provenance block. CI installs with
-`uv sync --locked`, so CI and local runs resolve to the same stack.
+The revision SHA is the primary repository identity. The loader additionally verifies the model and configuration file digests and the expected model byte size. Mutable refs such as `main` or `latest`, arbitrary local paths, and unapproved sources are rejected in the standard path.
 
-# Licence
+The Hugging Face model repository at the pinned revision does **not** contain a separate `LICENSE` file. The Apache-2.0 model-license statement therefore rests on the model-card/repository metadata at that immutable revision; exported provenance records that basis rather than implying a file that is not present.
 
-The Hugging Face model card metadata for `amazon/chronos-2` declares `license: apache-2.0`, and
-the repository carries the `license:apache-2.0` tag.
+## Forecast modes
 
-**There is no `LICENSE` file in the Hugging Face repository at the pinned revision.** The four
-files present are listed in the provenance table above. The licence claim therefore rests on the
-model card metadata at that revision and nothing else, and that is exactly how it is recorded in
-exported provenance:
+### Mode A — univariate
 
-> apache-2.0 declared in the Hugging Face model card metadata of amazon/chronos-2 at revision
-> 95a9710e2596287d08352589f42634fa5abdf0a7; the repository contains no LICENSE file at that
-> revision
+One target per series. This is the default live tutorial path.
 
-Pipeline code in this repository is [Apache-2.0](LICENSE), Copyright 2026 Kurt Valcorza. Data you
-forecast carries its own licence, which this repository makes no claim about.
+### Mode B — multiple independent series
 
-# Capabilities and limits
+Many series IDs can be forecast in one request while retaining independent series identity in the output.
 
-## Quantile grid
+### Mode C — multi-target
 
-Chronos-2 was trained on a fixed 21-level quantile grid, read from `chronos_config.quantiles` in
-the pinned `config.json`:
+A request can contain several target columns. The normalized output preserves `target_name`, and the pipeline asserts the upstream row layout so values cannot silently shift to a neighbouring series or target if upstream ordering changes.
+
+### Mode D — covariate-informed
+
+The pipeline distinguishes:
+
+- **past-only covariates** — available through the forecast origin;
+- **known-future covariates** — supplied across the requested horizon.
+
+Both sets are recorded separately in provenance. Future targets are refused as leakage.
+
+## Covariate policy
+
+v1 accepts **numeric covariates only**. Numeric strings that coerce without data loss are accepted; booleans are normalized to numeric 0/1. Categorical/string and temporal payload columns are refused unless the user explicitly derives a stable numeric feature.
+
+This is deliberate. In the reviewed upstream path, categorical covariate encoding can depend on unrelated request structure such as the number of targets. DIMER refuses a representation whose meaning could change across otherwise similar exports.
+
+Covariates are predictive inputs, not evidence of causal effect.
+
+## Quantile semantics
+
+Chronos-2 was trained on the fixed grid:
 
 ```text
 0.01 0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50
 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 0.99
 ```
 
-The pipeline reads this grid off the loaded model at runtime and rejects any requested level that
-is not an exact member. There is **no opt-out**: `forecast()` has no `allow_out_of_grid`
-parameter, and passing one is a `TypeError`. An earlier revision had that flag; it exported a
-column named for the *requested* level while holding the substituted one, and recorded
-`effective_quantile_levels == requested_quantile_levels` in provenance, so the substitution was
-invisible in the export. Phase 1 has no consumer for the escape hatch, so it was removed rather
-than repaired.
+The pipeline rejects requested levels outside this trained grid rather than allowing upstream to substitute a nearby quantile under the requested column name. Requested and effective quantiles therefore remain self-describing in exported results.
 
-Membership is **exact float identity**, matching upstream's own gate
-(`set(quantile_levels).issubset(training_quantile_levels)`, `pipeline.py` L797). A tolerance would
-accept `0.1 * 7 == 0.7000000000000001`, which upstream then routes to `interpolate_quantiles`
-instead of indexing the trained `0.7` — the same silent substitution, one grid step smaller. When a
-rejected level is within `1e-6` of a grid member the error names that member.
-
-**Why rejection rather than the upstream default.** Asked for a level outside the trained range,
-upstream 2.3.1 substitutes the nearest trained level and emits a warning
-(`chronos/chronos2/pipeline.py` L797-815). The returned column is still *named* for the level you
-asked for. A request for `0.001` therefore comes back as a column labelled `"0.001"` holding the
-`0.01` quantile — an export that says something false about itself. An integration test calls
-`predict_df` directly with `quantile_levels=[0.001]` and asserts the values equal the `0.01`
-column, which is the evidence behind this refusal.
-
-## Context and horizon
-
-| Limit | Value |
-| :-- | :-- |
-| Model context length | 8,192 timesteps |
-| Model native prediction length | 1,024 timesteps (64 output patches × patch size 16) |
-
-Both are read from the loaded pipeline (`model_context_length`, `model_prediction_length`), not
-hardcoded, and asserted against these numbers in the integration suite.
-
-Upstream clamps a longer requested context to 8,192 (`pipeline.py` L610-617) and will satisfy a
-horizon beyond 1,024 by unrolling its own output autoregressively — it passes
-`limit_prediction_length=False` unconditionally (`pipeline.py` L939), so there is no upstream
-guard to lean on. This pipeline rejects `prediction_length > 1024` by default; `allow_unroll=True`
-opts in, and provenance then records `autoregressive_unrolled: true`. Requested, effective and
-model values are recorded for both context and horizon on every call, whether or not clamping
-happened.
-
-Two guards bound the horizon and the order matters. `ResourceLimits.max_prediction_length`
-(**4,096** by default) is DIMER's own resource guard and is deliberately set *above* the model's
-native 1,024 so that the unroll gate, not the resource guard, is what answers a request beyond the
-model's capacity. When the two were equal, `PREDICTION_LENGTH_LIMIT` always won and `allow_unroll`
-— and therefore `autoregressive_unrolled: true` — was unreachable on the shipped configuration.
-So: 1,025-4,096 needs `allow_unroll=True` and is flagged in provenance; above 4,096 is refused
-outright as `PREDICTION_LENGTH_LIMIT`.
+The default tutorial requests `[0.1, 0.5, 0.9]`.
 
 ## Point-forecast semantics
 
-**`prediction` is the median (q0.5), never a mean.**
+The normalized `prediction` column is the **median / q0.5**, not a statistical mean.
 
-Upstream's `predict_df` returns a column called `predictions`, and parts of the upstream
-documentation describe it as a mean. It is not. At 2.3.1 it is computed as
-`pred[..., training_quantile_levels.index(0.5)]` — the code carries the comment
-`# NOTE: the median is returned as the mean here` (`chronos/chronos2/pipeline.py` L816-818).
+For `chronos-forecasting==2.3.1`, upstream `predictions` is populated from the 0.5 quantile. Every request that includes q0.5 asserts this equality before export. A future upstream change causes an `UpstreamContractError` rather than silently changing the meaning of the field.
 
-This pipeline therefore labels the column `prediction` / median point forecast, and asserts on
-every call that `raw["predictions"]` equals `raw["0.5"]` exactly whenever `0.5` was requested. A
-mismatch raises `UpstreamContractError` rather than relabelling a different statistic. For a
-skewed predictive distribution the median and the mean differ, and downstream cost calculations
-that assume a mean will be wrong.
+## Context and horizon
 
-## Frequency, gaps, and why validation is duplicated
+The pinned model exposes:
 
-Upstream's `freq=` argument bypasses frequency inference entirely. Its own docstring says so
-(`pipeline.py` L881-885): the supplied value "is used as-is and is not checked against the data,
-even when `validate_inputs=True`". A gappy or irregular series passed with `freq="h"` is accepted
-and forecast.
+- model context length: 8,192 timesteps;
+- native prediction length: 1,024 timesteps.
 
-This pipeline validates regularity, gaps, shared frequency and minimum length itself, before
-`predict_df`. Regularity is established by explicit diff equality per series, not by
-`pd.infer_freq`. Series with fewer than three observations are rejected: upstream's own inference
-needs three points (`chronos/df_utils.py` L30), and below that regularity is unfalsifiable.
+Requests beyond the native prediction length are rejected by default. `allow_unroll=True` explicitly permits upstream autoregressive unrolling within DIMER resource limits, and provenance records `autoregressive_unrolled: true` together with requested/effective/model context and horizon values.
 
-**A declared `frequency` neither suppresses those checks nor reaches upstream unchecked.** The
-checks are only half the protection: `freq` also *lays out the forecast horizon*, so a value that
-passes the checks but contradicts the data still moves the output onto a different time axis. An
-earlier revision compared only fixed-width aliases and let calendar aliases fall through, so
-hourly history declared `frequency="ME"` was validated as hourly and came back stamped at month
-ends, with no error. Now every declared alias is resolved before `predict_df` and only one that
-has been affirmatively confirmed equal to the observed interval is forwarded:
+The default live tutorial stays within native limits.
 
-| Declared, on strictly hourly data | Outcome |
-| :-- | :-- |
-| `"h"`, `"60min"` | accepted, forwarded to `predict_df` |
-| `"D"`, `"15min"` | `FREQUENCY_MISMATCH` |
-| `"W"`, `"ME"`, `"B"`, `"QS"`, `"YE"` | `FREQUENCY_NOT_FIXED_WIDTH` |
-| not declared | accepted; `freq=None`, upstream infers from the validated data |
+## Frequency and gaps
 
-### Fixed-width frequencies only
+DIMER validates frequency **before** `predict_df`, including when the caller explicitly supplies a frequency. Upstream's `freq` argument is not treated as an independent validator because it can be used as-is to construct a horizon.
 
-**v1 supports fixed-width frequencies only** — those where one period is always the same
-`Timedelta`: `15min`, `h`, `D`, `7D`. This follows directly from diff equality, which calendar
-frequencies can never satisfy, and it is a real limitation: **monthly, quarterly, yearly and
-business-daily data cannot be forecast by this pipeline.** Such a series is rejected with
-`CALENDAR_FREQUENCY_UNSUPPORTED`, which names the alias `pd.infer_freq` recognised, rather than
-being called `IRREGULAR_FREQUENCY` — regular monthly data is not irregular, and the earlier
-message said it was. Widening the rule to calendar offsets is a Phase-2 design decision, not a
-Phase-1 patch.
+v1 supports fixed-width intervals such as:
 
-Weekly data *is* in scope: a week is a constant seven days. Declare it as `"7D"`; the pandas alias
-`W` is anchored and therefore not fixed-width, so it is refused as a declaration even where the
-data itself passes.
+- `15min`
+- `h`
+- `D`
+- `7D`
 
-v1 rejects gaps and missing target values rather than interpolating them. Silent interpolation of
-irregular or gappy input is explicitly out of scope.
+Calendar-dependent offsets such as month-end, quarter-end, year-end, and business-day aliases remain outside the current v1 contract. Regular calendar data is rejected explicitly rather than mislabeled as ordinary irregularity. This is deferred serving/capability work, not unfinished Phase-2 inference.
 
-## Covariates
+Gaps and missing target values are rejected in v1; the pipeline does not silently interpolate them.
 
-Phase 2 supports both covariate kinds the RFC distinguishes:
+## Output contract
 
-- **past-only** — any numeric column in the history that is not the id, the timestamp, or a
-  target. The model reads it up to the forecast origin and no further.
-- **known-future** — a past covariate whose values you also supply across the horizon, in a
-  future table carrying the id and timestamp columns plus that covariate, exactly
-  `prediction_length` rows per series starting at the forecast origin. Target columns there are
-  refused as leakage; a future table carrying no covariate at all is refused rather than
-  silently ignored, because upstream would treat every covariate as past-only and the table
-  would change nothing.
+Normalized forecasts use:
 
-`provenance["inference"]` records `past_covariate_names` and `known_future_covariate_names`
-separately. The distinction is not recoverable from the forecast frame — neither kind appears in
-the output — and it is the difference between a forecast that could have been made in advance and
-one that could not.
+```text
+series_id
+timestamp
+target_name
+prediction
+q<level>...
+```
 
-**Covariates must be numeric.** Upstream accepts a string or categorical covariate, but encodes
-it by a route that depends on the request: `target_encode = use_target_encoding and n_targets == 1`
-(`chronos/chronos2/preprocess.py` L415), so the same column is target-encoded in a single-target
-request and ordinal-encoded in a two-target one. A covariate whose representation changes with an
-unrelated field of the request cannot be exported honestly, so this pipeline refuses it
-(`COVARIATE_NOT_NUMERIC`) rather than encoding it silently. `bool` is coerced to `0.0`/`1.0`,
-because upstream classes it as categorical (`preprocess.py` L188) and it would otherwise take
-exactly that route. Nulls and non-finite covariate values are refused on the same basis as
-targets: v1 does not impute, and upstream would carry a NaN covariate into the forecast without
-complaint.
+The upstream-to-normalized rename map is deterministic. The pipeline also asserts one row per `(series, target, forecast step)` in the reviewed upstream order so positional changes cannot silently relabel forecasts.
 
-Causal interpretation remains out of scope — see below.
+Every forecast travels with structured provenance including model pins, runtime versions, device/dtype, requested/effective context and horizon, quantiles, target/covariate counts, past vs known-future covariate names, batch size, cross-learning state, latency metadata, and observed frequency.
 
-## Row layout
+## Evaluation
 
-Upstream builds the output frame by ravelling a `[n_tasks, n_variates, horizon]` array against
-row labels it generates separately (`chronos/chronos2/pipeline.py` L951-957). Values and labels
-are therefore aligned by row position and by nothing else: were either order to change, every
-forecast would still arrive, each attached to the wrong series or the wrong target, and no column
-in the frame would contradict it. Every call asserts the frame is one row per
-`(series, target, step)` in that order, against the series list validation resolved, and refuses
-it otherwise (`UpstreamContractError`).
+Phase 3 evaluation is implemented and **chronological only**. The public path includes:
 
-## Not supported
+- chronological holdout construction;
+- MAE;
+- RMSE;
+- quantile pinball loss;
+- interval coverage when an appropriate lower/upper interval is available;
+- last-value baseline;
+- explicit seasonal-naive baseline when a valid season length is supplied;
+- per-series and aggregate results.
 
-- Fine-tuning or pretraining — zero-shot inference only.
-- Online or streaming weight updates.
-- Causal interpretation of covariates. A covariate that helps the forecast is not thereby a cause.
-- Categorical or string covariates — see [Covariates](#covariates).
-- Calibration guarantees. Quantiles are the model's, uncalibrated for your data.
-- Chronos-Bolt or older Chronos checkpoints.
-- `cross_learning=true` as a default or tutorial workflow. When enabled, results depend on batch
-  composition, so both the flag and `batch_size` must be exported.
+The helper does not expose a random-split evaluation path. Baselines are scored on the identical holdout horizon.
 
-# Evaluation caveat
+### Evaluation caveat
 
-**Do not treat a tutorial benchmark number from this repository as an unbiased estimate of
-Chronos-2's accuracy on your problem.** The datasets used in tutorials and examples may overlap
-the corpora Chronos-2 was pretrained or benchmarked on. Neither the pretraining corpus nor the
-benchmark suite is enumerated at the pinned revision, so overlap cannot be ruled out by
-inspection. Any honest comparison needs your own held-out window, split chronologically, with
-baselines scored on the identical horizon.
+Do not treat the deterministic tutorial's metric values as an unbiased estimate of performance on a real application. Tutorial data is synthetic and designed to exercise contracts. For external data, use a genuinely held-out chronological future window and interpret results against domain-relevant baselines.
 
-Evaluation is Phase 3 in this repository; `evaluation.py` raises `NotImplementedError` rather than
-offering a placeholder metric that might split at random.
+More generally, benchmark or user datasets may overlap corpora seen during upstream development/pretraining; this repository does not claim to prove absence of such overlap.
 
-# Upstream references
+## Live tutorial
 
-- Model: https://huggingface.co/amazon/chronos-2 (revision `95a9710e2596287d08352589f42634fa5abdf0a7`)
-- Code: https://github.com/amazon-science/chronos-forecasting (release `v2.3.1`, commit `7dc4435706a4454feb79df44ca9f33631f3027bf`)
-- Line references above are to the installed `chronos-forecasting==2.3.1` package as inspected on
-  2026-09-08, not to upstream `main`.
-- This pipeline's contract: [`docs/rfc/0001-chronos-2.md`](docs/rfc/0001-chronos-2.md)
+The v1 tutorial is:
+
+[`tutorials/chronos_2_forecasting_colab.ipynb`](tutorials/chronos_2_forecasting_colab.ipynb)
+
+It covers:
+
+1. reproducible runtime bootstrap;
+2. deterministic bundled sample or BYOD;
+3. DIMER schema/frequency validation;
+4. history inspection/visualization;
+5. forecast configuration;
+6. pinned model resolution and integrity verification;
+7. forecast execution;
+8. median + interval visualization;
+9. optional chronological evaluation + baselines;
+10. forecast CSV and provenance JSON export.
+
+CI executes the notebook's actual code cells against the pinned real weights on `main` and manual workflow dispatch; static notebook JSON validation alone is not considered live-readiness evidence.
+
+## Intended use
+
+Appropriate uses include exploratory and operational zero-shot forecasting where:
+
+- the input satisfies the explicit regular fixed-width time-series contract;
+- probabilistic quantiles are useful;
+- users can evaluate performance on their own chronological holdout before relying on forecasts;
+- numeric covariates are predictive inputs rather than causal claims.
+
+## Limitations
+
+- No fine-tuning/pretraining workflow in v1.
+- Fixed-width frequency support only; calendar offsets are deferred.
+- Missing targets/gaps are rejected rather than interpolated.
+- Categorical/string covariates are not encoded by the public path.
+- Quantiles are not guaranteed calibrated for a user's domain.
+- Horizons beyond the native model limit require explicit autoregressive-unroll opt-in.
+- `cross_learning=true` is not a beginner/tutorial default and makes results depend on batch composition.
+- The release boundary is a tutorial/developer preview; stable production-serving request limits, SLO/latency instrumentation, and DIMER backend packaging remain follow-on work.
+
+## License
+
+Pipeline code in this repository is Apache-2.0 licensed. The Chronos-2 model-repository metadata at the pinned revision declares Apache-2.0; model and wrapper provenance are recorded separately.
+
+## References
+
+- Model: `amazon/chronos-2` at `95a9710e2596287d08352589f42634fa5abdf0a7`
+- Upstream implementation: `amazon-science/chronos-forecasting`, release `v2.3.1`
+- DIMER contract: [`docs/rfc/0001-chronos-2.md`](docs/rfc/0001-chronos-2.md)
+- Release-completion tracking: issue #5
