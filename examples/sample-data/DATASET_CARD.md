@@ -4,7 +4,7 @@
 
 These are **synthetic, deterministic teaching datasets** for the DIMER Chronos-2 pipeline. They exist to exercise the repository's input, forecasting, covariate, evaluation and export contracts without introducing third-party redistribution or benchmark-overlap claims.
 
-The source of truth is [`generate_samples.py`](generate_samples.py). It contains no random draw: every value is produced from fixed trends, sinusoidal components and deterministic calendar flags. Running it recreates the tutorial CSVs and `SHA256SUMS` byte-for-byte under the locked runtime.
+The source of truth is [`generate_samples.py`](generate_samples.py). It contains no random draw: every value is produced from fixed trends, sinusoidal components and deterministic calendar flags.
 
 `chronos_univariate.csv` is checked in for the default quick-start path. The generator also produces the larger multi-series and covariate examples on demand so their provenance stays inspectable as code rather than as opaque copied data.
 
@@ -60,22 +60,17 @@ No imputation, interpolation, scaling, resampling or learned preprocessing is ap
 
 ## Integrity
 
-[`SHA256SUMS`](SHA256SUMS) records the canonical UTF-8 CSV bytes generated with:
+Two manifests deliberately distinguish checked-in bytes from reproducible generated outputs:
 
-- timestamps formatted as `%Y-%m-%dT%H:%M:%S`;
-- floats formatted as `%.4f`;
-- LF newlines.
+- [`SHA256SUMS`](SHA256SUMS) contains only artifacts present in a clean checkout and can therefore be verified directly with standard checksum tooling.
+- [`SHA256SUMS.generated`](SHA256SUMS.generated) records canonical digests for the generated-only multi-series and covariate CSVs.
 
-Tests regenerate the datasets in a temporary directory and compare both their digests and schemas. A changed formula, row order, float representation or timestamp layout therefore changes the recorded artifact identity.
+Canonical CSV bytes use ISO timestamps, `%.4f` floating-point formatting, and LF newlines. Tests regenerate all datasets in a temporary directory and compare their digests and schemas. A changed formula, row order, float representation or timestamp layout therefore changes the recorded artifact identity.
+
+The tutorial imports `build_samples()` for its optional covariate demonstration and keeps the generated frames in memory; enabling that demonstration does not rewrite tracked repository files.
 
 ## Intended use
 
-Use these samples for:
-
-- tutorial and smoke execution;
-- validation examples;
-- chronological holdout demonstrations;
-- naive-baseline comparisons;
-- result/provenance export examples.
+Use these samples for tutorial and smoke execution, validation examples, chronological holdout demonstrations, naive-baseline comparisons, and result/provenance export examples.
 
 They are **not benchmark datasets** and should not be used to claim model quality, generalization, calibration or superiority over another forecasting system. Their simple structure is pedagogical and may be easier than real operational data.
