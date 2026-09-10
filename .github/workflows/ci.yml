@@ -37,19 +37,14 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
 
-      # No network, no model weights. Includes sample reproducibility,
-      # evaluation leakage oracles and notebook source/structure checks.
       - name: Contract and unit tests
         run: uv run pytest -m "not integration"
 
   integration:
-    name: CPU smoke + live tutorial against pinned weights
-    # Downloads ~478 MB of weights, so it does not run on every PR. This job
-    # checks both the library integration suite and the exact notebook code-cell
-    # path before anything ships from main.
+    name: CPU live tutorial against pinned weights
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +59,6 @@ jobs:
       - name: Install the locked environment
         run: uv sync --locked --extra dev
 
-      # Keyed on the pinned revision: a pin change must miss the cache.
       - name: Cache the Hugging Face hub snapshot
         uses: actions/cache@v4
         with:
@@ -75,7 +69,23 @@ jobs:
       - name: Integration tests (CPU)
         run: uv run pytest -m integration
 
-      - name: Execute live tutorial code cells top-to-bottom
+      - name: Execute default tutorial from a clean bootstrap directory
+        env:
+          DIMER_TUTORIAL_REF: ${{ github.sha }}
+          DIMER_OUTPUT_DIR: ${{ github.workspace }}/outputs/default
+        run: |
+          rm -rf "${RUNNER_TEMP}/chronos-notebook-fresh"
+          mkdir -p "${RUNNER_TEMP}/chronos-notebook-fresh"
+          uv run python tools/run_notebook.py \
+            tutorials/chronos_2_forecasting_colab.ipynb \
+            --workdir "${RUNNER_TEMP}/chronos-notebook-fresh"
+
+      - name: Execute BYOD-shaped and known-future-covariate branches
+        env:
+          DIMER_NOTEBOOK_CI_PREINSTALLED: "1"
+          DIMER_BYOD_PATH: ${{ github.workspace }}/examples/sample-data/chronos_univariate.csv
+          DIMER_RUN_COVARIATE_DEMO: "1"
+          DIMER_OUTPUT_DIR: ${{ github.workspace }}/outputs/branches
         run: >-
           uv run python tools/run_notebook.py
           tutorials/chronos_2_forecasting_colab.ipynb
