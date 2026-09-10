@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
+CHECKED_IN = frozenset({"chronos_univariate.csv"})
 
 
 def build_samples() -> dict[str, pd.DataFrame]:
@@ -121,17 +122,32 @@ def csv_bytes(frame: pd.DataFrame) -> bytes:
     return text.encode("utf-8")
 
 
-def generate(root: Path = ROOT) -> dict[str, str]:
-    """Write samples and SHA256SUMS; return the digest map."""
+def _manifest(digests: dict[str, str], names: set[str] | frozenset[str]) -> str:
+    return "".join(f"{digests[name]}  {name}\n" for name in sorted(names))
 
+
+def generate(root: Path = ROOT) -> dict[str, str]:
+    """Write samples plus separate checked-in and generated-artifact manifests."""
+
+    root.mkdir(parents=True, exist_ok=True)
     digests: dict[str, str] = {}
-    for name, frame in build_samples().items():
+    samples = build_samples()
+    for name, frame in samples.items():
         payload = csv_bytes(frame)
         (root / name).write_bytes(payload)
         digests[name] = hashlib.sha256(payload).hexdigest()
 
-    manifest = "".join(f"{digest}  {name}\n" for name, digest in sorted(digests.items()))
-    (root / "SHA256SUMS").write_text(manifest, encoding="utf-8", newline="\n")
+    generated_only = set(samples) - set(CHECKED_IN)
+    (root / "SHA256SUMS").write_text(
+        _manifest(digests, CHECKED_IN),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (root / "SHA256SUMS.generated").write_text(
+        _manifest(digests, generated_only),
+        encoding="utf-8",
+        newline="\n",
+    )
     return digests
 
 
