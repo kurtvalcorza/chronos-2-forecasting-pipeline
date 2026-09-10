@@ -51,7 +51,10 @@ def main() -> None:
         "--workdir",
         type=Path,
         default=None,
-        help="Starting working directory. Use a clean directory to exercise clone/install bootstrap.",
+        help=(
+            "Starting working directory. Use a clean directory to exercise "
+            "clone/install bootstrap."
+        ),
     )
     args = parser.parse_args()
     for notebook in args.notebooks:
