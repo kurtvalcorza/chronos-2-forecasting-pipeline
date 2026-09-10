@@ -71,6 +71,21 @@ def test_runtime_limits_and_uncertainty_are_explained() -> None:
         assert required in text
 
 
+def test_effective_context_and_prediction_length_are_reported() -> None:
+    code = code_text()
+    assert 'result.inference["effective_context_length"]' in code
+    assert 'result.inference["effective_prediction_length"]' in code
+    assert 'print("effective_context_length:"' in code
+    assert 'print("effective_prediction_length:"' in code
+
+
+def test_model_loading_remote_code_boundary_is_explicit() -> None:
+    _, text = notebook_text()
+    assert "does not request model-repository remote code" in text
+    assert "verified snapshot" in text
+    assert "pinned `chronos-forecasting` package" in text
+
+
 def test_byod_duplicate_headers_are_rejected_before_pandas_parse() -> None:
     _, text = notebook_text()
     code = code_text()
