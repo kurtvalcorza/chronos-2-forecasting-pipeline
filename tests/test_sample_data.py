@@ -53,6 +53,34 @@ def test_generator_reproduces_every_recorded_artifact(tmp_path: Path) -> None:
     assert (tmp_path / "SHA256SUMS").read_text(encoding="utf-8") == (
         SAMPLE_DIR / "SHA256SUMS"
     ).read_text(encoding="utf-8")
+    assert (tmp_path / "SHA256SUMS.generated").read_text(encoding="utf-8") == (
+        SAMPLE_DIR / "SHA256SUMS.generated"
+    ).read_text(encoding="utf-8")
+
+
+def test_checked_in_manifest_is_verifiable_from_a_clean_checkout() -> None:
+    lines = (SAMPLE_DIR / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
+    assert lines
+    for line in lines:
+        digest, name = line.split(maxsplit=1)
+        path = SAMPLE_DIR / name.strip()
+        assert path.is_file()
+        assert sha256(path) == digest
+
+
+def test_generated_manifest_records_only_generated_examples() -> None:
+    names = {
+        line.split(maxsplit=1)[1].strip()
+        for line in (SAMPLE_DIR / "SHA256SUMS.generated")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    }
+    assert names == {
+        "chronos_multi_series.csv",
+        "chronos_covariates_history.csv",
+        "chronos_covariates_future.csv",
+    }
 
 
 def test_checked_in_quickstart_sample_is_the_generated_canonical_bytes(tmp_path: Path) -> None:
