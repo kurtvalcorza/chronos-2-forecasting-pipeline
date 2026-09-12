@@ -1,6 +1,6 @@
 ---
 license: apache-2.0
-model_card_spec: "1.0"
+model_card_spec: "1.1"
 pipeline_tag: time-series-forecasting
 tags:
   - time-series-forecasting
@@ -9,11 +9,28 @@ tags:
 base_model: amazon/chronos-2
 ---
 
-# Chronos-2 (v1.0)
+# Chronos-2 (v1.0) — Time-Series Foundation Model (Zero-Shot Forecasting)
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-amazon%2Fchronos--2-ffcc4d?style=flat)](https://huggingface.co/amazon/chronos-2)
-[![GitHub](https://img.shields.io/badge/GitHub-amazon--science%2Fchronos--forecasting-181717?style=flat&logo=github&logoColor=white)](https://github.com/amazon-science/chronos-forecasting)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-amazon--science%2Fchronos--forecasting-181717?style=flat&logo=github&logoColor=white)](https://github.com/amazon-science/chronos-forecasting)
+[![arXiv Paper](https://img.shields.io/badge/arXiv-2510.15821-b31b1b.svg)](https://arxiv.org/abs/2510.15821)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Pipeline](https://img.shields.io/badge/Pipeline-chronos--2--forecasting--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
+
+> [!WARNING]
+> ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
+
+---
+
+## Interactive Colab Tutorials
+
+This pipeline provides a ready-to-run interactive Google Colab notebook that exercises the repository's public API end to end — bootstrap a fresh runtime, resolve and verify the pinned upstream revision, validate an input, run the task, and inspect and export the outputs:
+
+- **Task Inference Tutorial**:  
+  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/tutorials/chronos_2_forecasting_colab.ipynb) [`chronos_2_forecasting_colab.ipynb`](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/tutorials/chronos_2_forecasting_colab.ipynb)  
+  *Validate bundled or your own CSV series, build a leakage-safe chronological holdout, verify the pinned `amazon/chronos-2` checkpoint, run univariate and multi-target zero-shot forecasts, and read median/quantile outputs against baselines; no training occurs.*
+
+---
 
 ###### Description
 
