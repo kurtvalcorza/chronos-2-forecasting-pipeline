@@ -31,7 +31,7 @@ Representative application areas include demand, telemetry, environmental, opera
 
 ###### Primary Intended Users
 
-Primary users are ML engineers, time-series data scientists, quantitative analysts, researchers, and application developers who understand temporal holdout design, point-vs-quantile forecasts, regular-frequency constraints, and the difference between predictive covariates and causal interventions.
+Primary users are ML engineers, time-series data scientists, quantitative analysts, researchers, and application developers. The envisioned deployment setting is internal enterprise or research use through the DIMER platform in a tutorial/developer-preview boundary; the card does not claim a stable production-serving contract. Users are assumed to understand temporal holdout design, the difference between a point forecast and a quantile grid, the fixed-width frequency constraint the pipeline enforces, and the difference between a predictive covariate and a causal intervention. A user who would read the `q0.1`/`q0.9` columns as a guaranteed interval, or who cannot run a chronological backtest on their own history, is outside the assumed competency.
 
 ###### Out-of-scope use cases
 
@@ -97,7 +97,7 @@ Upstream Chronos-2 was pretrained by Amazon on a mixture of synthetic and real-w
 
 ###### Human Life
 
-This repository does not certify Chronos-2 for life-critical, clinical, safety-critical, criminal-justice, autonomous-vehicle, emergency-dispatch, or other high-consequence uses. Any sensitive-domain deployment requires independent domain validation, safeguards, monitoring, and human oversight.
+The pipeline is not intended for decisions in health, safety, criminal justice, employment, credit, housing, autonomous-vehicle control, or emergency dispatch, and this repository does not certify Chronos-2 for any of them. Validation performed here is limited to the chronological forecasting helpers and the tutorial's CI execution against the pinned weights; no clinical, regulatory, or independent domain validation has been carried out by the developers or by any external body. Where a sensitive-domain deployment is foreseeable — capacity forecasting that gates staffing in a hospital, for example — it would be admissible only with independent domain validation on that operator's own history, a human decision-maker between the forecast and the action, monitoring for drift, and any regulatory clearance the domain requires.
 
 ###### Mitigations
 
@@ -111,11 +111,11 @@ Implemented mitigations include:
 
 ###### Risks and harms
 
-Material risks include automation bias, distribution shift, sensor/instrument drift, interpreting predictive covariates causally, misreading model quantiles as guaranteed intervals, and compounded forecast error during long autoregressive unrolling.
+Model-intrinsic risks: forecasts outside the pretraining distribution — regime changes, structural breaks, series shorter than the model has effectively seen — carry no signal of their own unreliability, so overconfidence is borne by the operator and by whoever the operator's decision affects; the quantile grid is not calibrated in a user's domain, and a reader who treats `q0.1`–`q0.9` as a guaranteed 80 % interval will under-provision at a rate the pipeline does not measure; long-horizon unrolling past the native 1,024 steps compounds error step by step, which is why it is opt-in. Use-context risks: automation bias, where a numerically precise forecast displaces the operator's own judgement; sensor or instrument drift that reaches the model as a level shift in the target and is forecast forward as if real; covariates read causally, so that a knob the operator can turn is assumed to move the target; and undetected leakage where a "known-future" covariate is actually derived from the future target. Likelihood under normal use is highest for the calibration and automation-bias risks because they need no fault to occur; magnitude scales with what the forecast gates, from a misallocated inventory order to a mis-staffed shift.
 
 ###### Use cases
 
-Users must comply with applicable law, policy, upstream licensing, and organizational controls. The repository should not be treated as authorization for surveillance, discriminatory scoring, unsafe autonomous control, or other prohibited or high-risk applications.
+Distinct from the capability and decision boundaries above, the developers consider the following uses prohibited even where the model would produce a plausible forecast: surveillance or activity profiling of individuals from telemetry that traces to a person; forecasting a person's behaviour, creditworthiness, employment, or housing outcome as an input to a decision about that person; autonomous control of physical systems where a forecast error can injure someone; deceptive presentation of a model quantile as a certified prediction interval; and any use that violates the Apache-2.0 terms of the upstream `amazon/chronos-2` weights, the `chronos-forecasting` package licence, or the terms of the DIMER deployment. The repository is not authorization for any of these, and organisational controls remain the operator's obligation.
 
 ---
 
