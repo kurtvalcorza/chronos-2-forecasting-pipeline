@@ -17,11 +17,17 @@ venv/
 .ipynb_checkpoints/
 
 # Local model / data caches (never commit weights)
-weights/
 .hf_cache/
-*.safetensors
-*.bin
-*.ckpt
+
+# Model weights are pulled locally; only small config/tokenizer files and the
+# dimer-base-manifest.json are committable
+weights/**/*.safetensors
+weights/**/*.ckpt
+weights/**/*.bin
+weights/**/*.pt
+weights/**/*.pth
+weights/**/*.onnx
+weights/**/.cache/
 
 # Tutorial/runtime outputs
 outputs/

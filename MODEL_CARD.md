@@ -90,7 +90,7 @@ The evaluation helpers currently implemented by this repository are:
 
 Evaluation returns per-series and pooled aggregate point metrics. Aggregate MAE/RMSE are scale-dependent and can be dominated by larger-magnitude series or targets, so heterogeneous workloads should also inspect per-series results and add domain-appropriate scale-aware metrics. CRPS, MASE, and WAPE are **not** currently implemented by this repository's evaluator; callers may compute them downstream when mathematically and operationally appropriate.
 
-Tutorial metrics use deterministic synthetic data and a single chronological tail holdout. They are sanity/evidence-of-execution metrics, not benchmark or production-fitness claims.
+Tutorial metrics use deterministic synthetic data and a single chronological tail holdout. They are sanity/evidence-of-execution metrics, not benchmark or production-fitness claims. The public `evaluation_report` helper packages these `evaluate_forecast` metrics and the naive baselines into a machine-readable report whose verdict is `sample-sanity` on such a holdout and `not-measurable` when no held-out truth exists.
 
 ###### Decision thresholds
 
@@ -121,7 +121,7 @@ The pipeline is not intended for decisions in health, safety, criminal justice, 
 Implemented mitigations include:
 
 1. **Supply-chain integrity:** immutable revision pinning, SHA-256 verification of `config.json` and `model.safetensors`, model byte-size validation, refusal of arbitrary/mutable model sources, and rejection of pickle-style weight formats.
-2. **Input validation:** explicit checks for timestamps, regularity, gaps, null/non-finite targets, numeric covariates, future-table semantics, and resource ceilings before upstream inference.
+2. **Input validation:** explicit checks for timestamps, regularity, gaps, null/non-finite targets, numeric covariates, future-table semantics, and resource ceilings before upstream inference. The public `validate_inputs` helper applies exactly these checks and returns an input manifest of the schema, ceilings, per-series observations and verdict before the model runs.
 3. **Alignment oracles:** verification of one row per `(series, target, step)` in the reviewed upstream layout and an assertion that `prediction == q0.5` when q0.5 is requested.
 4. **Reproducibility:** locked dependencies plus structured model/runtime/inference provenance on every forecast.
 5. **Evaluation discipline:** chronological holdout helpers and history-only naive baselines; no public random-split helper for tutorial forecasting evaluation.

@@ -34,10 +34,12 @@ def test_every_code_cell_is_valid_python() -> None:
 
 def test_notebook_declares_task_inference_profile_and_spec() -> None:
     notebook, text = notebook_text()
-    assert notebook["metadata"]["dimer"] == {
-        "notebook_profile": "TASK-INFERENCE",
-        "notebook_spec": "1.0",
-    }
+    dimer = notebook["metadata"]["dimer"]
+    assert dimer["notebook_profile"] == "TASK-INFERENCE"
+    assert dimer["notebook_spec"] == "1.1"
+    # NOTEBOOK_SPEC 1.1 §3.6 standalone carrier; parity lives in test_notebook_parity.py
+    assert dimer["standalone"] is True
+    assert dimer["generated_from"]["repository"] == "chronos-2-forecasting-pipeline"
     assert "DIMER `TASK-INFERENCE`" in text
     assert "No training or fine-tuning occurs" in text
 
@@ -94,7 +96,8 @@ def test_byod_duplicate_headers_are_rejected_before_pandas_parse() -> None:
     assert duplicate_guard < pandas_parse
     assert "Counter(header)" in code
     assert "is not sent to an external inference service" in text
-    assert "Do not upload confidential, restricted, personal" in text
+    assert "Do not upload confidential or restricted data" in text
+    assert "(personal or otherwise sensitive data included)" in text
 
 
 def test_forecasting_evaluation_contract_is_explicit() -> None:

@@ -39,6 +39,10 @@ from typing import Any
 from .errors import HubUnavailableError, ModelIntegrityError, ModelSourceError
 
 __all__ = [
+    "MODEL_ID",
+    "MODEL_REVISION",
+    "MODEL_LICENSE",
+    "MODEL_KEY",
     "PINNED_MODEL_ID",
     "PINNED_REVISION",
     "PINNED_WEIGHTS_SHA256",
@@ -69,13 +73,22 @@ __all__ = [
 # 2026-09-08; see MODEL_CARD.md for the provenance record.
 # --------------------------------------------------------------------------
 
-PINNED_MODEL_ID = "amazon/chronos-2"
-PINNED_REVISION = "95a9710e2596287d08352589f42634fa5abdf0a7"
+#: Fleet identity names (DIMER NOTEBOOK_SPEC 1.1 ST3): the four constants every DIMER package
+#: spells the same way, so a generated standalone notebook and the fleet tooling can read the
+#: identity without knowing this package's own vocabulary. The ``PINNED_*`` names below are the
+#: package's original spelling and stay in use everywhere; they alias these, never the reverse.
+MODEL_ID = "amazon/chronos-2"
+MODEL_REVISION = "95a9710e2596287d08352589f42634fa5abdf0a7"
+MODEL_LICENSE = "apache-2.0"
+MODEL_KEY = "chronos-2"
+
+PINNED_MODEL_ID = MODEL_ID
+PINNED_REVISION = MODEL_REVISION
 PINNED_WEIGHTS_SHA256 = "ddcda3c7508bf2528087723e98a20707cc04b7f370ae275a9fd88078ddba4f42"
 PINNED_WEIGHTS_BYTES = 477_930_472
 PINNED_CONFIG_SHA256 = "ef1143bfdc9c0376d9a056eefca46cb4b1ec3d0ffacd541ff56feb40fb708031"
 
-PINNED_LICENSE = "apache-2.0"
+PINNED_LICENSE = MODEL_LICENSE
 #: There is no LICENSE file in the Hugging Face repository at the pinned
 #: revision — the files present are .gitattributes, README.md, config.json and
 #: model.safetensors. The licence is declared in the model card metadata only,
@@ -103,9 +116,9 @@ CONFIG_FILENAME = "config.json"
 #: ``dimer-base-manifest.json``. The manifest is the parity anchor a standalone notebook
 #: carries inline; the digest constants above are asserted equal to it on every load, so the
 #: two can never disagree silently.
-PINNED_MODEL_KEY = "chronos-2"
+PINNED_MODEL_KEY = MODEL_KEY
 MANIFEST_NAME = "dimer-base-manifest.json"
-DEFAULT_WEIGHTS_DIR = Path(__file__).resolve().parents[2] / "weights" / PINNED_MODEL_KEY
+DEFAULT_WEIGHTS_DIR = Path(__file__).resolve().parents[2] / "weights" / MODEL_KEY
 
 #: Pickle-format checkpoints execute arbitrary code on load. If any appear in
 #: the snapshot the load is refused rather than silently preferring safetensors.
@@ -379,7 +392,9 @@ def _read_manifest(root: Path, *, expected_revision: str) -> dict[str, Any]:
         with open(manifest_path, encoding="utf-8") as handle:
             manifest = json.load(handle)
     except (OSError, ValueError) as exc:
-        raise ModelIntegrityError(f"Could not read snapshot manifest {manifest_path}: {exc}") from exc
+        raise ModelIntegrityError(
+            f"Could not read snapshot manifest {manifest_path}: {exc}"
+        ) from exc
     if manifest.get("modelId") != PINNED_MODEL_ID:
         raise ModelIntegrityError(
             f"Snapshot manifest names model {manifest.get('modelId')!r}, not the pinned "
