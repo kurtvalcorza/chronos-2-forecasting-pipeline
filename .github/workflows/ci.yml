@@ -35,7 +35,10 @@ jobs:
         run: uv sync --locked --extra dev
 
       - name: Ruff
-        run: uv run ruff check .
+        # Standalone notebooks intentionally carry multiple source modules in independent cells.
+        # Lint their source-of-truth modules and notebook tooling; parity/asset validation below
+        # verifies the generated notebooks instead of treating the whole .ipynb as one Python file.
+        run: uv run ruff check src tests tools
 
       - name: Contract and unit tests
         run: uv run pytest -m "not integration"
