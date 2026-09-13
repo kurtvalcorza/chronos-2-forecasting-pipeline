@@ -28,6 +28,7 @@ default, so a cached, digest-matching snapshot still loads offline.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 from collections.abc import Callable
@@ -46,6 +47,9 @@ __all__ = [
     "PINNED_LICENSE",
     "PINNED_LICENSE_SOURCE",
     "PINNED_MODEL_URL",
+    "PINNED_MODEL_KEY",
+    "DEFAULT_WEIGHTS_DIR",
+    "MANIFEST_NAME",
     "EXPECTED_TRAINED_QUANTILES",
     "WEIGHTS_FILENAME",
     "CONFIG_FILENAME",
@@ -55,6 +59,7 @@ __all__ = [
     "sha256_file",
     "check_model_source",
     "verify_snapshot",
+    "stage_missing_files",
     "resolve_hub_revision",
     "load_pinned_model",
 ]
@@ -92,6 +97,15 @@ EXPECTED_TRAINED_QUANTILES: tuple[float, ...] = (
 
 WEIGHTS_FILENAME = "model.safetensors"
 CONFIG_FILENAME = "config.json"
+
+#: Fleet snapshot scheme (DIMER NOTEBOOK_SPEC 1.1 MOD13): the pinned files also live in a
+#: repository-local snapshot directory named by this key, described by a committed
+#: ``dimer-base-manifest.json``. The manifest is the parity anchor a standalone notebook
+#: carries inline; the digest constants above are asserted equal to it on every load, so the
+#: two can never disagree silently.
+PINNED_MODEL_KEY = "chronos-2"
+MANIFEST_NAME = "dimer-base-manifest.json"
+DEFAULT_WEIGHTS_DIR = Path(__file__).resolve().parents[2] / "weights" / PINNED_MODEL_KEY
 
 #: Pickle-format checkpoints execute arbitrary code on load. If any appear in
 #: the snapshot the load is refused rather than silently preferring safetensors.
@@ -358,6 +372,154 @@ def resolve_hub_revision(model_id: str, revision: str) -> str:
     return sha
 
 
+def _read_manifest(root: Path, *, expected_revision: str) -> dict[str, Any]:
+    """Load and identity-check ``<root>/dimer-base-manifest.json``."""
+    manifest_path = root / MANIFEST_NAME
+    try:
+        with open(manifest_path, encoding="utf-8") as handle:
+            manifest = json.load(handle)
+    except (OSError, ValueError) as exc:
+        raise ModelIntegrityError(f"Could not read snapshot manifest {manifest_path}: {exc}") from exc
+    if manifest.get("modelId") != PINNED_MODEL_ID:
+        raise ModelIntegrityError(
+            f"Snapshot manifest names model {manifest.get('modelId')!r}, not the pinned "
+            f"{PINNED_MODEL_ID!r} ({manifest_path})."
+        )
+    if manifest.get("revision") != expected_revision:
+        raise ModelIntegrityError(
+            f"Snapshot manifest names revision {manifest.get('revision')!r}, not the pinned "
+            f"{expected_revision!r} ({manifest_path})."
+        )
+    if not isinstance(manifest.get("files"), list) or not manifest["files"]:
+        raise ModelIntegrityError(f"Snapshot manifest lists no files: {manifest_path}")
+    return manifest
+
+
+def _verify_manifest_snapshot(
+    root: Path,
+    *,
+    expected_revision: str,
+    expected_config_sha256: str,
+    expected_weights_sha256: str,
+    expected_weights_bytes: int,
+    resolved_revision: str | None,
+) -> dict[str, Any]:
+    """Manifest-driven verification of a snapshot directory named by ``PINNED_MODEL_KEY``.
+
+    The directory name carries no revision here — the committed manifest does — so the
+    revision assertion moves to the manifest and the per-file digests come from it. The
+    package's own ``PINNED_*`` digest constants are then asserted **equal to** the manifest
+    entries, so this path is never weaker than the revision-directory path.
+    """
+    if resolved_revision is not None and resolved_revision != expected_revision:
+        raise ModelIntegrityError(
+            f"The Hub resolved this model to revision {resolved_revision!r}, which does not "
+            f"match the pinned revision {expected_revision!r}. The pinned commit is the primary "
+            f"supply-chain invariant, so a different commit is refused whatever its contents."
+        )
+    manifest = _read_manifest(root, expected_revision=expected_revision)
+
+    refused = sorted(
+        p.name
+        for p in root.rglob("*")
+        if p.is_file() and p.suffix.lower() in REFUSED_WEIGHT_SUFFIXES
+    )
+    if refused:
+        raise ModelIntegrityError(
+            f"Refusing to load: pickle-format weight files are present in the snapshot and "
+            f"would permit arbitrary code execution: {refused}. Only {WEIGHTS_FILENAME} is "
+            f"acceptable."
+        )
+
+    digests: dict[str, str] = {}
+    for entry in manifest["files"]:
+        path = root / entry["path"]
+        if not path.is_file():
+            raise ModelIntegrityError(f"Snapshot file listed in the manifest is missing: {path}")
+        actual_bytes = path.stat().st_size
+        if actual_bytes != entry["bytes"]:
+            raise ModelIntegrityError(
+                f"{entry['path']} is {actual_bytes} bytes, expected {entry['bytes']} for "
+                f"revision {expected_revision}."
+            )
+        digest = sha256_file(path)
+        if digest != entry["sha256"]:
+            raise ModelIntegrityError(
+                f"{entry['path']} SHA-256 {digest} does not match the manifest digest "
+                f"{entry['sha256']}."
+            )
+        digests[entry["path"]] = digest
+
+    sizes = {entry["path"]: int(entry["bytes"]) for entry in manifest["files"]}
+    for filename in (CONFIG_FILENAME, WEIGHTS_FILENAME):
+        if filename not in digests:
+            raise ModelIntegrityError(
+                f"Snapshot manifest does not list {filename}, which the loader requires "
+                f"({root / MANIFEST_NAME})."
+            )
+    if digests[CONFIG_FILENAME] != expected_config_sha256:
+        raise ModelIntegrityError(
+            f"Manifest {CONFIG_FILENAME} digest {digests[CONFIG_FILENAME]} does not match the "
+            f"pinned digest {expected_config_sha256}."
+        )
+    if digests[WEIGHTS_FILENAME] != expected_weights_sha256:
+        raise ModelIntegrityError(
+            f"Manifest {WEIGHTS_FILENAME} digest {digests[WEIGHTS_FILENAME]} does not match the "
+            f"pinned digest {expected_weights_sha256}."
+        )
+    if sizes[WEIGHTS_FILENAME] != expected_weights_bytes:
+        raise ModelIntegrityError(
+            f"Manifest {WEIGHTS_FILENAME} size {sizes[WEIGHTS_FILENAME]} does not match the "
+            f"pinned byte count {expected_weights_bytes}."
+        )
+
+    return {
+        "path": str(root),
+        "revision": str(manifest["revision"]),
+        "config_sha256": digests[CONFIG_FILENAME],
+        "weights_sha256": digests[WEIGHTS_FILENAME],
+        "weights_bytes": sizes[WEIGHTS_FILENAME],
+        "files": list(manifest["files"]),
+        "model_key": manifest.get("modelKey", PINNED_MODEL_KEY),
+    }
+
+
+def _hub_download(relative_path: str, root: Path) -> None:
+    """Fetch one manifest-listed file at ``PINNED_REVISION`` straight into ``root``."""
+    from huggingface_hub import hf_hub_download
+
+    hf_hub_download(PINNED_MODEL_ID, relative_path, revision=PINNED_REVISION, local_dir=str(root))
+
+
+def stage_missing_files(
+    path: str | os.PathLike[str] | None = None,
+    *,
+    allow_download: bool = False,
+    downloader: Callable[[str, Path], None] | None = None,
+) -> list[str]:
+    """Fetch manifest-listed files that are absent from the snapshot directory.
+
+    A fresh clone commits the manifest and git-ignores the weights, so this is how the
+    snapshot is populated. Only files named by the manifest are fetched, only at
+    ``PINNED_REVISION``, and :func:`verify_snapshot` still re-hashes everything afterwards.
+    Returns the relative paths fetched (empty when nothing was missing).
+    """
+    root = Path(path) if path is not None else DEFAULT_WEIGHTS_DIR
+    manifest = _read_manifest(root, expected_revision=PINNED_REVISION)
+    missing = [entry["path"] for entry in manifest["files"] if not (root / entry["path"]).is_file()]
+    if not missing:
+        return []
+    if not allow_download:
+        raise FileNotFoundError(
+            f"snapshot at {root} is missing {missing}; pass allow_download=True to fetch them "
+            f"at {PINNED_REVISION}"
+        )
+    fetch = downloader or _hub_download
+    for relative_path in missing:
+        fetch(relative_path, root)
+    return missing
+
+
 def verify_snapshot(
     snapshot_path: str | os.PathLike[str],
     *,
@@ -390,6 +552,19 @@ def verify_snapshot(
     root = Path(snapshot_path)
     if not root.is_dir():
         raise ModelIntegrityError(f"Model snapshot path is not a directory: {root}")
+
+    if (root / MANIFEST_NAME).is_file():
+        # Fleet snapshot directory (``weights/<PINNED_MODEL_KEY>/``): the revision is carried by
+        # the committed manifest rather than by the directory name, and the per-file digests come
+        # from it. The pinned constants are asserted equal to the manifest inside.
+        return _verify_manifest_snapshot(
+            root,
+            expected_revision=expected_revision,
+            expected_config_sha256=expected_config_sha256,
+            expected_weights_sha256=expected_weights_sha256,
+            expected_weights_bytes=expected_weights_bytes,
+            resolved_revision=resolved_revision if check_resolved_revision else None,
+        )
 
     if check_resolved_revision:
         if resolved_revision is not None and resolved_revision != expected_revision:
@@ -495,6 +670,8 @@ def load_pinned_model(
     cache_dir: str | os.PathLike[str] | None = None,
     revision_resolver: Callable[[str, str], str] = resolve_hub_revision,
     require_hub_confirmation: bool = False,
+    weights_dir: str | os.PathLike[str] | None = None,
+    allow_download: bool = False,
 ) -> LoadedModel:
     """Download, verify and load the pinned Chronos-2 checkpoint.
 
@@ -520,6 +697,17 @@ def load_pinned_model(
         :class:`ModelIdentity` reports ``revision_confirmed_against_hub=False``
         with the reason. A Hub that *answers* with a different commit is refused
         in either mode.
+    weights_dir
+        A fleet snapshot directory holding ``dimer-base-manifest.json`` (normally
+        ``weights/<PINNED_MODEL_KEY>/``). When given, nothing is resolved through
+        ``snapshot_download``: missing manifest entries are staged with
+        :func:`stage_missing_files`, :func:`verify_snapshot` re-hashes every entry against the
+        manifest *and* against the pinned digest constants, and the same
+        ``BaseChronosPipeline.from_pretrained`` call loads from that directory. Identical files,
+        identical loader, a different place to keep them.
+    allow_download
+        Only meaningful with ``weights_dir``: permit :func:`stage_missing_files` to fetch the
+        manifest entries that are absent, at ``PINNED_REVISION``. The default refuses.
 
     Raises
     ------
@@ -534,37 +722,54 @@ def load_pinned_model(
     check_model_source(model_id, revision)
 
     from chronos import BaseChronosPipeline
-    from huggingface_hub import snapshot_download
 
     hub_revision: str | None
-    try:
-        hub_revision = revision_resolver(model_id, revision)
-    except HubUnavailableError as exc:
-        if require_hub_confirmation:
-            raise
+    snapshot_path: str
+    if weights_dir is not None:
+        # Fleet snapshot path: the committed manifest is the revision oracle and the digests
+        # prove the content, so no Hub lookup is performed for the identity.
+        root = Path(weights_dir)
+        stage_missing_files(root, allow_download=allow_download)
+        verified = verify_snapshot(root)
         hub_revision = None
         confirmation_note = (
-            f"the Hub was not consulted successfully on this load ({exc}); the "
-            f"snapshot's identity rests on the recorded {CONFIG_FILENAME} and "
-            f"{WEIGHTS_FILENAME} SHA-256 digests and the weight byte count, which "
-            f"prove its content independently of the Hub"
+            f"the Hub was not consulted on this load; the snapshot's identity rests on the "
+            f"committed {MANIFEST_NAME} at {root}, whose per-file SHA-256 digests were "
+            f"re-hashed and asserted equal to the pinned {CONFIG_FILENAME} and "
+            f"{WEIGHTS_FILENAME} digests and the weight byte count"
         )
+        snapshot_path = str(root)
     else:
-        if hub_revision != PINNED_REVISION:
-            raise ModelIntegrityError(
-                f"The Hub resolved {model_id!r}@{revision} to commit {hub_revision!r}, not "
-                f"the pinned {PINNED_REVISION!r}. Nothing is downloaded and nothing is loaded."
-            )
-        confirmation_note = (
-            f"the Hub resolved {model_id}@{revision} to {hub_revision} on this load"
-        )
+        from huggingface_hub import snapshot_download
 
-    snapshot_path = snapshot_download(
-        repo_id=model_id,
-        revision=revision,
-        cache_dir=cache_dir,
-    )
-    verified = verify_snapshot(snapshot_path, resolved_revision=hub_revision)
+        try:
+            hub_revision = revision_resolver(model_id, revision)
+        except HubUnavailableError as exc:
+            if require_hub_confirmation:
+                raise
+            hub_revision = None
+            confirmation_note = (
+                f"the Hub was not consulted successfully on this load ({exc}); the "
+                f"snapshot's identity rests on the recorded {CONFIG_FILENAME} and "
+                f"{WEIGHTS_FILENAME} SHA-256 digests and the weight byte count, which "
+                f"prove its content independently of the Hub"
+            )
+        else:
+            if hub_revision != PINNED_REVISION:
+                raise ModelIntegrityError(
+                    f"The Hub resolved {model_id!r}@{revision} to commit {hub_revision!r}, not "
+                    f"the pinned {PINNED_REVISION!r}. Nothing is downloaded and nothing is loaded."
+                )
+            confirmation_note = (
+                f"the Hub resolved {model_id}@{revision} to {hub_revision} on this load"
+            )
+
+        snapshot_path = snapshot_download(
+            repo_id=model_id,
+            revision=revision,
+            cache_dir=cache_dir,
+        )
+        verified = verify_snapshot(snapshot_path, resolved_revision=hub_revision)
 
     resolved_device = resolve_device(device)
     pipeline = BaseChronosPipeline.from_pretrained(
