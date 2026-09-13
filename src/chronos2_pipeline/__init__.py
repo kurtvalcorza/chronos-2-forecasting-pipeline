@@ -27,12 +27,19 @@ from .evaluation import (
     HoldoutSplit,
     chronological_holdout,
     evaluate_forecast,
+    evaluation_report,
     last_value_baseline,
     seasonal_naive_baseline,
 )
 from .inference import ForecastResult, build_rename_map, forecast, normalized_columns
 from .model import (
+    DEFAULT_WEIGHTS_DIR,
     EXPECTED_TRAINED_QUANTILES,
+    MANIFEST_NAME,
+    MODEL_ID,
+    MODEL_KEY,
+    MODEL_LICENSE,
+    MODEL_REVISION,
     PINNED_CONFIG_SHA256,
     PINNED_LICENSE,
     PINNED_MODEL_ID,
@@ -43,10 +50,17 @@ from .model import (
     ModelIdentity,
     load_pinned_model,
     resolve_hub_revision,
+    stage_missing_files,
     verify_snapshot,
 )
 from .provenance import build_provenance, runtime_versions
-from .validation import ResourceLimits, ValidationResult, validate_forecast_request
+from .validation import (
+    INPUT_SCHEMA,
+    ResourceLimits,
+    ValidationResult,
+    validate_forecast_request,
+    validate_inputs,
+)
 
 __version__ = "0.1.0"
 
@@ -65,6 +79,13 @@ __all__ = [
     # model
     "load_pinned_model",
     "verify_snapshot",
+    "stage_missing_files",
+    "DEFAULT_WEIGHTS_DIR",
+    "MANIFEST_NAME",
+    "MODEL_ID",
+    "MODEL_REVISION",
+    "MODEL_LICENSE",
+    "MODEL_KEY",
     "resolve_hub_revision",
     "LoadedModel",
     "ModelIdentity",
@@ -77,6 +98,8 @@ __all__ = [
     "EXPECTED_TRAINED_QUANTILES",
     # validation
     "validate_forecast_request",
+    "validate_inputs",
+    "INPUT_SCHEMA",
     "ValidationResult",
     "ResourceLimits",
     # inference
@@ -87,6 +110,7 @@ __all__ = [
     # evaluation
     "chronological_holdout",
     "evaluate_forecast",
+    "evaluation_report",
     "last_value_baseline",
     "seasonal_naive_baseline",
     "HoldoutSplit",
