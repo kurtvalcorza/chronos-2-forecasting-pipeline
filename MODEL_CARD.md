@@ -7,6 +7,8 @@ tags:
   - time-series-foundation-model
   - zero-shot
 base_model: amazon/chronos-2
+date_published: "2025-10-30"
+date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/amazon/chronos-2)"
 ---
 
 # Chronos-2 (v1.0) — Time-Series Foundation Model (Zero-Shot Forecasting)
@@ -15,7 +17,6 @@ base_model: amazon/chronos-2
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-amazon--science%2Fchronos--forecasting-181717?style=flat&logo=github&logoColor=white)](https://github.com/amazon-science/chronos-forecasting)
 [![arXiv Paper](https://img.shields.io/badge/arXiv-2510.15821-b31b1b.svg)](https://arxiv.org/abs/2510.15821)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Pipeline](https://img.shields.io/badge/Pipeline-chronos--2--forecasting--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
 
 > [!WARNING]
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
@@ -32,7 +33,7 @@ This pipeline provides a ready-to-run interactive Google Colab notebook that exe
 
 ---
 
-###### Description
+#### Description
 
 Chronos-2 is a pretrained time-series foundation model from Amazon (`amazon/chronos-2`, pinned revision `95a9710e2596287d08352589f42634fa5abdf0a7`) packaged by this repository for zero-shot probabilistic forecasting. The pinned checkpoint uses the T5-family Chronos-2 architecture (`model_type: t5`, ~119.5M parameters), with 16-timestep input/output patches, stride 16, hidden dimension 768, and a fixed 21-level trained quantile grid. Inference is in-context only: this repository performs no parameter training or fine-tuning.
 
