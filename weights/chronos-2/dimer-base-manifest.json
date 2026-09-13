@@ -1,0 +1,25 @@
+{
+  "format": "dimer_hf_snapshot",
+  "formatVersion": 1,
+  "modelKey": "chronos-2",
+  "modelId": "amazon/chronos-2",
+  "revision": "95a9710e2596287d08352589f42634fa5abdf0a7",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 31,
+      "sha256": "4bcf87ecfbbb8e07a01b21415a970c8b53a5283bf6872b657040d3f45c9241f7"
+    },
+    {
+      "path": "config.json",
+      "bytes": 1067,
+      "sha256": "ef1143bfdc9c0376d9a056eefca46cb4b1ec3d0ffacd541ff56feb40fb708031"
+    },
+    {
+      "path": "model.safetensors",
+      "bytes": 477930472,
+      "sha256": "ddcda3c7508bf2528087723e98a20707cc04b7f370ae275a9fd88078ddba4f42"
+    }
+  ],
+  "totalBytes": 477931570
+}

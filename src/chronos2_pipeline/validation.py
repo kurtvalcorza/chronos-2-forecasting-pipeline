@@ -54,6 +54,8 @@ __all__ = [
     "validate_forecast_request",
     "quantiles_in_grid",
     "nearest_grid_level",
+    "INPUT_SCHEMA",
+    "validate_inputs",
 ]
 
 #: RFC rule 10. Upstream's own frequency inference needs three points
@@ -908,3 +910,114 @@ def validate_forecast_request(
         past_covariate_names=[c for c in covariates if c not in known_future_covariates],
         confirmed_frequency=confirmed_frequency,
     )
+
+
+# --------------------------------------------------------------------------
+# Role stage: validation (DIMER NOTEBOOK_SPEC 1.1 DAT24)
+#
+# `validate_inputs` is the public validation stage a tutorial calls before the
+# model runs. It does not add a second rule set: it routes the request through
+# `validate_forecast_request` with exactly the arguments
+# `chronos2_pipeline.inference.forecast` passes, so it raises exactly what the
+# forecast call would raise, and then reports what was proven as a
+# machine-readable input manifest.
+# --------------------------------------------------------------------------
+
+#: The request contract and every named ceiling, in one readable structure.
+INPUT_SCHEMA: dict[str, Any] = {
+    "input": (
+        "long-format pandas DataFrame: config.id_column, config.timestamp_column, one column "
+        "per target name, and any further numeric column as a covariate"
+    ),
+    "timestamps": (
+        "parseable, strictly regular and contiguous per series at one fixed-width frequency; "
+        "monthly/quarterly/yearly/business-day and gappy calendars are refused"
+    ),
+    "targets": "finite numeric values; duplicate (id, timestamp) observations are refused",
+    "min_observations_per_series": MIN_OBSERVATIONS,
+    "max_ids": DEFAULT_LIMITS.max_ids,
+    "max_targets": DEFAULT_LIMITS.max_targets,
+    "max_covariates": DEFAULT_LIMITS.max_covariates,
+    "max_rows": DEFAULT_LIMITS.max_rows,
+    "max_context_length": DEFAULT_LIMITS.max_context_length,
+    "max_prediction_length": DEFAULT_LIMITS.max_prediction_length,
+    "quantile_levels": "must be members of the grid the pinned model was trained on, exactly",
+    "future_df": (
+        "known-future covariates only: id and timestamp columns plus covariates also present in "
+        "the history; target columns are refused as leakage"
+    ),
+}
+
+
+def validate_inputs(
+    history_df: pd.DataFrame,
+    config: ForecastConfig,
+    model: Any,
+    future_df: pd.DataFrame | None = None,
+    *,
+    limits: ResourceLimits = DEFAULT_LIMITS,
+    allow_unroll: bool = False,
+    target_policy: str = "strict",
+    names: list[Any] | None = None,
+) -> dict[str, Any]:
+    """Validation stage: return the input manifest (schema, per-series observations, verdict).
+
+    Rejection is reported by raising exactly as :func:`chronos2_pipeline.inference.forecast`
+    would — both go through :func:`validate_forecast_request` with the same arguments — so a
+    caller that wants the finding recorded catches :class:`ValidationError` and stores
+    ``str(exc)`` under ``findings``.
+
+    ``model`` is the :class:`chronos2_pipeline.model.LoadedModel`; only its
+    ``trained_quantiles``, ``model_context_length`` and ``model_prediction_length`` are read,
+    because those are the model-side facts the rules need.
+    """
+    validated = validate_forecast_request(
+        history_df,
+        config,
+        trained_quantiles=model.trained_quantiles,
+        model_context_length=model.model_context_length,
+        model_prediction_length=model.model_prediction_length,
+        future_df=future_df,
+        limits=limits,
+        target_policy=target_policy,
+        allow_unroll=allow_unroll,
+    )
+    if names is not None and len(names) != len(validated.series_ids):
+        raise ValidationError(
+            "NAMES_LENGTH_MISMATCH",
+            f"names must have one entry per series: got {len(names)} for "
+            f"{len(validated.series_ids)} series.",
+            {"n_names": len(names), "n_series": len(validated.series_ids)},
+        )
+    history = validated.history
+    inputs: list[dict[str, Any]] = []
+    for index, series_id in enumerate(validated.series_ids):
+        block = history[history[config.id_column] == series_id]
+        timestamps = block[config.timestamp_column]
+        inputs.append(
+            {
+                "id": names[index] if names else str(series_id),
+                "series_id": str(series_id),
+                "n_observations": int(len(block)),
+                "first_timestamp": str(timestamps.min()),
+                "last_timestamp": str(timestamps.max()),
+                "targets": list(validated.target_names),
+            }
+        )
+    return {
+        "schema": dict(INPUT_SCHEMA),
+        "inputs": inputs,
+        "n_rows": int(validated.n_rows),
+        "prediction_length": int(config.prediction_length),
+        "requested_quantile_levels": list(validated.requested_quantiles),
+        "observed_frequency": str(validated.frequency),
+        "confirmed_frequency": validated.confirmed_frequency,
+        "longest_series_length": int(validated.max_series_length),
+        "shortest_series_length": int(validated.min_series_length),
+        "past_covariate_names": list(validated.past_covariate_names),
+        "known_future_covariate_names": list(validated.known_future_covariate_names),
+        "verdict": "accepted",
+        "findings": [],
+        "model_id": model.identity.model_id,
+        "model_revision": model.identity.revision,
+    }

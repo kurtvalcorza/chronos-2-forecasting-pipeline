@@ -29,6 +29,7 @@ __all__ = [
     "HoldoutSplit",
     "chronological_holdout",
     "evaluate_forecast",
+    "evaluation_report",
     "seasonal_naive_baseline",
     "last_value_baseline",
 ]
@@ -424,3 +425,129 @@ def seasonal_naive_baseline(
         [NORMALIZED_ID_COLUMN, NORMALIZED_TARGET_COLUMN, NORMALIZED_TIMESTAMP_COLUMN],
         kind="mergesort",
     ).reset_index(drop=True)
+
+
+# --------------------------------------------------------------------------
+# Role stage: evaluation (DIMER NOTEBOOK_SPEC 1.1 EVAL21)
+#
+# `evaluation_report` is the public evaluation stage a tutorial calls after the
+# forecast. It adds no metric of its own: every number comes from
+# `evaluate_forecast` (MAE, RMSE, per-quantile pinball loss, empirical interval
+# coverage) and the two naive baselines above, so the metric ids in the report
+# are this module's own helper names (EVAL2). Without held-out truth the report
+# still exists and says what would make the task measurable (EVAL9).
+# --------------------------------------------------------------------------
+
+
+def _aggregate_metrics(evaluation: EvaluationResult, *, estimation: str) -> list[dict[str, Any]]:
+    metrics: list[dict[str, Any]] = [
+        {"id": "evaluate_forecast", "metric": name, "value": float(value), "estimation": estimation}
+        for name, value in evaluation.aggregate.items()
+        if name in ("mae", "rmse", "interval_coverage")
+    ]
+    for row in evaluation.quantiles.to_dict("records"):
+        metrics.append(
+            {
+                "id": "evaluate_forecast",
+                "metric": "pinball_loss",
+                "quantile": float(row["quantile"]),
+                "value": float(row["pinball_loss"]),
+                "estimation": estimation,
+            }
+        )
+    return metrics
+
+
+def evaluation_report(
+    result: Any,
+    truth_df: pd.DataFrame | None = None,
+    *,
+    config: ForecastConfig,
+    history_df: pd.DataFrame | None = None,
+    season_length: int | None = None,
+    sample_kind: str = "synthetic",
+) -> dict[str, Any]:
+    """Evaluation stage: a machine-readable report even when nothing is measurable.
+
+    ``result`` is the :class:`chronos2_pipeline.inference.ForecastResult` (or its
+    ``forecast`` frame). With ``truth_df`` — the held-out future produced by
+    :func:`chronological_holdout` or supplied from outside — the report carries the
+    :func:`evaluate_forecast` metrics for the model and, when ``history_df`` is given, for
+    :func:`last_value_baseline` (and :func:`seasonal_naive_baseline` when ``season_length``
+    is given too) with the verdict ``sample-sanity``: one chronological tail split of one
+    sample, no dispersion estimate. Without truth the verdict is ``not-measurable`` and the
+    report says what data would make the task measurable. Everything ``evaluate_forecast``
+    would raise (a coverage mismatch, a malformed frame) is raised here unchanged.
+    """
+    forecast_df = getattr(result, "forecast", result)
+    provenance = getattr(result, "provenance", None) or {}
+    model_block = provenance.get("model", {}) if isinstance(provenance, dict) else {}
+    inference_block = provenance.get("inference", {}) if isinstance(provenance, dict) else {}
+    base: dict[str, Any] = {
+        "task": "zero-shot probabilistic time-series forecasting",
+        "score_semantics": (
+            "prediction is the median (q0.5) of the model's quantile forecast; the requested "
+            "quantiles summarise the predictive distribution and are not calibrated intervals"
+        ),
+        "sample_kind": sample_kind,
+        "horizon": int(config.prediction_length),
+        "effective_context_length": inference_block.get("effective_context_length"),
+        "n_forecast_rows": int(len(forecast_df)),
+        "n_series": int(forecast_df[NORMALIZED_ID_COLUMN].nunique()),
+        "targets": sorted(str(t) for t in forecast_df[NORMALIZED_TARGET_COLUMN].unique()),
+        "model_id": model_block.get("name"),
+        "model_revision": model_block.get("revision"),
+    }
+    if truth_df is None:
+        return {
+            **base,
+            "metrics": [],
+            "baselines": [],
+            "verdict": "not-measurable",
+            "reason": "no held-out future truth was supplied for the forecast window",
+            "needs": (
+                "the true target values for the forecast window, aligned on (series_id, "
+                "timestamp, target_name) - e.g. a chronological tail holdout of your own history "
+                "(chronological_holdout) scored with evaluate_forecast against last_value_baseline"
+            ),
+        }
+    estimation = "single chronological tail holdout of one sample; no dispersion estimate"
+    evaluation = evaluate_forecast(forecast_df, truth_df, config)
+    baselines: list[dict[str, Any]] = []
+    if history_df is not None:
+        last_value = evaluate_forecast(
+            last_value_baseline(history_df, truth_df, config), truth_df, config
+        )
+        baselines.append(
+            {
+                "id": "last_value_baseline",
+                "metrics": _aggregate_metrics(last_value, estimation=estimation),
+            }
+        )
+        if season_length is not None:
+            seasonal = evaluate_forecast(
+                seasonal_naive_baseline(history_df, truth_df, config, season_length=season_length),
+                truth_df,
+                config,
+            )
+            baselines.append(
+                {
+                    "id": "seasonal_naive_baseline",
+                    "season_length": int(season_length),
+                    "metrics": _aggregate_metrics(seasonal, estimation=estimation),
+                }
+            )
+    return {
+        **base,
+        "metrics": _aggregate_metrics(evaluation, estimation=estimation),
+        "baselines": baselines,
+        "verdict": "sample-sanity",
+        "reason": (
+            f"{int(evaluation.aggregate['n'])} held-out (series, timestamp, target) rows from one "
+            f"chronological tail split of the tutorial sample; not a benchmark"
+        ),
+        "needs": (
+            "rolling-origin backtests over several forecast windows of the deployment domain's own "
+            "history, compared against the naive baselines, for any generalisable accuracy claim"
+        ),
+    }

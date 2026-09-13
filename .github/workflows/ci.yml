@@ -40,6 +40,12 @@ jobs:
       - name: Contract and unit tests
         run: uv run pytest -m "not integration"
 
+      - name: Validate tutorial and model-card source
+        run: uv run python tools/validate_release_assets.py
+
+      - name: Standalone notebook parity (NOTEBOOK_SPEC 1.1 PAR3)
+        run: uv run python tools/build_notebook.py --check
+
   integration:
     name: CPU live tutorial against pinned weights
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -69,26 +75,36 @@ jobs:
       - name: Integration tests (CPU)
         run: uv run pytest -m integration
 
-      - name: Execute default tutorial from a clean bootstrap directory
+      # The notebook is standalone (NOTEBOOK_SPEC 1.1 §3.6): it carries the package, pins its own
+      # runtime and stages the weights into <workdir>/weights/chronos-2/. It runs here on the locked
+      # uv environment (DIMER_NOTEBOOK_CI_PREINSTALLED=1 skips the inline pip install, which the uv
+      # venv has no pip for), in a scratch working directory with no repository checkout on the path.
+      # Both runs share the scratch directory so the 478 MB checkpoint is fetched once; outputs/ is
+      # copied back into the workspace after each run for the evidence upload.
+      - name: Execute default tutorial from a clean working directory
         env:
-          DIMER_TUTORIAL_REF: ${{ github.sha }}
-          DIMER_OUTPUT_DIR: ${{ github.workspace }}/outputs/default
+          DIMER_NOTEBOOK_CI_PREINSTALLED: "1"
         run: |
           rm -rf "${RUNNER_TEMP}/chronos-notebook-fresh"
           mkdir -p "${RUNNER_TEMP}/chronos-notebook-fresh"
           uv run python tools/run_notebook.py \
             tutorials/chronos_2_forecasting_colab.ipynb \
             --workdir "${RUNNER_TEMP}/chronos-notebook-fresh"
+          mkdir -p outputs/default
+          cp -r "${RUNNER_TEMP}/chronos-notebook-fresh/outputs/." outputs/default/
 
       - name: Execute BYOD-shaped and known-future-covariate branches
         env:
           DIMER_NOTEBOOK_CI_PREINSTALLED: "1"
           DIMER_BYOD_PATH: ${{ github.workspace }}/examples/sample-data/chronos_univariate.csv
           DIMER_RUN_COVARIATE_DEMO: "1"
-          DIMER_OUTPUT_DIR: ${{ github.workspace }}/outputs/branches
-        run: >-
-          uv run python tools/run_notebook.py
-          tutorials/chronos_2_forecasting_colab.ipynb
+        run: |
+          rm -rf "${RUNNER_TEMP}/chronos-notebook-fresh/outputs"
+          uv run python tools/run_notebook.py \
+            tutorials/chronos_2_forecasting_colab.ipynb \
+            --workdir "${RUNNER_TEMP}/chronos-notebook-fresh"
+          mkdir -p outputs/branches
+          cp -r "${RUNNER_TEMP}/chronos-notebook-fresh/outputs/." outputs/branches/
 
       - name: Upload tutorial evidence
         uses: actions/upload-artifact@v4
