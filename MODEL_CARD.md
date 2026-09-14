@@ -11,7 +11,7 @@ date_published: "2025-10-30"
 date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/amazon/chronos-2)"
 ---
 
-# Chronos-2 (v1.0) — Time-Series Foundation Model (Zero-Shot Forecasting)
+# Chronos-2 — Time-Series Foundation Model (Zero-Shot Forecasting)
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-amazon%2Fchronos--2-ffcc4d?style=flat)](https://huggingface.co/amazon/chronos-2)
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-amazon--science%2Fchronos--forecasting-181717?style=flat&logo=github&logoColor=white)](https://github.com/amazon-science/chronos-forecasting)
