@@ -2,6 +2,7 @@
 license: apache-2.0
 model_card_spec: "1.1"
 pipeline_tag: time-series-forecasting
+task: "Others - Time-Series Forecasting"
 tags:
   - time-series-forecasting
   - time-series-foundation-model
