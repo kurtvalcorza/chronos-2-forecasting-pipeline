@@ -201,3 +201,7 @@ tests/                              unit/contract + real-weight integration suit
 
 Pipeline code and repository-generated tutorial samples: [Apache-2.0](LICENSE), Copyright 2026
 Kurt Valcorza. Chronos-2 model weights carry their own licence, recorded in [MODEL_CARD.md](MODEL_CARD.md).
+
+## AI Assistance Disclosure
+
+This tutorial and its accompanying documentation were developed with generative AI assistance for code development and technical writing under maintainer direction. The maintainer remains responsible for reviewing the implementation, validating results, and making release decisions. AI assistance does not constitute independent verification, provider endorsement, or release approval.
