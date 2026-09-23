@@ -50,7 +50,7 @@ Representative application areas include demand, telemetry, environmental, opera
 
 ###### Primary Intended Users
 
-Primary users are ML engineers, time-series data scientists, quantitative analysts, researchers, and application developers. The envisioned deployment setting is internal enterprise or research use through the DIMER platform in a tutorial/developer-preview boundary; the card does not claim a stable production-serving contract. Users are assumed to understand temporal holdout design, the difference between a point forecast and a quantile grid, the fixed-width frequency constraint the pipeline enforces, and the difference between a predictive covariate and a causal intervention. A user who would read the `q0.1`/`q0.9` columns as a guaranteed interval, or who cannot run a chronological backtest on their own history, is outside the assumed competency.
+Primary users are ML engineers, time-series data scientists, quantitative analysts, researchers, and application developers. The envisioned deployment setting is research or in-house use on infrastructure the user controls, within a tutorial and developer-preview boundary; the card does not claim a stable production-serving contract. Users are assumed to understand temporal holdout design, the difference between a point forecast and a quantile grid, the fixed-width frequency constraint the pipeline enforces, and the difference between a predictive covariate and a causal intervention. A user who would read the `q0.1`/`q0.9` columns as a guaranteed interval, or who cannot run a chronological backtest on their own history, is outside the assumed competency.
 
 ###### Out-of-scope use cases
 
