@@ -56,7 +56,7 @@ Primary users are ML engineers, time-series data scientists, quantitative analys
 
 1. **Capability boundaries:** classification, anomaly detection, missing-value imputation, representation learning, model pretraining, and model fine-tuning are outside this repository's public forecasting path.
 2. **Input boundaries:** fixed-width regular frequencies are required. Calendar frequencies such as month-end/year-end/business-day schedules, irregular or gappy series, missing target values, non-numeric covariates, and histories shorter than the validator minimum are rejected.
-3. **Resource boundaries:** model context is capped at 8,192 timesteps; native prediction length is 1,024. Requests above 1,024 require explicit `allow_unroll=True` and remain bounded by the DIMER 4,096-step request guard.
+3. **Resource boundaries:** model context is capped at 8,192 timesteps; native prediction length is 1,024. Requests above 1,024 require explicit `allow_unroll=True` and remain bounded by the pipeline's 4,096-step request guard.
 4. **Decision boundaries:** autonomous high-consequence decisions without independent domain validation, monitoring, and human review are out of scope.
 
 ---
@@ -96,7 +96,7 @@ Tutorial metrics use deterministic synthetic data and a single chronological tai
 
 ###### Decision thresholds
 
-The normalized `prediction` field is required to equal the median (`q0.5`) for the pinned upstream version; it is not labeled as a statistical mean. Quantile requests must belong to the trained 21-level grid and are refused rather than silently clamped or substituted. Forecast horizons above the native 1,024-step capacity require explicit autoregressive-unroll opt-in and remain subject to the DIMER request ceiling.
+The normalized `prediction` field is required to equal the median (`q0.5`) for the pinned upstream version; it is not labeled as a statistical mean. Quantile requests must belong to the trained 21-level grid and are refused rather than silently clamped or substituted. Forecast horizons above the native 1,024-step capacity require explicit autoregressive-unroll opt-in and remain subject to the pipeline's request ceiling.
 
 Operational alert or action thresholds are domain-specific and are not supplied by this repository.
 
@@ -134,7 +134,7 @@ Model-intrinsic risks: forecasts outside the pretraining distribution — regime
 
 ###### Use cases
 
-Distinct from the capability and decision boundaries above, the developers consider the following uses prohibited even where the model would produce a plausible forecast: surveillance or activity profiling of individuals from telemetry that traces to a person; forecasting a person's behaviour, creditworthiness, employment, or housing outcome as an input to a decision about that person; autonomous control of physical systems where a forecast error can injure someone; deceptive presentation of a model quantile as a certified prediction interval; and any use that violates the Apache-2.0 terms of the upstream `amazon/chronos-2` weights, the `chronos-forecasting` package licence, or the terms of the DIMER deployment. The repository is not authorization for any of these, and organisational controls remain the operator's obligation.
+Distinct from the capability and decision boundaries above, the developers consider the following uses prohibited even where the model would produce a plausible forecast: surveillance or activity profiling of individuals from telemetry that traces to a person; forecasting a person's behaviour, creditworthiness, employment, or housing outcome as an input to a decision about that person; autonomous control of physical systems where a forecast error can injure someone; deceptive presentation of a model quantile as a certified prediction interval; and any use that violates the Apache-2.0 terms of the upstream `amazon/chronos-2` weights, the `chronos-forecasting` package licence, or the terms of the deployment that runs the pipeline. The repository is not authorization for any of these, and organisational controls remain the operator's obligation.
 
 ---
 
@@ -215,11 +215,11 @@ The normalized `prediction` column is the **median / q0.5**, not a statistical m
 
 ## Context and horizon
 
-The pinned model exposes an 8,192-timestep context and native 1,024-timestep prediction length. Requests beyond the native horizon are rejected unless `allow_unroll=True`; permitted unrolling remains bounded by DIMER limits, and provenance records requested/effective/model horizon plus whether unrolling occurred.
+The pinned model exposes an 8,192-timestep context and native 1,024-timestep prediction length. Requests beyond the native horizon are rejected unless `allow_unroll=True`; permitted unrolling remains bounded by the pipeline's limits, and provenance records requested/effective/model horizon plus whether unrolling occurred.
 
 ## Frequency and gaps
 
-DIMER validates observed and declared frequency before `predict_df`. v1 supports fixed-width intervals such as `15min`, `h`, `D`, and `7D`. Calendar-dependent month/quarter/year/business-day offsets remain outside the current contract. Gaps and missing target values are rejected rather than silently interpolated.
+The pipeline validates observed and declared frequency before `predict_df`. v1 supports fixed-width intervals such as `15min`, `h`, `D`, and `7D`. Calendar-dependent month/quarter/year/business-day offsets remain outside the current contract. Gaps and missing target values are rejected rather than silently interpolated.
 
 ## Output contract
 
@@ -270,5 +270,5 @@ Pipeline code is Apache-2.0 licensed. The pinned Chronos-2 model-repository meta
 
 - Model: `amazon/chronos-2` at `95a9710e2596287d08352589f42634fa5abdf0a7`
 - Upstream implementation: `amazon-science/chronos-forecasting`, release `v2.3.1`
-- DIMER contract: [`docs/rfc/0001-chronos-2.md`](docs/rfc/0001-chronos-2.md)
+- Model contract: [`docs/rfc/0001-chronos-2.md`](docs/rfc/0001-chronos-2.md)
 - Release-completion tracking: issue #5
