@@ -1,4 +1,5 @@
 """Generate the DIMER multi-model time-series forecasting workshop notebook.
+# ruff: noqa: E501 -- generated/embedded notebook source intentionally contains long literals
 
 NOTEBOOK_SPEC 2.1. Pure-stdlib generator so generation itself adds no project dependency.
 """
