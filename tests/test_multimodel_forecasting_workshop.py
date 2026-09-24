@@ -1,5 +1,5 @@
+# ruff: noqa: E501,I001
 """Static contract tests for the multi-model forecasting workshop."""
-# ruff: noqa: E501 -- generated/embedded notebook source intentionally contains long literals
 from __future__ import annotations
 
 import json
