@@ -1,5 +1,5 @@
+# ruff: noqa: E501,I001
 """Source cells for the DIMER multi-model forecasting workshop.
-# ruff: noqa: E501 -- generated/embedded notebook source intentionally contains long literals
 
 Edit this file, then run:
     python tools/build_multimodel_forecasting_workshop.py
