@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "chronos2_pipeline"
 REPO_NAME = "chronos-2-forecasting-pipeline"
 NOTEBOOK_NAME = "chronos_2_forecasting_colab.ipynb"
+WORKSHOP_NOTEBOOK_NAME = "DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb"
 EXPECTED_PROFILE = "TASK-INFERENCE"
 EXPECTED_MODEL_ID = "amazon/chronos-2"
 PIPELINE_CLASS = "LoadedModel"
@@ -628,9 +629,13 @@ def _validate_notebook_content(
 def validate_notebooks() -> None:
     tutorials = ROOT / "tutorials"
     notebooks = sorted(tutorials.glob("*.ipynb"))
-    _check(len(notebooks) == 1, f"exactly one tutorial notebook is expected, found {len(notebooks)}")
-    path = notebooks[0]
-    _check(path.name == NOTEBOOK_NAME, f"tutorial notebook must be named {NOTEBOOK_NAME}, found {path.name}")
+    notebook_names = {path.name for path in notebooks}
+    expected_names = {NOTEBOOK_NAME, WORKSHOP_NOTEBOOK_NAME}
+    _check(
+        notebook_names == expected_names,
+        f"tutorial notebooks must be exactly {sorted(expected_names)}, found {sorted(notebook_names)}",
+    )
+    path = tutorials / NOTEBOOK_NAME
     build = _load_tool("build_notebook")
     notebook = json.loads(_read(path))
     code_cells, markdown = _validate_notebook_structure(path, notebook)
@@ -641,6 +646,10 @@ def validate_notebooks() -> None:
     _validate_notebook_content(path, code_cells, markdown, embedded)
     registry = _read(tutorials / "README.md")
     _check(f"`{path.name}`" in registry, f"{path.name} missing from tutorials/README.md")
+    _check(
+        f"`{WORKSHOP_NOTEBOOK_NAME}`" in registry,
+        f"{WORKSHOP_NOTEBOOK_NAME} missing from tutorials/README.md",
+    )
     _check(f"`{EXPECTED_PROFILE}`" in registry, f"tutorials/README.md must record `{EXPECTED_PROFILE}`")
     _check(
         f"DIMER Notebook Specification {NOTEBOOK_SPEC}" in registry,
