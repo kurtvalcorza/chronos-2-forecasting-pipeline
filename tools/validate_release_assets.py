@@ -351,7 +351,8 @@ WEIGHT_DOCS = ("README.md", "MODEL_CARD.md", "docs/WEIGHTS.md")
 EXTERNAL_WEIGHT_BYTES: dict[int, str] = {}
 EXTERNAL_WEIGHT_DIGESTS: dict[str, str] = {}
 _DIGEST = re.compile(r"(?<![0-9a-fA-F])[0-9a-f]{64}(?![0-9a-fA-F])")
-_BYTE_COUNT = re.compile(r"(?<![\d,])(\d{1,3}(?:[,\u202f\u00a0 ]\d{3})+|\d+)\s*bytes\b|totalBytes`?\s*(\d+)")
+_GROUPED = r"(\d{1,3}(?:[,\u202f\u00a0 ]\d{3})+|\d+)"
+_BYTE_COUNT = re.compile(r"(?<![\d,\-])" + _GROUPED + r"\s*bytes\b|totalBytes`?\s*" + _GROUPED)
 
 
 def _manifest_facts(root: Path = ROOT) -> tuple[set[str], set[int]]:

@@ -63,6 +63,13 @@ def test_wrong_digest_is_rejected(tmp_path):
         validator.validate_weight_facts(root)
 
 
+def test_grouped_total_bytes_is_read_whole(tmp_path):
+    root = _copy_docs(tmp_path)
+    _append(root, "\n- stray manifest `totalBytes` 987,654,321,013\n")
+    with pytest.raises(validator.ValidationError, match="987654321013"):
+        validator.validate_weight_facts(root)
+
+
 def test_spaced_byte_count_is_read_whole(tmp_path):
     root = _copy_docs(tmp_path)
     _append(root, "\n- stray file (987 654 321 013 bytes)\n")
