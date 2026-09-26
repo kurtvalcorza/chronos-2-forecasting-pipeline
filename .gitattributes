@@ -8,6 +8,7 @@
 # get -text: no conversion at all, in either direction, on any platform.
 docs/rfc/0001-chronos-2.md -text
 examples/sample-data/** -text
+examples/byod-data/** -text
 
 # Binary
 *.png binary
