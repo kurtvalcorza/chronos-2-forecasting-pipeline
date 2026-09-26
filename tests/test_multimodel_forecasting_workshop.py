@@ -27,6 +27,7 @@ def test_notebook_declares_spec_2_1_workshop():
     assert meta["notebook_mode"] == "WORKSHOP"
     assert meta["standalone"] is True
     assert meta["clean_runtime_evidence"] == "pending"
+    assert meta["default_tier"] == "STANDARD"
 
 def test_notebook_has_required_models_and_forms():
     source = "\n".join("".join(cell.get("source", [])) for cell in load()["cells"])
@@ -34,16 +35,17 @@ def test_notebook_has_required_models_and_forms():
         "NX-AI/TiRex-2",
         "amazon/chronos-2",
         "Datadog/Toto-2.0-2.5B",
-        'USE_BYOD = False  # @param',
-        'BYOD_PATH = ""  # @param',
-        'RUN_TIREX = True  # @param',
-        'RUN_CHRONOS = True  # @param',
-        'RUN_TOTO = True  # @param',
-        'HORIZON = 48  # @param',
+        'WORKSHOP_TIER = "STANDARD"  # @param ["STANDARD", "FULL"]',
+        "USE_BYOD = False            # @param",
+        'BYOD_CSV_PATH = ""          # @param',
+        "VALIDATION_HORIZON = 24     # @param",
+        "TEST_HORIZON = 24           # @param",
+        "SEASON_LENGTH = 24          # @param",
+        "6f12f1475411aaab13a2de860ba50f008bd7185a9266f99147c244db4a5de8b3",
         "seasonal_naive",
-        "selection_partition",
-        "multimodel_forecasting_predictions.csv",
-        "multimodel_forecasting_provenance.json",
+        "frozen_experiment.json",
+        "experiment_manifest.json",
+        "workshop_summary.json",
     ]:
         assert literal in source
 
@@ -64,3 +66,10 @@ def test_committed_notebook_is_clean():
         if cell["cell_type"] == "code":
             assert cell["execution_count"] is None
             assert cell["outputs"] == []
+
+
+def test_canonical_sample_digest_matches_generated_fixture():
+    sums = (REPO / "examples" / "sample-data" / "SHA256SUMS.generated").read_text(encoding="utf-8")
+    digests = dict(reversed(line.split()) for line in sums.splitlines() if line.strip())
+    source = "\n".join("".join(cell.get("source", [])) for cell in load()["cells"])
+    assert f'CANONICAL_SAMPLE_SHA256 = "{digests["chronos_multi_series.csv"]}"' in source
