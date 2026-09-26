@@ -20,7 +20,7 @@ def build_notebook():
             rendered.append({
                 "cell_type": "markdown",
                 "id": f"dimer-ts-workshop-{index:02d}",
-                "metadata": {},
+                "metadata": cell.get("metadata", {}),
                 "source": cell["source"].splitlines(keepends=True),
             })
         elif cell["kind"] == "code":
@@ -28,7 +28,7 @@ def build_notebook():
                 "cell_type": "code",
                 "execution_count": None,
                 "id": f"dimer-ts-workshop-{index:02d}",
-                "metadata": {},
+                "metadata": cell.get("metadata", {}),
                 "outputs": [],
                 "source": cell["source"].splitlines(keepends=True),
             })

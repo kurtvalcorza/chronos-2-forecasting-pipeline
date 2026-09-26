@@ -129,13 +129,69 @@ Notebook blob `13e92f12ef0b` (from `129142b`) is unchanged at `e7d9cd8`. Both de
 Notebook blob `2213095d1e58` (unchanged from `4199536` to `00abb68`) now has passing Google Colab T4 runs of the default `STANDARD` path with the synthetic sample and of the `FULL` tier with the Open-Meteo sample, which together exercise all three models and both samples; the `STANDARD` + Open-Meteo combination passed at the two preceding blobs. As for the primary tutorial, this table is the evidence record. The notebook's `metadata.dimer.clean_runtime_evidence` stays `pending` as authored, because editing it would change the blob these runs verify.
 
 
+### Guided learning follow-up — 2026-09-26
+
+The historical runs above remain evidence for notebook blob `2213095d1e58`,
+not a claim that the updated notebook has been run in a fresh hosted runtime.
+The follow-up changes learner-facing explanations and collapse metadata, fixes
+the context-length attribution in the test checkpoint, and adds one optional,
+default-off seasonal-period activity. The original 18 code-cell sources are
+unchanged. The updated notebook has 19 code cells and remains **Candidate**
+pending execution of this exact revised artifact and the remaining BYOD gate.
+
+Local verification (Windows, Python 3.12; no foundation-model inference):
+
+- Baseline: 7/7 existing workshop tests and release-asset validation passed.
+- After: 13/13 workshop tests passed, including actual path-mode BYOD loading,
+  schema validation, chronological splitting and baseline scoring on a
+  separately generated two-series CSV. The path branch bypasses Colab upload.
+- Missing targets, duplicate timestamps, irregular timestamps and non-finite
+  values were each rejected before model acquisition.
+- The optional activity was executed both disabled and enabled. Its two
+  conditions score identical validation targets, agree with an independent
+  NumPy MAE calculation, do not read test inputs, and preserve canonical data
+  and output files.
+
+Reproduce these lightweight checks without installing the model stack:
+
+```shell
+python -m pytest --noconftest tests/test_multimodel_forecasting_workshop.py tests/test_forecasting_workshop_learning.py
+python tools/validate_release_assets.py
+python tools/build_multimodel_forecasting_workshop.py --check
+```
+
+`--noconftest` isolates these notebook-cell checks from the repository-wide
+model fixtures; it does not stand in for the full unit/integration suite.
+
+**Remaining REL12 procedure (not claimed complete):**
+
+1. In a fresh Colab T4 runtime, save the exact revised notebook and record its
+   Git commit/blob, runtime versions and controls. Run the default path first
+   and retain the executed notebook and report ZIP SHA-256.
+2. In a separate fresh runtime, place a representative user-owned compatible
+   CSV at `/content/byod.csv`, set `BYOD_CSV_PATH` to that location and run all
+   with the other default controls. Verify `sample_kind=BYOD`, validation,
+   both foundation-model validation forecasts, freeze, test evaluation, future
+   forecasts and export. Save the input digest and report ZIP digest. A built-in
+   `OPEN_METEO_PH` run alone does not exercise this file-reading branch.
+3. In a separate negative run, remove the `target` column from a copy of that
+   CSV. Use that path and confirm `Missing required columns` before any model
+   download. Retain the rejection output and input digest.
+4. Optionally enable the seasonal-period activity in the successful run after
+   writing a prediction, and save its separate comparison CSV and conclusion.
+   Do not change or retune the frozen test comparison using that activity.
+
+The local positive/negative checks establish the input and baseline boundary;
+they do **not** yet establish BYOD foundation-model execution through export.
+Promote only after the exact-revision hosted and BYOD evidence is recorded.
+
 ## Current status
 
-No clean-runtime execution of the standalone notebook has been recorded yet; the run is **pending** and queued
-to the GPU lane. Static validation (`tools/validate_release_assets.py`), nbformat validation, a
-`compile()` sweep over every code cell, and the offline unit suite passed on the tutorial source at
-the candidate revision, which is necessary but not sufficient. The registry status remains
-**Candidate** until a reviewer confirms a recorded run against the notebook blob under review and
+Use the per-notebook, per-blob execution tables above for historical outcomes;
+the earlier blanket statement that no clean-runtime execution had been recorded
+was stale. The revised multi-model notebook's hosted rerun and full BYOD gate
+are **pending** as described above. The registry status remains **Candidate**
+until a reviewer confirms a recorded run against the notebook blob under review and
 an integrator promotes it; promotion is not performed by the builder. Three facts a reviewer should
 weigh: `stage_missing_files` was exercised only with an injected downloader in the unit suite (the
 real `hf_hub_download` fetch of all three manifest entries into a fresh `weights/chronos-2/` has not been
