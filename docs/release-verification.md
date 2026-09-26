@@ -108,6 +108,19 @@ they are measurements for the stated runtime, not general estimates.
 |---|---|---|---|---|---|
 | 2026-09-14 | `8485f55` / `e06fea3dcb8d` | Kaggle CPU (`kurtvalcorza/dimer-nb2-chronos-2-forecasting` v1) | Default sample path | 236.0 s | **PASSED** — 17/17 ok code cells executed cleanly, 8 files, 478 MB staged |
 
+### Multi-model forecasting workshop
+
+Notebook identity is the Git blob id of `tutorials/DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb`.
+This notebook is verified separately from the primary tutorial above.
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-26 | `7932079` / `6cdfa5a9d48d` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `STANDARD` tier (TiRex-2 on CPU, Chronos-2 on CUDA), synthetic `chronos_multi_series.csv` sample | not recorded | **PASSED** — 18/18 code cells executed without error; test macro MAE TiRex-2 1.147, Chronos-2 0.175; report bundle SHA-256 `518b770c8d92…`. The saved copy differs from the blob only by an empty `# @title` line Colab inserted in one cell. |
+
+Later revisions add the optional `OPEN_METEO_PH` sample and have been run only locally
+(`nbclient`, CPU PyTorch); they need their own clean-runtime run before the workshop's evidence
+status changes from pending. The `FULL` tier (Toto 2.0) has no recorded run.
+
 ## Current status
 
 No clean-runtime execution of the standalone notebook has been recorded yet; the run is **pending** and queued
