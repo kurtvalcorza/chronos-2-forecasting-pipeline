@@ -201,3 +201,16 @@ carrier itself — executing the seven carried module cells in a runtime that ha
 validated statically only (parity PASS, carrier probe up to the fetch), never run. The earlier repository-installing
 notebook did run in CI against the real weights at `95a9710e2596287d08352589f42634fa5abdf0a7`; that evidence predates the standalone carrier and the
 fleet snapshot scheme and does not transfer to it.
+
+
+## Maintainer-supplied Colab execution — 2026-09-26
+
+The maintainer reported that this notebook passed an end-to-end Colab run and authorized merging its open PR. The supplied [executed notebook](execution-evidence/2026-09-26/DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb) is preserved byte-for-byte as evidence.
+
+- Reviewed source commit: `9e10f240fd76eb6799eded892776a60ec21539c8`.
+- Executed-file SHA-256: `b84f24987b939b073b3147535491c7399a37b9df1d5fe5f4a119b82e2124ac9e`.
+- Independently inspected: 19 executed code cells; zero saved error outputs; terminal completion and exports present.
+- Configuration/source comparison: STANDARD tier with SAMPLE_DATASET=OPEN_METEO_PH. This is the supported weather sample route, not evidence for the default SYNTHETIC setting. Other code is unchanged.
+- Evidence boundary: saved outputs were inspected; execution was not independently repeated. This submission establishes the recorded path, not optional FULL/BYOD paths. Fresh-runtime/restart details beyond the maintainer's explicit prior confirmations are not inferred.
+
+This record supersedes the pending rerun item for the source/configuration above. It does not promote the whole pipeline or close untested optional-path qualification.
