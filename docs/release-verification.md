@@ -118,11 +118,16 @@ This notebook is verified separately from the primary tutorial above.
 | 2026-09-26 | `7932079` / `6cdfa5a9d48d` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `STANDARD` tier (TiRex-2 on CPU, Chronos-2 on CUDA), synthetic `chronos_multi_series.csv` sample | not recorded | **PASSED** — 18/18 code cells executed without error; test macro MAE TiRex-2 1.147, Chronos-2 0.175; report bundle SHA-256 `518b770c8d92…`. The saved copy differs from the blob only by an empty `# @title` line Colab inserted in one cell. |
 | 2026-09-26 | `129142b` / `13e92f12ef0b` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `STANDARD` tier, `SAMPLE_DATASET = "SYNTHETIC"` (default) | not recorded | **PASSED** — 18/18 code cells executed without error, notebook unmodified; test macro MAE TiRex-2 1.147, Chronos-2 0.175 (identical to the `7932079` run); report bundle SHA-256 `4cb835100d1c…` |
 | 2026-09-26 | `129142b` / `13e92f12ef0b` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `STANDARD` tier, `SAMPLE_DATASET = "OPEN_METEO_PH"` (only that control changed) | not recorded | **PASSED** — 18/18 code cells executed without error; sample digest `74163ee609cd…` verified; test macro MAE TiRex-2 0.463, Chronos-2 0.450, seasonal-naive 0.496; report bundle SHA-256 `2cdac3575695…` |
+| 2026-09-26 | `eb426b9` / `40b307491592` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `STANDARD` tier, `SAMPLE_DATASET = "SYNTHETIC"` (default), guided-text revision | not recorded | **PASSED** — 18/18 code cells executed without error, notebook unmodified; report bundle SHA-256 `505c03e9f59a…` |
+| 2026-09-26 | `eb426b9` / `40b307491592` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `STANDARD` tier, `SAMPLE_DATASET = "OPEN_METEO_PH"` (only that control changed) | not recorded | **PASSED** — 18/18 code cells executed without error; sample digest `74163ee609cd…` verified; report bundle SHA-256 `8b02fa737519…` |
+| 2026-09-26 | `eb426b9` / `40b307491592` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `FULL` tier, `SAMPLE_DATASET = "OPEN_METEO_PH"` | not recorded | **FAILED** — all three environments built and TiRex-2 and Chronos-2 forecast the validation period, but the Toto runner exited while importing `toto2`: Colab's `MPLBACKEND=module://matplotlib_inline.backend_inline` was inherited by the subprocess, and `matplotlib` (loaded through `gluonts` → `lightning` → `torchmetrics`) rejected it. Fixed in the next revision by setting `MPLBACKEND=Agg` for every runner |
 
 Notebook blob `13e92f12ef0b` (from `129142b`) is unchanged at `e7d9cd8`. Both default and optional sample paths of the
 `STANDARD` tier therefore have clean-runtime evidence at that blob. The notebook metadata still
-reads `clean_runtime_evidence: pending`, because the `FULL` tier (Toto 2.0) has no recorded run
+reads `clean_runtime_evidence: pending`, because the `FULL` tier (Toto 2.0) has no passing run
 and changing the metadata would change the blob these runs verify.
+
+The `eb426b9` revision rewrote the guided text and cell titles only; its `STANDARD` runs above cover both samples at that blob. The revision after it changes one line of runner environment setup (`MPLBACKEND=Agg`), so it needs its own `FULL` run, and ideally a `STANDARD` re-run, before the evidence status changes from pending.
 
 
 ## Current status
