@@ -113,10 +113,11 @@ With the default horizons, the notebook splits the 14 days chronologically:
 
 ### Recorded execution
 
-The STANDARD tier (TiRex-2 and Chronos-2) ran on this file with the notebook at commit
-`7932079`. The run used `nbclient`, a Python 3.13 parent kernel, and Python 3.12 model
-environments with CPU-only PyTorch. It passed in 195 s. This was a local verification run, not
-clean-runtime release evidence.
+The notebook's `SAMPLE_DATASET = "OPEN_METEO_PH"` option embeds this file and checks its digest.
+With that option, the STANDARD tier (TiRex-2 on CPU, Chronos-2 on CUDA) passed in Google Colab
+on a Tesla T4 on 2026-09-26, at commit `129142b`, notebook blob `13e92f12ef0b`. See
+`docs/release-verification.md`. The same file had earlier passed through the BYOD path in a
+local `nbclient` run with CPU-only PyTorch. Both runs gave identical metrics.
 
 Test window, 2026-09-08 (macro-averaged over the three cities):
 
