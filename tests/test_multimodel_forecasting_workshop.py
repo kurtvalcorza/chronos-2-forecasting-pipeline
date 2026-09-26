@@ -73,3 +73,23 @@ def test_canonical_sample_digest_matches_generated_fixture():
     digests = dict(reversed(line.split()) for line in sums.splitlines() if line.strip())
     source = "\n".join("".join(cell.get("source", [])) for cell in load()["cells"])
     assert f'CANONICAL_SAMPLE_SHA256 = "{digests["chronos_multi_series.csv"]}"' in source
+
+
+def test_embedded_open_meteo_sample_matches_the_committed_byod_file():
+    cells = load()["cells"]
+    source = next(
+        "".join(cell["source"]) for cell in cells if "def open_meteo_ph_bytes" in "".join(cell["source"])
+    )
+    definitions = source[source.index("OPEN_METEO_PH_SHA256 ="):source.index("def read_checked_csv")]
+    import pandas as pd
+
+    namespace = {"pd": pd}
+    exec(definitions, namespace)
+    sample_dir = REPO / "examples" / "byod-data" / "open-meteo-ph-temperature"
+    committed = (sample_dir / "openmeteo_ph_hourly_temperature.csv").read_bytes()
+    manifest_digest = (sample_dir / "SHA256SUMS").read_text(encoding="utf-8").split()[0]
+    assert namespace["open_meteo_ph_bytes"]() == committed
+    assert namespace["OPEN_METEO_PH_SHA256"] == manifest_digest
+    assert 'SAMPLE_DATASET = "SYNTHETIC"  # @param ["SYNTHETIC", "OPEN_METEO_PH"]' in "\n".join(
+        "".join(cell["source"]) for cell in cells
+    )
