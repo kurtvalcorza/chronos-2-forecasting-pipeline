@@ -214,3 +214,65 @@ The maintainer reported that this notebook passed an end-to-end Colab run and au
 - Evidence boundary: saved outputs were inspected; execution was not independently repeated. This submission establishes the recorded path, not optional FULL/BYOD paths. Fresh-runtime/restart details beyond the maintainer's explicit prior confirmations are not inferred.
 
 This record supersedes the pending rerun item for the source/configuration above. It does not promote the whole pipeline or close untested optional-path qualification.
+
+
+## Multi-model forecasting workshop: Notebook Review Framework v1 findings — revision 0.2.0-candidate (2026-09-27)
+
+A review under the Notebook Review Framework v1 examined commit `e13b362` (notebook blob `8d65d164`) and concluded **Needs revision**. It reported six major and four minor findings. The review and its probes are archived in [`reviews/2026-09-27-notebook-review/`](reviews/2026-09-27-notebook-review/). Revision `0.2.0-candidate` (notebook blob `9b13733993da`) addresses every finding.
+
+`tests/test_forecasting_workshop_review_fixes.py` executes the notebook's own cells end to end, with pretrained models replaced by a small fake runner program that has the same command-line and file contract. It uses the notebook's real `run_model`, freeze, test and export cells. All 39 of its tests fail on the reviewed revision and pass on 0.2.0. These are orchestration and contract checks, not model runs.
+
+| Finding | Correction in 0.2.0 | Acceptance check |
+|---|---|---|
+| **TS-R01** (major): pre-model EDA plotted and summarised the test targets | The test boundary is fixed before any plot. §4.1 plots and summarises only development rows, draws the test interval as an empty band, and fits the z-scores on development rows. The complete series is plotted in §9.2, after scoring | For the synthetic sample, the Open-Meteo sample and BYOD, every plotted timestamp precedes the test start and the summary counts only development rows; the chronological-split check is kept |
+| **TS-R02** (major): TiRex received one joint multivariate item, while Chronos and Toto forecast each series independently | One policy, `independent-per-series`: TiRex gets one univariate `TimeseriesType` per series; Chronos keeps `cross_learning=False`; Toto keeps a distinct `series_id` per series. The pinned `toto-2==2.0.0` source confirms that distinct IDs mask cross-series attention. Every runner reports its conditioning, and `run_model` refuses any other report | In-process adapter tests show TiRex receiving one `(1, T)` item per series and Chronos called with `cross_learning=False`. A runner reporting joint groups is refused. Real-model perturbation (below) |
+| **TS-R03** (major): numeric-looking IDs passed validation, then broke scoring after a CSV round trip | IDs are read as text from the first read (`dtype=str`, with missing-value parsing limited to `target`). Every runner and the forecast reader do the same. The evaluator rejects a non-text ID instead of repairing it | IDs `001`, `1`, `101` and `A` survive acquisition, requests, forecasts, scoring, the forecast beyond the data, and export; series named `NA` and `null` are kept |
+| **TS-R04** (major): the evaluator accepted missing rows or series and crossed or missing quantiles | `validate_forecast_table` requires the exact model × series × timestamp grid with correct steps and origins. It also requires finite values, the point equal to q0.5, and q0.1 ≤ q0.5 ≤ q0.9. Crossing is rejected rather than sorted. The same contract applies to the forecast beyond the data | A missing row, missing series, unexpected series, duplicate, shifted timestamp, renumbered step, non-finite or missing quantile, crossed bounds, median ≠ point, or missing model are each rejected. A complete table keeps its metrics |
+| **TS-R05** (major): the freeze did not bind the staged request bytes | The freeze records request-file digests, split boundaries, runner digests, environment pins and signatures, context limits and evaluation rules. §9.1 recomputes all of these from the current files and refuses on any difference, and `run_model` rechecks the input digest immediately before each call. A freeze is never overwritten, and a frozen test runs once | A changed request value or timestamp, runner, seasonal period, environment or context limit each stops §9.1 before any model call. An unchanged re-freeze keeps the file; a second test is refused |
+| **TS-R06** (major): a report could contain an earlier run's files | Each run of §1.1 creates `outputs/<experiment ID>/`. Model environments and checkpoints are shared under `work/`, but results are not. The ZIP holds only the current experiment and lists every file in `provenance/inventory.json` | FULL on Open-Meteo with the optional activity, then STANDARD on the synthetic sample: the second report contains no Toto file or activity, and the first report is unchanged. A re-export flags an activity as optional |
+| **TS-R07** (minor): "real future" for dates that have already happened | §11 is now "Forecast beyond the supplied dataset", with status "not evaluated: matching future targets were not provided", and it explains prospective forecasting | Status and wording checks; the synthetic forecast starts 2026-01-05 |
+| **TS-R08** (minor): macro MAE presented as scale normalisation; the overlay called min–max | Pooled and macro scores are described as target-unit aggregation. Equal pooled and macro MAE on complete grids is explained, skill is the scale-free comparison, and a new `skill_series` count is reported. The overlay is described as z-scores | The complete-grid test asserts pooled MAE = macro MAE; wording checks |
+| **TS-R09** (minor): opaque long runs; FULL GPU checked after a 9.8 GB download | §1.2 checks the GPU, its memory and free disk for the tier before any download. Runners print `[stage]` lines, which `run_model` streams along with a 30-second heartbeat and a full log. Toto checks CUDA before staging. Runtime text says the timings compare configurations, not architectures | FULL without a GPU stops in §1.2; stage lines appear during a run; static order check on Toto |
+| **TS-R10** (minor): incomplete reproducibility record | The manifest records the notebook file and revision (`0.2.0-candidate`), run controls, parent versions against a tested range (warns, never blocks), each environment's intended pins and the package versions observed in it, device, precision, and request digests | Manifest and freeze content checks |
+| Optional: first result before the long install | §5.1 shows both baselines' validation scores immediately; test baselines stay unscored until §9 | The first table holds validation scores only (seasonal naive 3.60, last value 5.53) |
+
+The generator source and the notebook had drifted since `e13b362` because the AI-disclosure edit was made to the notebook only. As a result, `test_generator_parity` failed on `main`. The disclosure now lives in `tools/multimodel_forecasting_workshop_source.py`, and the notebook is regenerated from it, so parity passes again.
+
+### Real-model check of the conditioning fix (CPU, 2026-09-27)
+
+The pinned TiRex-2 runner was executed on CPU with `tirex-2==0.2.1`, `torch==2.8.0+cpu`, `numpy==2.3.3`, `pandas==2.3.3`, `huggingface-hub==0.36.2` and `triton==3.4.0`. It used the real checkpoint at revision `05e5b26d`, fed with the notebook's own request files. TiRex runs on CPU in Colab as well. The script and full results are in [`reviews/2026-09-27-notebook-review/`](reviews/2026-09-27-notebook-review/) (`tirex_cpu_rerun.py`, `tirex_cpu_rerun_0.2.0.json`).
+
+- **Environment fidelity:** the reviewed revision's joint runner reproduced the recorded Colab figures exactly:
+  - synthetic validation MAE 3.28 (`A`) and 2.34 (`B`);
+  - synthetic test MAE 1.76 and 0.54;
+  - Open-Meteo validation skill +0.05, with Manila at −0.09.
+- **Perturbation:** only the second series' last 12 context hours were changed.
+
+  | Runner | Change in the unchanged series' q0.5 | Change in the edited series' q0.5 |
+  |---|---|---|
+  | Joint (reviewed revision) | synthetic `A` 0.54; Open-Meteo Cebu 0.032, Manila 0.035 | 43.1 (synthetic `B`), 25.6 (Davao) |
+  | Independent (0.2.0) | **0.0 exactly** for every unchanged series | 43.7 (`B`), 25.5 (Davao) |
+
+  The joint runner let one series change another's forecast. The independent runner does not.
+- **TiRex-2 figures after the fix, used in the regenerated sample answers:**
+
+  | Sample | Period | Macro MAE | Macro skill | Coverage | Width |
+  |---|---|---|---|---|---|
+  | Synthetic | Validation | 2.44 (`A` 2.83, `B` 2.04) | 0.32 | 0.65 | 5.00 |
+  | Synthetic | Test | 1.16 (`A` 1.84, `B` 0.49) | 0.70 | 0.94 | 4.63 |
+  | Open-Meteo | Validation | 0.53 | +0.085 (Manila +0.004) | 0.75 | 1.73 |
+  | Open-Meteo | Test | 0.47 | −0.066 | 0.81 | 1.57 |
+
+  The Chronos-2 input, settings and runner semantics did not change, so its quoted figures are unchanged. The EDA answers now quote development-period statistics.
+
+Code cells changed, so no earlier hosted run describes this revision. **Status: Candidate.** The following exact-revision evidence is required:
+
+- a fresh Colab T4 `STANDARD` run on the synthetic sample;
+- a `STANDARD` run on the Open-Meteo sample;
+- a `FULL` Open-Meteo run on the intended GPU (this also covers Toto under the new contract);
+- a BYOD run with text, numeric and leading-zero IDs through export;
+- the corrected rejection paths;
+- a sample or tier switch within one session, checking that each report holds only its own experiment;
+- the optional activity.
+
+The review's learner-observation recommendation is not addressed by code and remains open.

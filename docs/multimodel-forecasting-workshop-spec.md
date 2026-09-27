@@ -266,9 +266,11 @@ where:
 
 Every model receives exactly the same float values.
 
+**Conditioning policy (revision 0.2.0).** Every model MUST forecast each series independently: no model may use one series to inform another series' forecast. Passing the same values is not enough, because TiRex-2 treats several target rows in one item as a joint multivariate forecast, Chronos-2 shares information across items when `cross_learning` is on, and Toto groups variates by `series_ids`. The canonical adapters therefore use one univariate `TimeseriesType` per series (TiRex-2), `cross_learning=False` (Chronos-2) and a distinct `series_id` per series (Toto). Each runner MUST report its `conditioning` (mode and target groups) in its run metadata, and the notebook MUST refuse a run that reports anything else. Independent-versus-joint forecasting MAY be taught only as a separately labelled experiment.
+
 The notebook MUST state:
 
-> The source fixture defines two aligned synthetic series. The comparative workshop presents them as a common two-channel numerical target matrix. This does not imply a causal or physical relationship between the two variables.
+> The source fixture defines two aligned synthetic series. This notebook forecasts each one on its own. Sharing a timestamp grid does not imply a causal or physical relationship between them.
 
 ---
 
@@ -497,10 +499,12 @@ The notebook MUST NOT silently:
 
 # 15. Exploratory analysis
 
-Before model inference, the workshop SHOULD show:
+The test boundary MUST be fixed before any exploratory output. Before the freeze, every plot and data-dependent summary MUST use only the development rows (everything before the test period); the test interval MAY be marked, but its values MUST NOT be shown. Any display normalisation MUST be fitted on the development rows. The complete series MAY be shown only after the test period has been scored.
+
+Before model inference, the workshop SHOULD show, for the development rows:
 
 1. raw series A and B;
-2. normalized overlay;
+2. standardised (z-score) overlay;
 3. per-series summary table;
 4. first differences;
 5. 24-hour seasonal pattern;
@@ -830,9 +834,14 @@ Before test evaluation, export:
 outputs/frozen/frozen_experiment.json
 ```
 
+(Since revision 0.2.0 this path is relative to the experiment's own folder, `outputs/<experiment ID>/`.)
+
 It MUST record:
 
 - dataset SHA-256;
+- SHA-256 of each staged request file actually passed to the models, and the forecast origin, context length and horizon of each period;
+- runner-program SHA-256 and each environment's Python version, pins and build signature;
+- the conditioning mode;
 - model set;
 - model revisions;
 - environment pins;
@@ -845,7 +854,7 @@ It MUST record:
 - baselines;
 - metric definitions.
 
-After this file is written, test results MUST NOT alter these choices.
+After this file is written, test results MUST NOT alter these choices. Before the test period is run, the notebook MUST recompute this identity from the current files and settings and refuse to run on any difference; each model call MUST recheck its request file's digest. A completed freeze MUST NOT be overwritten, and the test of a frozen experiment runs once; a changed experiment is a new experiment.
 
 ---
 
@@ -913,7 +922,7 @@ This section SHOULD prompt:
 
 ---
 
-# 31. New-data forecast
+# 31. Forecast beyond the supplied data
 
 After test evaluation, use the entire 96-step sample as context.
 
@@ -939,9 +948,9 @@ q0.9
 
 This output MUST be marked:
 
-**not measurable yet**
+**not evaluated: matching future targets were not provided**
 
-because no future ground truth exists.
+The forecast covers the hours after the supplied data ends, which for the fixed samples are already in the past (2026-01-05 and 2026-09-09). The notebook MUST NOT describe them as not having happened yet. A genuinely prospective forecast uses observations up to the present as its origin.
 
 ---
 
@@ -1178,8 +1187,12 @@ None is fully represented by this fixture.
 
 # 41. Output structure
 
+Since revision 0.2.0, each run of the controls cell creates a new experiment folder, and the report ZIP contains that folder only, with `provenance/inventory.json` listing every file and its digest:
+
 ```text
 outputs/
+├── <experiment ID>_DIMER_TimeSeries_FM_Workshop_Report.zip
+└── <experiment ID>/
 ├── data/
 │   ├── chronos_multi_series.csv
 │   └── dataset_manifest.json

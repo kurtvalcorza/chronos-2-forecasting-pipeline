@@ -1,0 +1,1292 @@
+{
+  "SYNTHETIC": {
+    "validation": {
+      "old_joint": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 2.813,
+            "pooled_rmse": 3.1153,
+            "macro_mae": 2.813,
+            "macro_rmse": 3.0653,
+            "macro_mae_skill_vs_seasonal": 0.2132,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.3542,
+            "mean_interval_width": 4.6186,
+            "pinball_q0.1": 0.4931,
+            "pinball_q0.5": 1.4065,
+            "pinball_q0.9": 0.5503
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 5.5348,
+            "pooled_rmse": 7.1921,
+            "macro_mae": 5.5348,
+            "macro_rmse": 6.9459,
+            "macro_mae_skill_vs_seasonal": -0.686,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 3.2657,
+            "pinball_q0.5": 2.7674,
+            "pinball_q0.9": 2.2691
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 3.6,
+            "pooled_rmse": 3.6713,
+            "macro_mae": 3.6,
+            "macro_rmse": 3.6,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.36,
+            "pinball_q0.5": 1.8,
+            "pinball_q0.9": 3.24
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "A",
+            "mae": 3.2814,
+            "rmse": 3.6215,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.2404,
+            "pinball_q0.1": 0.552,
+            "pinball_q0.5": 1.6407,
+            "pinball_q0.9": 0.7596,
+            "q10_q90_coverage": 0.375,
+            "mean_interval_width": 4.8459
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "B",
+            "mae": 2.3446,
+            "rmse": 2.5091,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.1859,
+            "pinball_q0.1": 0.4341,
+            "pinball_q0.5": 1.1723,
+            "pinball_q0.9": 0.3409,
+            "q10_q90_coverage": 0.3333,
+            "mean_interval_width": 4.3913
+          },
+          {
+            "model": "last_value",
+            "series_id": "A",
+            "mae": 4.0742,
+            "rmse": 5.0805,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0569,
+            "pinball_q0.1": 0.5159,
+            "pinball_q0.5": 2.0371,
+            "pinball_q0.9": 3.5583,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "B",
+            "mae": 6.9954,
+            "rmse": 8.8114,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": -1.4289,
+            "pinball_q0.1": 6.0154,
+            "pinball_q0.5": 3.4977,
+            "pinball_q0.9": 0.98,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "A",
+            "mae": 4.32,
+            "rmse": 4.32,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.432,
+            "pinball_q0.5": 2.16,
+            "pinball_q0.9": 3.888,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "B",
+            "mae": 2.88,
+            "rmse": 2.88,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.288,
+            "pinball_q0.5": 1.44,
+            "pinball_q0.9": 2.592,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": null,
+        "packages": null
+      },
+      "new_independent": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 2.4383,
+            "pooled_rmse": 2.6887,
+            "macro_mae": 2.4383,
+            "macro_rmse": 2.6536,
+            "macro_mae_skill_vs_seasonal": 0.3173,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.6458,
+            "mean_interval_width": 4.996,
+            "pinball_q0.1": 0.4642,
+            "pinball_q0.5": 1.2191,
+            "pinball_q0.9": 0.2055
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 5.5348,
+            "pooled_rmse": 7.1921,
+            "macro_mae": 5.5348,
+            "macro_rmse": 6.9459,
+            "macro_mae_skill_vs_seasonal": -0.686,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 3.2657,
+            "pinball_q0.5": 2.7674,
+            "pinball_q0.9": 2.2691
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 3.6,
+            "pooled_rmse": 3.6713,
+            "macro_mae": 3.6,
+            "macro_rmse": 3.6,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.36,
+            "pinball_q0.5": 1.8,
+            "pinball_q0.9": 3.24
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "A",
+            "mae": 2.8328,
+            "rmse": 3.0867,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.3443,
+            "pinball_q0.1": 0.5228,
+            "pinball_q0.5": 1.4164,
+            "pinball_q0.9": 0.2946,
+            "q10_q90_coverage": 0.5417,
+            "mean_interval_width": 5.3648
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "B",
+            "mae": 2.0437,
+            "rmse": 2.2204,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.2904,
+            "pinball_q0.1": 0.4056,
+            "pinball_q0.5": 1.0219,
+            "pinball_q0.9": 0.1164,
+            "q10_q90_coverage": 0.75,
+            "mean_interval_width": 4.6271
+          },
+          {
+            "model": "last_value",
+            "series_id": "A",
+            "mae": 4.0742,
+            "rmse": 5.0805,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0569,
+            "pinball_q0.1": 0.5159,
+            "pinball_q0.5": 2.0371,
+            "pinball_q0.9": 3.5583,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "B",
+            "mae": 6.9954,
+            "rmse": 8.8114,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": -1.4289,
+            "pinball_q0.1": 6.0154,
+            "pinball_q0.5": 3.4977,
+            "pinball_q0.9": 0.98,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "A",
+            "mae": 4.32,
+            "rmse": 4.32,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.432,
+            "pinball_q0.5": 2.16,
+            "pinball_q0.9": 3.888,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "B",
+            "mae": 2.88,
+            "rmse": 2.88,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.288,
+            "pinball_q0.5": 1.44,
+            "pinball_q0.9": 2.592,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": {
+          "mode": "independent-per-series",
+          "target_groups": [
+            [
+              "A"
+            ],
+            [
+              "B"
+            ]
+          ],
+          "mechanism": "one univariate TimeseriesType per series"
+        },
+        "packages": {
+          "tirex-2": "0.2.1",
+          "torch": "2.8.0+cpu",
+          "numpy": "2.3.3",
+          "pandas": "2.3.3",
+          "huggingface-hub": "0.36.2"
+        }
+      }
+    },
+    "test": {
+      "old_joint": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 1.1466,
+            "pooled_rmse": 1.4458,
+            "macro_mae": 1.1466,
+            "macro_rmse": 1.2865,
+            "macro_mae_skill_vs_seasonal": 0.7036,
+            "skill_series": 2,
+            "q10_q90_coverage": 1.0,
+            "mean_interval_width": 4.5896,
+            "pinball_q0.1": 0.3293,
+            "pinball_q0.5": 0.5733,
+            "pinball_q0.9": 0.1297
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 5.5348,
+            "pooled_rmse": 7.1921,
+            "macro_mae": 5.5348,
+            "macro_rmse": 6.9459,
+            "macro_mae_skill_vs_seasonal": -0.686,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 3.2657,
+            "pinball_q0.5": 2.7674,
+            "pinball_q0.9": 2.2691
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 3.6,
+            "pooled_rmse": 3.6713,
+            "macro_mae": 3.6,
+            "macro_rmse": 3.6,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.36,
+            "pinball_q0.5": 1.8,
+            "pinball_q0.9": 3.24
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "A",
+            "mae": 1.7577,
+            "rmse": 1.9462,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.5931,
+            "pinball_q0.1": 0.4183,
+            "pinball_q0.5": 0.8788,
+            "pinball_q0.9": 0.0899,
+            "q10_q90_coverage": 1.0,
+            "mean_interval_width": 5.0812
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "B",
+            "mae": 0.5355,
+            "rmse": 0.6269,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.814,
+            "pinball_q0.1": 0.2403,
+            "pinball_q0.5": 0.2678,
+            "pinball_q0.9": 0.1695,
+            "q10_q90_coverage": 1.0,
+            "mean_interval_width": 4.0979
+          },
+          {
+            "model": "last_value",
+            "series_id": "A",
+            "mae": 4.0742,
+            "rmse": 5.0805,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0569,
+            "pinball_q0.1": 0.5159,
+            "pinball_q0.5": 2.0371,
+            "pinball_q0.9": 3.5583,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "B",
+            "mae": 6.9954,
+            "rmse": 8.8114,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": -1.4289,
+            "pinball_q0.1": 6.0154,
+            "pinball_q0.5": 3.4977,
+            "pinball_q0.9": 0.98,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "A",
+            "mae": 4.32,
+            "rmse": 4.32,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.432,
+            "pinball_q0.5": 2.16,
+            "pinball_q0.9": 3.888,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "B",
+            "mae": 2.88,
+            "rmse": 2.88,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.288,
+            "pinball_q0.5": 1.44,
+            "pinball_q0.9": 2.592,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": null,
+        "packages": null
+      },
+      "new_independent": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 1.1644,
+            "pooled_rmse": 1.4729,
+            "macro_mae": 1.1644,
+            "macro_rmse": 1.2842,
+            "macro_mae_skill_vs_seasonal": 0.7021,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.9375,
+            "mean_interval_width": 4.6314,
+            "pinball_q0.1": 0.3267,
+            "pinball_q0.5": 0.5822,
+            "pinball_q0.9": 0.141
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 5.5348,
+            "pooled_rmse": 7.1921,
+            "macro_mae": 5.5348,
+            "macro_rmse": 6.9459,
+            "macro_mae_skill_vs_seasonal": -0.686,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 3.2657,
+            "pinball_q0.5": 2.7674,
+            "pinball_q0.9": 2.2691
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 3.6,
+            "pooled_rmse": 3.6713,
+            "macro_mae": 3.6,
+            "macro_rmse": 3.6,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 2,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.36,
+            "pinball_q0.5": 1.8,
+            "pinball_q0.9": 3.24
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "A",
+            "mae": 1.8386,
+            "rmse": 2.0056,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.5744,
+            "pinball_q0.1": 0.4158,
+            "pinball_q0.5": 0.9193,
+            "pinball_q0.9": 0.0878,
+            "q10_q90_coverage": 0.875,
+            "mean_interval_width": 4.9459
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "B",
+            "mae": 0.4901,
+            "rmse": 0.5628,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.8298,
+            "pinball_q0.1": 0.2376,
+            "pinball_q0.5": 0.2451,
+            "pinball_q0.9": 0.1941,
+            "q10_q90_coverage": 1.0,
+            "mean_interval_width": 4.3169
+          },
+          {
+            "model": "last_value",
+            "series_id": "A",
+            "mae": 4.0742,
+            "rmse": 5.0805,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0569,
+            "pinball_q0.1": 0.5159,
+            "pinball_q0.5": 2.0371,
+            "pinball_q0.9": 3.5583,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "B",
+            "mae": 6.9954,
+            "rmse": 8.8114,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": -1.4289,
+            "pinball_q0.1": 6.0154,
+            "pinball_q0.5": 3.4977,
+            "pinball_q0.9": 0.98,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "A",
+            "mae": 4.32,
+            "rmse": 4.32,
+            "seasonal_naive_mae": 4.32,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.432,
+            "pinball_q0.5": 2.16,
+            "pinball_q0.9": 3.888,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "B",
+            "mae": 2.88,
+            "rmse": 2.88,
+            "seasonal_naive_mae": 2.88,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.288,
+            "pinball_q0.5": 1.44,
+            "pinball_q0.9": 2.592,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": {
+          "mode": "independent-per-series",
+          "target_groups": [
+            [
+              "A"
+            ],
+            [
+              "B"
+            ]
+          ],
+          "mechanism": "one univariate TimeseriesType per series"
+        },
+        "packages": {
+          "tirex-2": "0.2.1",
+          "torch": "2.8.0+cpu",
+          "numpy": "2.3.3",
+          "pandas": "2.3.3",
+          "huggingface-hub": "0.36.2"
+        }
+      }
+    },
+    "perturbation_max_abs_median_change": {
+      "changed_series": "B",
+      "old_joint": {
+        "A": 0.537139892578125,
+        "B": 43.115570068359375
+      },
+      "new_independent": {
+        "A": 0.0,
+        "B": 43.67462158203128
+      }
+    }
+  },
+  "OPEN_METEO_PH": {
+    "validation": {
+      "old_joint": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 0.5556,
+            "pooled_rmse": 0.6905,
+            "macro_mae": 0.5556,
+            "macro_rmse": 0.6791,
+            "macro_mae_skill_vs_seasonal": 0.0456,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.7361,
+            "mean_interval_width": 1.7095,
+            "pinball_q0.1": 0.1126,
+            "pinball_q0.5": 0.2778,
+            "pinball_q0.9": 0.1388
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 1.5944,
+            "pooled_rmse": 2.3111,
+            "macro_mae": 1.5944,
+            "macro_rmse": 2.0532,
+            "macro_mae_skill_vs_seasonal": -1.9181,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.445,
+            "pinball_q0.5": 0.7972,
+            "pinball_q0.9": 1.1494
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 0.5764,
+            "pooled_rmse": 0.6907,
+            "macro_mae": 0.5764,
+            "macro_rmse": 0.687,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.0139,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.2521,
+            "pinball_q0.5": 0.2882,
+            "pinball_q0.9": 0.3243
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "cebu",
+            "mae": 0.4488,
+            "rmse": 0.5733,
+            "seasonal_naive_mae": 0.5292,
+            "mae_skill_vs_seasonal": 0.1519,
+            "pinball_q0.1": 0.1305,
+            "pinball_q0.5": 0.2244,
+            "pinball_q0.9": 0.0985,
+            "q10_q90_coverage": 0.8333,
+            "mean_interval_width": 1.7658
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "davao",
+            "mae": 0.5038,
+            "rmse": 0.6095,
+            "seasonal_naive_mae": 0.5458,
+            "mae_skill_vs_seasonal": 0.077,
+            "pinball_q0.1": 0.1144,
+            "pinball_q0.5": 0.2519,
+            "pinball_q0.9": 0.134,
+            "q10_q90_coverage": 0.5833,
+            "mean_interval_width": 1.2505
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "manila",
+            "mae": 0.7143,
+            "rmse": 0.8546,
+            "seasonal_naive_mae": 0.6542,
+            "mae_skill_vs_seasonal": -0.092,
+            "pinball_q0.1": 0.0928,
+            "pinball_q0.5": 0.3572,
+            "pinball_q0.9": 0.1839,
+            "q10_q90_coverage": 0.7917,
+            "mean_interval_width": 2.1122
+          },
+          {
+            "model": "last_value",
+            "series_id": "cebu",
+            "mae": 2.0542,
+            "rmse": 2.6796,
+            "seasonal_naive_mae": 0.5292,
+            "mae_skill_vs_seasonal": -2.8819,
+            "pinball_q0.1": 0.4321,
+            "pinball_q0.5": 1.0271,
+            "pinball_q0.9": 1.6221,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "davao",
+            "mae": 2.3083,
+            "rmse": 2.9206,
+            "seasonal_naive_mae": 0.5458,
+            "mae_skill_vs_seasonal": -3.229,
+            "pinball_q0.1": 0.7708,
+            "pinball_q0.5": 1.1542,
+            "pinball_q0.9": 1.5375,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "manila",
+            "mae": 0.4208,
+            "rmse": 0.5594,
+            "seasonal_naive_mae": 0.6542,
+            "mae_skill_vs_seasonal": 0.3567,
+            "pinball_q0.1": 0.1321,
+            "pinball_q0.5": 0.2104,
+            "pinball_q0.9": 0.2887,
+            "q10_q90_coverage": 0.0833,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "cebu",
+            "mae": 0.5292,
+            "rmse": 0.668,
+            "seasonal_naive_mae": 0.5292,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.1429,
+            "pinball_q0.5": 0.2646,
+            "pinball_q0.9": 0.3863,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "davao",
+            "mae": 0.5458,
+            "rmse": 0.6107,
+            "seasonal_naive_mae": 0.5458,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.0546,
+            "pinball_q0.5": 0.2729,
+            "pinball_q0.9": 0.4912,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "manila",
+            "mae": 0.6542,
+            "rmse": 0.7824,
+            "seasonal_naive_mae": 0.6542,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.5588,
+            "pinball_q0.5": 0.3271,
+            "pinball_q0.9": 0.0954,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": null,
+        "packages": null
+      },
+      "new_independent": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 0.5306,
+            "pooled_rmse": 0.6607,
+            "macro_mae": 0.5306,
+            "macro_rmse": 0.6538,
+            "macro_mae_skill_vs_seasonal": 0.085,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.75,
+            "mean_interval_width": 1.7251,
+            "pinball_q0.1": 0.1087,
+            "pinball_q0.5": 0.2653,
+            "pinball_q0.9": 0.131
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 1.5944,
+            "pooled_rmse": 2.3111,
+            "macro_mae": 1.5944,
+            "macro_rmse": 2.0532,
+            "macro_mae_skill_vs_seasonal": -1.9181,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.445,
+            "pinball_q0.5": 0.7972,
+            "pinball_q0.9": 1.1494
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 0.5764,
+            "pooled_rmse": 0.6907,
+            "macro_mae": 0.5764,
+            "macro_rmse": 0.687,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.0139,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.2521,
+            "pinball_q0.5": 0.2882,
+            "pinball_q0.9": 0.3243
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "cebu",
+            "mae": 0.4619,
+            "rmse": 0.5899,
+            "seasonal_naive_mae": 0.5292,
+            "mae_skill_vs_seasonal": 0.1271,
+            "pinball_q0.1": 0.1333,
+            "pinball_q0.5": 0.231,
+            "pinball_q0.9": 0.095,
+            "q10_q90_coverage": 0.8333,
+            "mean_interval_width": 1.7918
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "davao",
+            "mae": 0.4783,
+            "rmse": 0.583,
+            "seasonal_naive_mae": 0.5458,
+            "mae_skill_vs_seasonal": 0.1237,
+            "pinball_q0.1": 0.113,
+            "pinball_q0.5": 0.2392,
+            "pinball_q0.9": 0.1178,
+            "q10_q90_coverage": 0.625,
+            "mean_interval_width": 1.275
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "manila",
+            "mae": 0.6515,
+            "rmse": 0.7885,
+            "seasonal_naive_mae": 0.6542,
+            "mae_skill_vs_seasonal": 0.0041,
+            "pinball_q0.1": 0.0798,
+            "pinball_q0.5": 0.3257,
+            "pinball_q0.9": 0.1802,
+            "q10_q90_coverage": 0.7917,
+            "mean_interval_width": 2.1085
+          },
+          {
+            "model": "last_value",
+            "series_id": "cebu",
+            "mae": 2.0542,
+            "rmse": 2.6796,
+            "seasonal_naive_mae": 0.5292,
+            "mae_skill_vs_seasonal": -2.8819,
+            "pinball_q0.1": 0.4321,
+            "pinball_q0.5": 1.0271,
+            "pinball_q0.9": 1.6221,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "davao",
+            "mae": 2.3083,
+            "rmse": 2.9206,
+            "seasonal_naive_mae": 0.5458,
+            "mae_skill_vs_seasonal": -3.229,
+            "pinball_q0.1": 0.7708,
+            "pinball_q0.5": 1.1542,
+            "pinball_q0.9": 1.5375,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "manila",
+            "mae": 0.4208,
+            "rmse": 0.5594,
+            "seasonal_naive_mae": 0.6542,
+            "mae_skill_vs_seasonal": 0.3567,
+            "pinball_q0.1": 0.1321,
+            "pinball_q0.5": 0.2104,
+            "pinball_q0.9": 0.2887,
+            "q10_q90_coverage": 0.0833,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "cebu",
+            "mae": 0.5292,
+            "rmse": 0.668,
+            "seasonal_naive_mae": 0.5292,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.1429,
+            "pinball_q0.5": 0.2646,
+            "pinball_q0.9": 0.3863,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "davao",
+            "mae": 0.5458,
+            "rmse": 0.6107,
+            "seasonal_naive_mae": 0.5458,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.0546,
+            "pinball_q0.5": 0.2729,
+            "pinball_q0.9": 0.4912,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "manila",
+            "mae": 0.6542,
+            "rmse": 0.7824,
+            "seasonal_naive_mae": 0.6542,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.5588,
+            "pinball_q0.5": 0.3271,
+            "pinball_q0.9": 0.0954,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": {
+          "mode": "independent-per-series",
+          "target_groups": [
+            [
+              "cebu"
+            ],
+            [
+              "davao"
+            ],
+            [
+              "manila"
+            ]
+          ],
+          "mechanism": "one univariate TimeseriesType per series"
+        },
+        "packages": {
+          "tirex-2": "0.2.1",
+          "torch": "2.8.0+cpu",
+          "numpy": "2.3.3",
+          "pandas": "2.3.3",
+          "huggingface-hub": "0.36.2"
+        }
+      }
+    },
+    "test": {
+      "old_joint": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 0.4628,
+            "pooled_rmse": 0.5964,
+            "macro_mae": 0.4628,
+            "macro_rmse": 0.5927,
+            "macro_mae_skill_vs_seasonal": -0.0607,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.8194,
+            "mean_interval_width": 1.6008,
+            "pinball_q0.1": 0.1089,
+            "pinball_q0.5": 0.2314,
+            "pinball_q0.9": 0.1137
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 1.8042,
+            "pooled_rmse": 2.4373,
+            "macro_mae": 1.8042,
+            "macro_rmse": 2.2425,
+            "macro_mae_skill_vs_seasonal": -3.7962,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.6204,
+            "pinball_q0.5": 0.9021,
+            "pinball_q0.9": 1.1837
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 0.4958,
+            "pooled_rmse": 0.6495,
+            "macro_mae": 0.4958,
+            "macro_rmse": 0.6104,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.1389,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.2651,
+            "pinball_q0.5": 0.2479,
+            "pinball_q0.9": 0.2307
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "cebu",
+            "mae": 0.4717,
+            "rmse": 0.6054,
+            "seasonal_naive_mae": 0.2958,
+            "mae_skill_vs_seasonal": -0.5946,
+            "pinball_q0.1": 0.1265,
+            "pinball_q0.5": 0.2359,
+            "pinball_q0.9": 0.1225,
+            "q10_q90_coverage": 0.7917,
+            "mean_interval_width": 1.6451
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "davao",
+            "mae": 0.3648,
+            "rmse": 0.5063,
+            "seasonal_naive_mae": 0.4167,
+            "mae_skill_vs_seasonal": 0.1245,
+            "pinball_q0.1": 0.0545,
+            "pinball_q0.5": 0.1824,
+            "pinball_q0.9": 0.0996,
+            "q10_q90_coverage": 0.875,
+            "mean_interval_width": 1.4608
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "manila",
+            "mae": 0.5518,
+            "rmse": 0.6665,
+            "seasonal_naive_mae": 0.775,
+            "mae_skill_vs_seasonal": 0.288,
+            "pinball_q0.1": 0.1457,
+            "pinball_q0.5": 0.2759,
+            "pinball_q0.9": 0.1191,
+            "q10_q90_coverage": 0.7917,
+            "mean_interval_width": 1.6967
+          },
+          {
+            "model": "last_value",
+            "series_id": "cebu",
+            "mae": 2.2333,
+            "rmse": 2.8356,
+            "seasonal_naive_mae": 0.2958,
+            "mae_skill_vs_seasonal": -6.5493,
+            "pinball_q0.1": 0.55,
+            "pinball_q0.5": 1.1167,
+            "pinball_q0.9": 1.6833,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "davao",
+            "mae": 2.4667,
+            "rmse": 2.9964,
+            "seasonal_naive_mae": 0.4167,
+            "mae_skill_vs_seasonal": -4.92,
+            "pinball_q0.1": 1.0133,
+            "pinball_q0.5": 1.2333,
+            "pinball_q0.9": 1.4533,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "manila",
+            "mae": 0.7125,
+            "rmse": 0.8956,
+            "seasonal_naive_mae": 0.775,
+            "mae_skill_vs_seasonal": 0.0806,
+            "pinball_q0.1": 0.2979,
+            "pinball_q0.5": 0.3562,
+            "pinball_q0.9": 0.4146,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "cebu",
+            "mae": 0.2958,
+            "rmse": 0.3984,
+            "seasonal_naive_mae": 0.2958,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.0563,
+            "pinball_q0.5": 0.1479,
+            "pinball_q0.9": 0.2396,
+            "q10_q90_coverage": 0.2917,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "davao",
+            "mae": 0.4167,
+            "rmse": 0.5164,
+            "seasonal_naive_mae": 0.4167,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.3317,
+            "pinball_q0.5": 0.2083,
+            "pinball_q0.9": 0.085,
+            "q10_q90_coverage": 0.125,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "manila",
+            "mae": 0.775,
+            "rmse": 0.9165,
+            "seasonal_naive_mae": 0.775,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.4075,
+            "pinball_q0.5": 0.3875,
+            "pinball_q0.9": 0.3675,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": null,
+        "packages": null
+      },
+      "new_independent": {
+        "aggregate": [
+          {
+            "model": "TiRex-2",
+            "pooled_mae": 0.4658,
+            "pooled_rmse": 0.596,
+            "macro_mae": 0.4658,
+            "macro_rmse": 0.5929,
+            "macro_mae_skill_vs_seasonal": -0.0659,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.8056,
+            "mean_interval_width": 1.5726,
+            "pinball_q0.1": 0.1101,
+            "pinball_q0.5": 0.2329,
+            "pinball_q0.9": 0.111
+          },
+          {
+            "model": "last_value",
+            "pooled_mae": 1.8042,
+            "pooled_rmse": 2.4373,
+            "macro_mae": 1.8042,
+            "macro_rmse": 2.2425,
+            "macro_mae_skill_vs_seasonal": -3.7962,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.6204,
+            "pinball_q0.5": 0.9021,
+            "pinball_q0.9": 1.1837
+          },
+          {
+            "model": "seasonal_naive",
+            "pooled_mae": 0.4958,
+            "pooled_rmse": 0.6495,
+            "macro_mae": 0.4958,
+            "macro_rmse": 0.6104,
+            "macro_mae_skill_vs_seasonal": 0.0,
+            "skill_series": 3,
+            "q10_q90_coverage": 0.1389,
+            "mean_interval_width": 0.0,
+            "pinball_q0.1": 0.2651,
+            "pinball_q0.5": 0.2479,
+            "pinball_q0.9": 0.2307
+          }
+        ],
+        "per_series": [
+          {
+            "model": "TiRex-2",
+            "series_id": "cebu",
+            "mae": 0.4707,
+            "rmse": 0.6028,
+            "seasonal_naive_mae": 0.2958,
+            "mae_skill_vs_seasonal": -0.591,
+            "pinball_q0.1": 0.1239,
+            "pinball_q0.5": 0.2353,
+            "pinball_q0.9": 0.1173,
+            "q10_q90_coverage": 0.7917,
+            "mean_interval_width": 1.6062
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "davao",
+            "mae": 0.3701,
+            "rmse": 0.5142,
+            "seasonal_naive_mae": 0.4167,
+            "mae_skill_vs_seasonal": 0.1117,
+            "pinball_q0.1": 0.0594,
+            "pinball_q0.5": 0.1851,
+            "pinball_q0.9": 0.099,
+            "q10_q90_coverage": 0.8333,
+            "mean_interval_width": 1.435
+          },
+          {
+            "model": "TiRex-2",
+            "series_id": "manila",
+            "mae": 0.5567,
+            "rmse": 0.6617,
+            "seasonal_naive_mae": 0.775,
+            "mae_skill_vs_seasonal": 0.2817,
+            "pinball_q0.1": 0.1471,
+            "pinball_q0.5": 0.2784,
+            "pinball_q0.9": 0.1165,
+            "q10_q90_coverage": 0.7917,
+            "mean_interval_width": 1.6765
+          },
+          {
+            "model": "last_value",
+            "series_id": "cebu",
+            "mae": 2.2333,
+            "rmse": 2.8356,
+            "seasonal_naive_mae": 0.2958,
+            "mae_skill_vs_seasonal": -6.5493,
+            "pinball_q0.1": 0.55,
+            "pinball_q0.5": 1.1167,
+            "pinball_q0.9": 1.6833,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "davao",
+            "mae": 2.4667,
+            "rmse": 2.9964,
+            "seasonal_naive_mae": 0.4167,
+            "mae_skill_vs_seasonal": -4.92,
+            "pinball_q0.1": 1.0133,
+            "pinball_q0.5": 1.2333,
+            "pinball_q0.9": 1.4533,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "last_value",
+            "series_id": "manila",
+            "mae": 0.7125,
+            "rmse": 0.8956,
+            "seasonal_naive_mae": 0.775,
+            "mae_skill_vs_seasonal": 0.0806,
+            "pinball_q0.1": 0.2979,
+            "pinball_q0.5": 0.3562,
+            "pinball_q0.9": 0.4146,
+            "q10_q90_coverage": 0.0417,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "cebu",
+            "mae": 0.2958,
+            "rmse": 0.3984,
+            "seasonal_naive_mae": 0.2958,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.0563,
+            "pinball_q0.5": 0.1479,
+            "pinball_q0.9": 0.2396,
+            "q10_q90_coverage": 0.2917,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "davao",
+            "mae": 0.4167,
+            "rmse": 0.5164,
+            "seasonal_naive_mae": 0.4167,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.3317,
+            "pinball_q0.5": 0.2083,
+            "pinball_q0.9": 0.085,
+            "q10_q90_coverage": 0.125,
+            "mean_interval_width": 0.0
+          },
+          {
+            "model": "seasonal_naive",
+            "series_id": "manila",
+            "mae": 0.775,
+            "rmse": 0.9165,
+            "seasonal_naive_mae": 0.775,
+            "mae_skill_vs_seasonal": 0.0,
+            "pinball_q0.1": 0.4075,
+            "pinball_q0.5": 0.3875,
+            "pinball_q0.9": 0.3675,
+            "q10_q90_coverage": 0.0,
+            "mean_interval_width": 0.0
+          }
+        ],
+        "conditioning": {
+          "mode": "independent-per-series",
+          "target_groups": [
+            [
+              "cebu"
+            ],
+            [
+              "davao"
+            ],
+            [
+              "manila"
+            ]
+          ],
+          "mechanism": "one univariate TimeseriesType per series"
+        },
+        "packages": {
+          "tirex-2": "0.2.1",
+          "torch": "2.8.0+cpu",
+          "numpy": "2.3.3",
+          "pandas": "2.3.3",
+          "huggingface-hub": "0.36.2"
+        }
+      }
+    },
+    "perturbation_max_abs_median_change": {
+      "changed_series": "davao",
+      "old_joint": {
+        "cebu": 0.03232955932617543,
+        "davao": 25.567190170288082,
+        "manila": 0.03502082824707031
+      },
+      "new_independent": {
+        "cebu": 0.0,
+        "davao": 25.482248306274414,
+        "manila": 0.0
+      }
+    }
+  }
+}
