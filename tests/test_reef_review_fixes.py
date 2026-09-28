@@ -423,3 +423,50 @@ def test_metrics_round_trip_without_string_fallback(scored, ns):
     for report in reports.values():
         for table in ("paired_differences", "per_origin_errors", "thresholds", "macro"):
             assert all(type(r["horizon"]) is int for r in report[table])
+
+
+# Hosted run 2026-09-28: stages run with a clean environment, a log file and a heartbeat ------
+
+
+def _runner_helpers(notebook, tmp_path):
+    setup = next(
+        "".join(c["source"])
+        for c in notebook["cells"]
+        if c["cell_type"] == "code" and "def run_logged" in "".join(c["source"])
+    )
+    helpers = setup[
+        setup.index("def child_environment") : setup.index("run_logged([sys.executable")
+    ]
+    import os
+    import subprocess
+    import sys
+    import time
+
+    space = dict(os=os, subprocess=subprocess, sys=sys, time=time, LOG_DIR=tmp_path)
+    exec(helpers, space)
+    return space
+
+
+def test_child_stages_get_clean_environment_and_logs(notebook, tmp_path, monkeypatch, capsys):
+    import sys
+
+    monkeypatch.setenv("PYTHONPATH", "/env/python")
+    monkeypatch.setenv("MPLBACKEND", "module://matplotlib_inline.backend_inline")
+    helpers = _runner_helpers(notebook, tmp_path)
+    probe = "import os; print(os.environ.get('PYTHONPATH'), os.environ['MPLBACKEND'])"
+    helpers["run_logged"]([sys.executable, "-c", probe], "probe")
+    assert "None Agg" in capsys.readouterr().out
+    assert (tmp_path / "probe.log").read_text().strip() == "None Agg"
+    with pytest.raises(RuntimeError, match="exit code 3") as failure:
+        helpers["run_logged"](
+            [sys.executable, "-c", "print('last words'); raise SystemExit(3)"], "fails"
+        )
+    assert "last words" in str(failure.value)
+
+
+def test_setup_and_stages_use_logged_runner(notebook):
+    code = "\n".join("".join(c["source"]) for c in notebook["cells"] if c["cell_type"] == "code")
+    assert "subprocess.run([sys.executable" not in code
+    assert 'run_logged(command, f"stage_{name}")' in code
+    assert "still working" in code
+    assert '_ = (RUN_ROOT / "setup_summary.json").write_text' in code

@@ -317,3 +317,42 @@ This satisfies the fresh `STANDARD` synthetic item for revision 0.2.0. The follo
 - the optional activity.
 
 **Status: Candidate.**
+
+## Philippine reef heat-stress capstone: maintainer-supplied Colab execution — 2026-09-28
+
+Notebook identity is the Git blob of `tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb`.
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `f3c4a1e` / `61fae866df91` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all | not recorded | **INCOMPLETE** — the runtime disconnected during the first stage. The notebook reports no error. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_f3c4a1e.ipynb)
+  is preserved byte for byte. SHA-256 `e15148da3bdcc54a92ea62caa34e28690d6e720d43109454ff2202cb7a9d9a3d`.
+- **Source match.** The source equals revision `f3c4a1e` except for:
+  - the maintainer's title edit, which removes "7" from "DIMER Capstone 7";
+  - empty `# @title` lines that Colab inserted in seven collapsed cells. These are not substantive.
+- **Executed cells.** Cells `reef-003` to `reef-009` ran, with execution counts 1–5.
+  - Setup printed `Isolated Python 3.12.13 dependencies ready (kernel Python 3.13.15)`. This is
+    hosted evidence that the R1 interpreter fix works on a Python 3.13 Colab kernel.
+  - The embedded NOAA archive verified.
+  - `reef-010` (runner assembly and the `prepare` stage) has no execution count or output. No later
+    cell ran.
+- **Cause.** Not determined from the notebook: a disconnect leaves no traceback in the saved file.
+  The same cells ran offline without error from a non-3.12 kernel, with the full hash-locked
+  environment on managed Python 3.12.13:
+  - setup took 71 s and produced a 6.8 GB environment;
+  - `prepare` took 3 s;
+  - baselines took 29 s over 299 origins.
+
+  They were also run with Colab's `PYTHONPATH` and inline `MPLBACKEND` set. Colab's runtime log
+  would be needed to identify the cause.
+- **Follow-up in the next revision.** Every child process now:
+  - runs with `PYTHONPATH`, `PYTHONHOME` and `PYTHONSTARTUP` removed and `MPLBACKEND=Agg`;
+  - writes a log under `reef_capstone_run/logs/`;
+  - echoes progress into the cell, with a heartbeat every 30 s during silent steps.
+
+  A failure shows the log tail. Setup no longer prints a stray `116`.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated. No
+  model stage ran, so this run is not model or forecast evidence.
+
+**Status: Candidate.** A complete fresh-T4 Run all is still required.

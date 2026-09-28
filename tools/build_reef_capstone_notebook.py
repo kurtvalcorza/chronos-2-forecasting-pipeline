@@ -32,7 +32,7 @@ def build() -> dict:
     def code(text: str, hidden: bool = False) -> None:
         add("code", text, hidden)
 
-    md("""# DIMER Capstone 7: Philippine Reef Heat-Stress Outlook
+    md("""# DIMER Capstone: Philippine Reef Heat-Stress Outlook
 
 **Profile:** TASK-INFERENCE · **Mode:** GUIDED · **Standard:** NOTEBOOK_SPEC 2.2
 **Status:** Candidate pending fresh Colab T4 qualification.
@@ -99,7 +99,42 @@ RUN_ROOT = pathlib.Path.cwd() / "reef_capstone_run"
 RUN_ROOT.mkdir(exist_ok=True)
 ENV_ROOT = RUN_ROOT / "environment"
 PYTHON = ENV_ROOT / "bin/python"
-subprocess.run([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "uv==0.10.12"], check=True)
+LOG_DIR = RUN_ROOT / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+def child_environment():
+    # Children never inherit the kernel's Python path, startup file or inline plotting backend.
+    env = {k: v for k, v in os.environ.items() if k not in {"PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP"}}
+    env.update(MPLBACKEND="Agg", PYTHONUNBUFFERED="1")
+    return env
+def run_logged(command, log_name, echo=True):
+    # Run a child with its output in logs/<name>.log. Poll it, echo new lines, and print a
+    # heartbeat every 30 s so a long silent step is visibly alive; on failure show the log tail.
+    started = last_beat = time.perf_counter()
+    log_path, shown, returncode = LOG_DIR / f"{log_name}.log", 0, None
+    with log_path.open("w", encoding="utf-8") as log:
+        process = subprocess.Popen([str(part) for part in command], stdout=log,
+                                   stderr=subprocess.STDOUT, env=child_environment())
+        while returncode is None:
+            try:
+                returncode = process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            text = log_path.read_text(encoding="utf-8", errors="replace")
+            lines = text.splitlines()
+            complete = lines if text.endswith("\\n") or returncode is not None else lines[:-1]
+            if echo:
+                for line in complete[shown:]:
+                    print(line, flush=True)
+            shown = max(shown, len(complete))
+            if returncode is None and time.perf_counter() - last_beat >= 30:
+                print(f"  ... {log_name} still working, {time.perf_counter() - started:.0f} s", flush=True)
+                last_beat = time.perf_counter()
+    if returncode:
+        tail = "\\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-30:])
+        raise RuntimeError(f"{log_name} failed with exit code {returncode}; log: {log_path}\\n{tail}")
+    return time.perf_counter() - started
+run_logged([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "uv==0.10.12"],
+           "setup_uv", echo=False)
 def environment_python():
     if not PYTHON.exists():
         return None
@@ -107,19 +142,21 @@ def environment_python():
     return subprocess.run(probe, capture_output=True, text=True).stdout.strip() or None
 ENV_REUSED = environment_python() == TARGET_PYTHON
 if not ENV_REUSED:
-    subprocess.run([sys.executable, "-m", "uv", "venv", "--clear", "--managed-python",
-                    "--python", TARGET_PYTHON, str(ENV_ROOT)], check=True)
+    run_logged([sys.executable, "-m", "uv", "venv", "--clear", "--managed-python",
+                "--python", TARGET_PYTHON, ENV_ROOT], "setup_python")
 if environment_python() != TARGET_PYTHON:
     raise RuntimeError(f"Isolated environment is not Python {TARGET_PYTHON}; preserve this log.")
 """
         + f"REQUIREMENTS = {lock!r}\n"
         + """
 (RUN_ROOT / "requirements.lock").write_text(REQUIREMENTS, encoding="utf-8")
-subprocess.run([sys.executable, "-m", "uv", "pip", "sync", "--python", str(PYTHON),
-                "--require-hashes", str(RUN_ROOT / "requirements.lock")], check=True)
+print("Installing the hash-locked environment (a few minutes on a fresh runtime)...", flush=True)
+seconds = run_logged([sys.executable, "-m", "uv", "pip", "sync", "--python", PYTHON,
+                      "--require-hashes", RUN_ROOT / "requirements.lock"], "setup_sync", echo=False)
+print(f"Locked packages installed in {seconds:.0f} s (log: {LOG_DIR / 'setup_sync.log'}).")
 print(f"Isolated Python {TARGET_PYTHON} dependencies ready (kernel Python {platform.python_version()});"
       " the notebook kernel does not need a restart.")
-(RUN_ROOT / "setup_summary.json").write_text(json.dumps({
+_ = (RUN_ROOT / "setup_summary.json").write_text(json.dumps({
     "seconds": time.perf_counter() - SETUP_STARTED,
     "kernel_python": platform.python_version(),
     "environment_python": TARGET_PYTHON,
@@ -198,8 +235,10 @@ compile(RUNNER_SOURCE, "reef_runner.py", "exec")
 SOURCE_IDENTITY["runner_sha256"] = hashlib.sha256(RUNNER_SOURCE.encode()).hexdigest()
 (RUN_ROOT / "source_identity.json").write_text(json.dumps(SOURCE_IDENTITY, indent=2))
 def run_stage(name, *extra):
-    command = [str(PYTHON), str(RUN_ROOT / "reef_runner.py"), name, "--root", str(RUN_ROOT), *extra]
-    subprocess.run(command, check=True)
+    print(f"[{time.strftime('%H:%M:%S')}] stage {name} started", flush=True)
+    command = [PYTHON, RUN_ROOT / "reef_runner.py", name, "--root", RUN_ROOT, *extra]
+    seconds = run_logged(command, f"stage_{name}")
+    print(f"[{time.strftime('%H:%M:%S')}] stage {name} finished in {seconds:.0f} s", flush=True)
 run_stage("prepare")
 """,
         True,

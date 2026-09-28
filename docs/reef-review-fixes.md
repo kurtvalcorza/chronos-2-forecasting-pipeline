@@ -205,6 +205,16 @@ Not performed:
 
 Model outputs in every integration check come from a deterministic test double.
 
+## Hosted run of `f3c4a1e` — 2026-09-28
+
+A maintainer Colab T4 Run all confirmed R1 on a Python 3.13.15 kernel: the isolated environment
+was built on Python 3.12.13. The runtime then disconnected during the first stage, `prepare`,
+without an error in the notebook. The run is recorded in
+[release-verification.md](release-verification.md). Offline, the same cells completed: setup in
+71 s, `prepare` in 3 s and baselines in 29 s. The next revision streams every stage into the cell
+through a per-stage log file, prints a 30 s heartbeat, and gives child processes a clean
+environment. It also drops the "7" from the title, as the maintainer edited it.
+
 ## Remaining gates
 
 1. Fresh Colab T4 default Run all on this head, recording the kernel and environment interpreters,
