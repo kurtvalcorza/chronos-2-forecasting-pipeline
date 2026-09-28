@@ -71,6 +71,9 @@ evidence are in [reef-review-fixes.md](reef-review-fixes.md).
   DHW components. BYOD reads region IDs literally and writes each input's forecasts and receipt to
   `byod/<input sha256 prefix>/`.
 - **Serialization.** JSON records use native numeric types; the blanket `default=str` fallback is removed.
+- **Quantile order.** Chronos-2 can emit slightly crossing quantiles. They are sorted before use
+  (monotone rearrangement), and the point forecast is the rearranged median. The unsorted model values
+  and the crossing size are exported.
 
 ## Qualification procedure
 

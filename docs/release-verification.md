@@ -356,3 +356,43 @@ Notebook identity is the Git blob of `tutorials/DIMER_Philippine_Reef_Heat_Stres
   model stage ran, so this run is not model or forecast evidence.
 
 **Status: Candidate.** A complete fresh-T4 Run all is still required.
+
+### Maintainer-supplied Colab execution of `2de49e1` — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `2de49e1` / `9a4d35edf291` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all with `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED` ticked, path empty | about 3 min to the failure | **FAILED** — the 180-day context activity stopped with `ValueError: Crossing quantiles`. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_2de49e1_byod.ipynb)
+  is preserved byte for byte. SHA-256 `dcad18fcca01df7a014af9aa782e6527d4021b8e9e90f3a1140d2b792ea6a88d`.
+- **Source match.** The source equals `2de49e1` except for:
+  - the two BYOD `# @param` toggles;
+  - empty `# @title` lines that Colab inserted in collapsed cells. These are not substantive.
+- **Executed cells.** Execution counts run 1–9 in order, with no disconnect.
+
+  | Step | Result |
+  |---|---|
+  | Setup | 80 s for the locked sync |
+  | `prepare` | 6 s; the origin table matches the plan |
+  | Baselines | 43 s, 299 origins |
+  | Validation, real Chronos-2 | 40 s, 115 origins, peak GPU 513,587,712 bytes |
+  | `activity` | Failed after origin 25 |
+
+  The stage log and the error were shown in the cell, as the previous revision intended.
+- **Cause.** Chronos-2 2.3.1 returns the trained quantile slices without enforcing their order, so a
+  small crossing is a model property. The adapter treated it as corrupt output. A CPU probe with the
+  pinned weights (`95a9710e…`) over all 115 validation origins found exactly one crossing day:
+  - context: 180 days;
+  - region: eastern;
+  - origin: 2023-05-01;
+  - q10 exceeds q50 by 0.000023 °C, with both about −0.0038 °C.
+
+  No 365-day forecast crossed. The CPU probe is not hosted evidence; GPU values can differ slightly.
+- **Fixed in the next revision.** Chronos quantiles are sorted before use (monotone rearrangement).
+  The point forecast is the rearranged median. The model's unsorted values (`model_q10`–`model_q90`)
+  and the crossing size (`quantile_crossing_c`) are kept in every forecast file and checked at reload.
+  Stage summaries and `run_summary.json` count crossing days.
+- **Not assessed in this run.** Lock, test, scoring tables, outlook, reload, report, BYOD.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
+
+**Status: Candidate.** A complete fresh-T4 Run all is still required.

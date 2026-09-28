@@ -141,10 +141,15 @@ def test_metrics_null_support_order_and_parity(tmp_path):
     f.to_csv(tmp_path / "forecasts.csv", index=False)
     loaded = pd.read_csv(tmp_path / "forecasts.csv", parse_dates=["origin", "target_date"])
     assert core.evaluate_forecasts(loaded) == result
-    with pytest.raises(ValueError, match="Quantiles"):
-        core.forecast_frame(
-            p, "region", "2024-03-01", "chronos", raw, "test", np.tile([2, 0, 1], (28, 1))
-        )
+    # Crossing quantiles (a Chronos-2 model property) are rearranged and recorded, not refused.
+    crossed = core.forecast_frame(
+        p, "region", "2024-03-01", "chronos", raw, "test", np.tile([2, 0, 1], (28, 1))
+    )
+    assert np.allclose(crossed[["raw_q10", "raw_q50", "raw_q90"]], [0, 1, 2])
+    assert np.allclose(crossed.hotspot_c, 1) and np.allclose(crossed.quantile_crossing_c, 2)
+    for bad in (np.full((28, 3), np.nan), np.zeros((27, 3))):
+        with pytest.raises(ValueError, match="Quantiles"):
+            core.forecast_frame(p, "region", "2024-03-01", "chronos", raw, "test", bad)
     with pytest.raises(ValueError, match="Missing model outputs"):
         core.evaluate_forecasts(f.iloc[:-1])
 

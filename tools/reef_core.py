@@ -30,7 +30,18 @@ REEF_NAMES = [
 
 
 FORECAST_KEYS = ["region_id", "origin", "arm", "lead"]
-QUANTILE_COLUMNS = ["raw_q10", "raw_q50", "raw_q90", "q10", "q50", "q90"]
+QUANTILE_COLUMNS = [
+    "model_q10",
+    "model_q50",
+    "model_q90",
+    "quantile_crossing_c",
+    "raw_q10",
+    "raw_q50",
+    "raw_q90",
+    "q10",
+    "q50",
+    "q90",
+]
 QUANTILE_ARMS = {"chronos", "chronos_180"}
 
 
@@ -303,6 +314,21 @@ def compose_dhw(context: object, predictions: object) -> dict:
     }
 
 
+def rearrange_quantiles(quantiles: object) -> tuple[np.ndarray, np.ndarray]:
+    """Monotone rearrangement: sort each day's q10/q50/q90 and report the largest crossing.
+
+    Chronos-2 predicts its quantiles independently and does not enforce their order, so a
+    crossing is a model property, not corrupt output. Sorting never increases pinball loss
+    (Chernozhukov, Fernandez-Val and Galichon, 2010); the crossing size is kept for audit.
+    """
+    q = np.asarray(quantiles, dtype=float)
+    if q.ndim != 2 or q.shape[1] != 3 or not np.isfinite(q).all():
+        raise ValueError("Quantiles must be finite (H,3) q10,q50,q90")
+    pairs = [q[:, 0] - q[:, 1], q[:, 1] - q[:, 2], q[:, 0] - q[:, 2]]
+    crossing = np.maximum.reduce([np.zeros(len(q))] + pairs)
+    return np.sort(q, axis=1), crossing
+
+
 def forecast_frame(
     panel: pd.DataFrame,
     region: str,
@@ -317,6 +343,15 @@ def forecast_frame(
     values = np.asarray(raw, dtype=float)
     if values.shape != (28,) or not np.isfinite(values).all():
         raise ValueError("Each arm must return exactly 28 finite predictions")
+    if quantiles is not None:
+        model_q = np.asarray(quantiles, dtype=float)
+        if model_q.shape != (28, 3) or not np.isfinite(model_q).all():
+            raise ValueError("Quantiles must be finite (28,3) q10,q50,q90")
+        if not np.allclose(model_q[:, 1], values, atol=1e-6, rtol=0):
+            raise ValueError("Point forecast must equal the model median")
+        q, crossing = rearrange_quantiles(model_q)
+        # The point forecast is the median of the rearranged (ordered) quantiles.
+        values = q[:, 1]
     constrained = np.maximum(values, 0)
     dates = pd.date_range(origin + pd.Timedelta(days=1), periods=28)
     data = panel.xs(region)
@@ -340,11 +375,9 @@ def forecast_frame(
         )
     )
     if quantiles is not None:
-        q = np.asarray(quantiles, dtype=float)
-        if q.shape != (28, 3) or not np.isfinite(q).all() or (np.diff(q, axis=1) < 0).any():
-            raise ValueError("Quantiles must be finite ordered (28,3) q10,q50,q90")
-        if not np.allclose(q[:, 1], values, atol=1e-6, rtol=0):
-            raise ValueError("Point forecast must equal the raw median")
+        for i, label in enumerate(["q10", "q50", "q90"]):
+            out["model_" + label] = model_q[:, i]
+        out["quantile_crossing_c"] = crossing
         for i, label in enumerate(["q10", "q50", "q90"]):
             out["raw_" + label] = q[:, i]
             out[label] = np.maximum(q[:, i], 0)

@@ -85,7 +85,7 @@ def reef_load_model(manifest: dict, cache: Path):
 
 
 def reef_predict(model, history, horizon: int = 28) -> np.ndarray:
-    """Return H by 3 raw q10/q50/q90, with one independent series per call."""
+    """Return H by 3 raw q10/q50/q90 as the model emits them; one series per call."""
     values = np.asarray(history, dtype=np.float32)
     if values.ndim != 1 or not np.isfinite(values).all() or len(values) < 84:
         raise ValueError("Expected a finite one-dimensional daily history")
@@ -103,6 +103,5 @@ def reef_predict(model, history, horizon: int = 28) -> np.ndarray:
     result = quantiles[0].detach().float().cpu().numpy()
     if result.shape != (1, horizon, 3) or not np.isfinite(result).all():
         raise ValueError("Invalid quantile dimensions or nonfinite prediction")
-    if (np.diff(result, axis=-1) < 0).any():
-        raise ValueError("Crossing quantiles")
+    # Quantiles are returned in model order; crossings are rearranged and recorded downstream.
     return result[0].astype(float)

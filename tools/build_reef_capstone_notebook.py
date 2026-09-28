@@ -102,8 +102,10 @@ PYTHON = ENV_ROOT / "bin/python"
 LOG_DIR = RUN_ROOT / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 def child_environment():
-    # Children never inherit the kernel's Python path, startup file or inline plotting backend.
-    env = {k: v for k, v in os.environ.items() if k not in {"PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP"}}
+    # Children never inherit the kernel's Python path, startup file, inline plotting backend or
+    # Colab's UV_SYSTEM_PYTHON (which makes uv warn that --system has no effect on uv venv).
+    dropped = {"PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP", "UV_SYSTEM_PYTHON"}
+    env = {k: v for k, v in os.environ.items() if k not in dropped}
     env.update(MPLBACKEND="Agg", PYTHONUNBUFFERED="1")
     return env
 def run_logged(command, log_name, echo=True):

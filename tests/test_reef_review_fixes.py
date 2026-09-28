@@ -27,8 +27,10 @@ def _builder():
 
 
 def fake_predict(model, history, horizon=28):
+    """Persistence double; above 1 degC its q10 crosses above q50, as Chronos-2 can emit."""
     value = float(np.asarray(history)[-1])
-    return np.tile([value - 0.1, value, value + 0.1], (horizon, 1))
+    low = value + 0.05 if value > 1 else value - 0.1
+    return np.tile([low, value, value + 0.1], (horizon, 1))
 
 
 @pytest.fixture(scope="module")
@@ -452,11 +454,15 @@ def test_child_stages_get_clean_environment_and_logs(notebook, tmp_path, monkeyp
 
     monkeypatch.setenv("PYTHONPATH", "/env/python")
     monkeypatch.setenv("MPLBACKEND", "module://matplotlib_inline.backend_inline")
+    monkeypatch.setenv("UV_SYSTEM_PYTHON", "1")
     helpers = _runner_helpers(notebook, tmp_path)
-    probe = "import os; print(os.environ.get('PYTHONPATH'), os.environ['MPLBACKEND'])"
+    probe = (
+        "import os; print(os.environ.get('PYTHONPATH'), os.environ['MPLBACKEND'],"
+        " os.environ.get('UV_SYSTEM_PYTHON'))"
+    )
     helpers["run_logged"]([sys.executable, "-c", probe], "probe")
-    assert "None Agg" in capsys.readouterr().out
-    assert (tmp_path / "probe.log").read_text().strip() == "None Agg"
+    assert "None Agg None" in capsys.readouterr().out
+    assert (tmp_path / "probe.log").read_text().strip() == "None Agg None"
     with pytest.raises(RuntimeError, match="exit code 3") as failure:
         helpers["run_logged"](
             [sys.executable, "-c", "print('last words'); raise SystemExit(3)"], "fails"
@@ -470,3 +476,64 @@ def test_setup_and_stages_use_logged_runner(notebook):
     assert 'run_logged(command, f"stage_{name}")' in code
     assert "still working" in code
     assert '_ = (RUN_ROOT / "setup_summary.json").write_text' in code
+
+
+# Hosted run 2026-09-28 (2de49e1): Chronos-2 emitted crossing quantiles in the activity stage ----
+
+
+def test_rearrangement_sorts_and_measures_crossing(ns):
+    q = np.array([[0.2, 0.1, 0.3], [0.0, 0.5, 0.4], [0.1, 0.2, 0.3], [0.9, 0.5, 0.1]])
+    ordered, crossing = ns["rearrange_quantiles"](q)
+    assert (np.diff(ordered, axis=1) >= 0).all()
+    assert np.allclose(crossing, [0.1, 0.1, 0.0, 0.8])
+    with pytest.raises(ValueError):
+        ns["rearrange_quantiles"](np.array([[0.1, np.nan, 0.3]]))
+
+
+def test_crossing_model_output_is_rearranged_not_refused(scored, ns):
+    """The adapter keeps model order; forecast_frame sorts, records and scores it."""
+
+    class Tensor:
+        def detach(self):
+            return self
+
+        def float(self):
+            return self
+
+        def cpu(self):
+            return self
+
+        def numpy(self):
+            return np.tile([0.3, 0.2, 0.4], (1, 28, 1))
+
+    class Model:
+        def predict_quantiles(self, inputs, **kwargs):
+            return [Tensor()], None
+
+    carried = dict(ns)
+    exec(compile(carried["MODEL_SOURCE"], "models.py", "exec"), carried)
+    q = carried["reef_predict"](Model(), np.ones(365))
+    assert np.allclose(q[0], [0.3, 0.2, 0.4])
+    panel, plan = ns["reef_load_data"](scored), ns["reef_plan"](scored)
+    row = plan[plan.split == "test"].iloc[0]
+    frame = ns["forecast_frame"](
+        panel, row.region_id, row.origin, "chronos", q[:, 1], "test", quantiles=q
+    )
+    assert np.allclose(frame.model_q10, 0.3) and np.allclose(frame.raw_q10, 0.2)
+    assert np.allclose(frame.raw_hotspot_c, 0.3) and np.allclose(frame.hotspot_c, 0.3)
+    assert np.allclose(frame.quantile_crossing_c, 0.1)
+
+
+def test_crossings_survive_scoring_reload_and_are_reported(run, ns):
+    test = pd.read_csv(run / "test_forecasts.csv")
+    assert (test.quantile_crossing_c > 0).any() and (test.quantile_crossing_c == 0).any()
+    assert (test[["raw_q10", "raw_q50", "raw_q90"]].diff(axis=1).iloc[:, 1:] >= 0).all().all()
+    summary = json.loads((run / "test_summary.json").read_text())
+    assert summary["quantile_crossing_days"] == int((test.quantile_crossing_c > 0).sum())
+    ns["reef_reload"](run)
+    outlook = pd.read_csv(run / "outlook.csv")
+    chronos = outlook[outlook.arm == "chronos"]
+    assert chronos.quantile_crossing_c.notna().all()
+    _edit(run, "test", lambda f: f.assign(model_q10=np.nan))
+    with pytest.raises(ValueError, match="quantiles"):
+        ns["reef_metrics"](run)

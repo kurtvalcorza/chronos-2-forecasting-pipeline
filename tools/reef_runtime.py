@@ -265,6 +265,10 @@ def reef_experiment(root: Path, stage: str) -> None:
         "complete": True,
         "rows": len(result),
     }
+    if "quantile_crossing_c" in result:
+        crossed = result.quantile_crossing_c > 0
+        summary["quantile_crossing_days"] = int(crossed.sum())
+        summary["quantile_crossing_max_c"] = float(result.quantile_crossing_c.max())
     if model is not None:
         import torch
 
@@ -314,6 +318,11 @@ def reef_lock(root: Path) -> None:
 def reef_outlook_rows(region, origin, arm, context, raw, quantiles=None) -> list[dict]:
     """Unscored forward rows keep raw, constrained, quantile and DHW-component fields."""
     raw = np.asarray(raw, dtype=float)
+    crossing = None
+    if quantiles is not None:
+        model_q = np.asarray(quantiles, dtype=float)
+        quantiles, crossing = rearrange_quantiles(model_q)
+        raw = quantiles[:, 1]
     components = compose_dhw(context, np.maximum(raw, 0))
     dates = pd.date_range(pd.Timestamp(origin) + pd.Timedelta(days=1), periods=len(raw))
     rows = []
@@ -331,6 +340,9 @@ def reef_outlook_rows(region, origin, arm, context, raw, quantiles=None) -> list
             "known_dhw": components["known"][k],
             "predicted_dhw": components["predicted"][k],
         }
+        for i, label in enumerate(["q10", "q50", "q90"]):
+            row["model_" + label] = float(model_q[k, i]) if crossing is not None else np.nan
+        row["quantile_crossing_c"] = float(crossing[k]) if crossing is not None else np.nan
         for i, label in enumerate(["q10", "q50", "q90"]):
             value = float(quantiles[k, i]) if quantiles is not None else np.nan
             row["raw_" + label] = value
@@ -398,9 +410,10 @@ def reef_reload(root: Path) -> None:
         rebuilt_model = []
         for (region, origin, arm), group in saved.groupby(["region_id", "origin", "arm"]):
             group = group.sort_values("lead")
-            qcols = ["raw_q10", "raw_q50", "raw_q90"]
+            # Rebuild from the model's own (unsorted) quantiles, as the stage did.
+            qcols = ["model_q10", "model_q50", "model_q90"]
             qs = group[qcols].to_numpy() if set(qcols).issubset(group) else None
-            raw_col = "raw_hotspot_c"
+            raw_col = "model_q50" if qs is not None else "raw_hotspot_c"
             rebuilt_model.append(
                 forecast_frame(
                     panel,
@@ -771,6 +784,8 @@ def reef_report(root: Path) -> None:
         "reload": reload,
         "refusal_probes": reef_read(root / "dataset_audit.json")["checks"],
         "negative_point_predictions_clamped": int((joined.raw_hotspot_c < 0).sum()),
+        "quantile_crossing_days": int((joined.quantile_crossing_c.fillna(0) > 0).sum()),
+        "quantile_crossing_max_c": float(joined.quantile_crossing_c.fillna(0).max()),
         "source": reef_read(root / "source_identity.json"),
         "model": reef_read(root / "model_manifest.json"),
         "dataset_archive_sha256": reef_read(root / "dataset_manifest.json")["archive"]["sha256"],
@@ -778,6 +793,7 @@ def reef_report(root: Path) -> None:
             "Western/Southern have no eligible 2025 test origins",
             "No confirmed exclusion from foundation-model pretraining",
             "Marginal HotSpot bands are not DHW probability intervals",
+            "Crossing Chronos quantiles are sorted (monotone rearrangement) before scoring",
         ],
     }
     reef_json(root / "run_summary.json", summary)

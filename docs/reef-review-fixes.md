@@ -215,6 +215,17 @@ without an error in the notebook. The run is recorded in
 through a per-stage log file, prints a 30 s heartbeat, and gives child processes a clean
 environment. It also drops the "7" from the title, as the maintainer edited it.
 
+## Hosted run of `2de49e1` — 2026-09-28
+
+The run completed setup (80 s), `prepare`, baselines and real-Chronos validation (115 origins, 40 s,
+0.51 GB peak GPU) with no disconnect. It then stopped in the 180-day activity: the adapter rejected a
+crossing between Chronos quantiles. Chronos-2 does not enforce quantile order. A CPU probe with the
+pinned weights found a single crossing day across all validation forecasts, of 0.000023 °C, with
+both quantiles below zero. The next revision sorts quantiles (monotone rearrangement) instead of
+refusing them. It keeps the model's unsorted values and the crossing size, and reports how many days
+crossed. Setup also drops Colab's `UV_SYSTEM_PYTHON` from child processes, which removes a harmless
+uv warning.
+
 ## Remaining gates
 
 1. Fresh Colab T4 default Run all on this head, recording the kernel and environment interpreters,
