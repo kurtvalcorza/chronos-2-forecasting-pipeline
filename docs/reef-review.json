@@ -1,0 +1,41 @@
+{
+  "review": "independent substantive implementation review",
+  "status": "no_remaining_blocker_found_in_reviewed_scope",
+  "findings": [
+    {
+      "id": "REEF-R1",
+      "severity": "P2",
+      "status": "addressed_source_verified",
+      "title": "Independent metric parity missing in initial implementation",
+      "evidence": "tools/reef_runtime.py:268",
+      "resolution": "Root added score stage and reef_reload comparison against independently recomputed reef_metrics. CPU source verification confirms the call; root owns full export/reload integration execution."
+    },
+    {
+      "id": "REEF-R2",
+      "severity": "P2",
+      "status": "addressed_cpu_verified",
+      "title": "Resource limits absent before locked test in initial implementation",
+      "evidence": "tools/reef_runtime.py:192",
+      "resolution": "Root added validation-based resource projection and memory gate. Independent CPU probe with 1,000,000 seconds and 100 GiB raises RuntimeError before experiment lock."
+    }
+  ],
+  "verified": {
+    "carried_modules_compile_and_share_namespace": true,
+    "model_pin_matches_pipeline": true,
+    "installed_chronos_2_3_1_quantile_api_matches_adapter": true,
+    "excessive_resource_budget_refused": true,
+    "fresh_process_metric_comparison_present": true
+  },
+  "limitations": [
+    "No hosted/GPU run",
+    "Model runtime and determinism unverified here",
+    "Root owns baseline and synthetic export integration tests",
+    "Resource projection is an estimate and cannot qualify hosted timing"
+  ],
+  "source_sha256": {
+    "reef_core.py": "1d39acc3ffd6dccdf49ead7d61ddc8730b5d45321438f61b75e92205d3946d1b",
+    "reef_models.py": "b5653c6ddb156c2b988c1f7417a10f399a01237b540ad2f8d1f2e7b84207a628",
+    "reef_runtime.py": "4f0fbb16e5ce756226ac676cd12852db4ceabd1135e09f02b177d422469ea7ac",
+    "build_reef_capstone_notebook.py": "48d0a4ecee9127f0663d78ca6f914da50a68ce6fc1d367d0219c83e5dbbdb115"
+  }
+}

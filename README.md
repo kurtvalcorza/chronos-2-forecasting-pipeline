@@ -1,5 +1,10 @@
 # Chronos-2 Forecasting — DIMER Pipeline
 
+The [Philippine Reef Heat-Stress Outlook capstone](tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb)
+compares regional NOAA HotSpot forecasts and derived accumulated stress against simple baselines.
+It is a standalone guided notebook, **Candidate pending fresh Colab T4 qualification**.
+See its [data and evidence notes](docs/reef-capstone.md).
+
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/tutorials/chronos_2_forecasting_colab.ipynb)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-amazon%2Fchronos--2-ffcc4d?style=flat)](https://huggingface.co/amazon/chronos-2)

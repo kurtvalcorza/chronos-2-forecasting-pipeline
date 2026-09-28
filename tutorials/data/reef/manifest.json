@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "dataset_id": "noaa-crw-rvs-v3.1-philippines-2026-09-28",
+  "product": "NOAA Coral Reef Watch Regional Virtual Stations",
+  "product_version": "3.1",
+  "retrieval_utc": "2026-09-28T05:26:03.426497+00:00",
+  "coverage_start": "1985-01-01",
+  "coverage_end": "2026-09-26",
+  "archive": {
+    "filename": "noaa_crw_philippines_2026-09-28.zip",
+    "bytes": 1040559,
+    "sha256": "320a04998ff0f0ce4a66264fc83b585c0fafd653844d533468d98a84d6d07b43",
+    "format": "zip"
+  },
+  "members": [
+    {
+      "filename": "central_philippines.txt",
+      "region_id": "central",
+      "source_url": "https://coralreefwatch.noaa.gov/product/vs/data/central_philippines.txt",
+      "bytes": 1265690,
+      "sha256": "84ce50cf4698d05f8f0e45a524ca381c57b3f8acef24b35bccb5f8e9bc936866",
+      "rows": 15244,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "missing_dates": []
+    },
+    {
+      "filename": "eastern_philippines.txt",
+      "region_id": "eastern",
+      "source_url": "https://coralreefwatch.noaa.gov/product/vs/data/eastern_philippines.txt",
+      "bytes": 1265690,
+      "sha256": "b4d7c93e8232947f8dfce0c6203f9e019e9e62b8e41d7e8dd2d6d82e35c7ccee",
+      "rows": 15244,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "missing_dates": []
+    },
+    {
+      "filename": "northern_philippines.txt",
+      "region_id": "northern",
+      "source_url": "https://coralreefwatch.noaa.gov/product/vs/data/northern_philippines.txt",
+      "bytes": 1265691,
+      "sha256": "a963b9a5b13283f8bf8d9b8ce577db887e7ec9792e36b05b8a59c62eb424b3ae",
+      "rows": 15244,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "missing_dates": []
+    },
+    {
+      "filename": "southern_philippines.txt",
+      "region_id": "southern",
+      "source_url": "https://coralreefwatch.noaa.gov/product/vs/data/southern_philippines.txt",
+      "bytes": 1263616,
+      "sha256": "3b04a206b4c95031c7ad53e6c5a01b1616f05bbf2c4010de9f3155d75dcdd933",
+      "rows": 15219,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "missing_dates": [
+        "2025-01-05",
+        "2025-01-13",
+        "2025-10-02",
+        "2025-10-03",
+        "2025-10-04",
+        "2025-10-05",
+        "2025-10-06",
+        "2025-10-07",
+        "2025-10-08",
+        "2025-10-09",
+        "2025-10-10",
+        "2025-10-11",
+        "2025-10-12",
+        "2025-10-13",
+        "2025-10-14",
+        "2025-10-15",
+        "2025-10-16",
+        "2025-10-17",
+        "2025-10-18",
+        "2025-10-19",
+        "2025-10-20",
+        "2025-10-21",
+        "2025-10-22",
+        "2025-10-23",
+        "2026-03-24"
+      ]
+    },
+    {
+      "filename": "western_philippines.txt",
+      "region_id": "western",
+      "source_url": "https://coralreefwatch.noaa.gov/product/vs/data/western_philippines.txt",
+      "bytes": 1263615,
+      "sha256": "5521c5ac1415fdb986b533dd2aa6c0116a736093bbb3b839362956b935daa65f",
+      "rows": 15219,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "missing_dates": [
+        "2025-01-05",
+        "2025-01-13",
+        "2025-10-02",
+        "2025-10-03",
+        "2025-10-04",
+        "2025-10-05",
+        "2025-10-06",
+        "2025-10-07",
+        "2025-10-08",
+        "2025-10-09",
+        "2025-10-10",
+        "2025-10-11",
+        "2025-10-12",
+        "2025-10-13",
+        "2025-10-14",
+        "2025-10-15",
+        "2025-10-16",
+        "2025-10-17",
+        "2025-10-18",
+        "2025-10-19",
+        "2025-10-20",
+        "2025-10-21",
+        "2025-10-22",
+        "2025-10-23",
+        "2026-03-24"
+      ]
+    }
+  ],
+  "original_audit": {
+    "filename": "audit.json",
+    "bytes": 16125,
+    "sha256": "178414d1d835e172bfeb4436acd65a512c326abb67a4a0c32c4cbd11b2d2655b"
+  },
+  "rights": {
+    "status": "Public domain NOAA Coral Reef Watch website content",
+    "source_url": "https://coralreefwatch.noaa.gov/satellite/docs/recommendations_crw_citation.php",
+    "attribution": "NOAA Coral Reef Watch",
+    "separate_from_code_license": true
+  },
+  "citation": "NOAA Coral Reef Watch. 2019. NOAA Coral Reef Watch Version 3.1 Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Products: Regional Virtual Stations, Northern, Central, Western, Eastern and Southern Philippines; 1 January 1985 to 26 September 2026. NOAA Coral Reef Watch, College Park, Maryland, USA. Accessed 28 September 2026. https://coralreefwatch.noaa.gov/product/vs/data.php",
+  "scientific_contract": {
+    "interpretation": "Daily moving-pixel regional 90th-percentile HotSpot summary; not a fixed sensor, regional-mean SST, or observed bleaching label",
+    "dhw_first_valid_date": "1985-03-25",
+    "baa_first_valid_date": "1985-03-31",
+    "dhw_formula": "sum(HotSpot if HotSpot >= 1 C else 0) over 84 calendar days / 7",
+    "missing_policy": "Reindex daily; preserve gaps; never zero-fill missing observations",
+    "alert_scheme": "Legacy BAA; not interchangeable with current global alert categories"
+  },
+  "distribution": {
+    "default": "Notebook embeds this exact ZIP as base64 data and verifies archive/member hashes before parsing",
+    "spec_amendment": "An embedded immutable data-only archive replaces the proposed remote immutable asset download, avoiding an unpublished URL. No executable source is fetched; no live-data fallback.",
+    "live_refresh": "Different dataset version requiring a new audit and manifest; not a default fallback"
+  }
+}
