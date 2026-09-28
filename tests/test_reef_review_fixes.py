@@ -439,12 +439,15 @@ def _runner_helpers(notebook, tmp_path):
     helpers = setup[
         setup.index("def child_environment") : setup.index("run_logged([sys.executable")
     ]
+    assert "def resource_note" in helpers
     import os
+    import shutil
     import subprocess
     import sys
     import time
 
-    space = dict(os=os, subprocess=subprocess, sys=sys, time=time, LOG_DIR=tmp_path)
+    space = dict(os=os, subprocess=subprocess, sys=sys, time=time, shutil=shutil)
+    space.update(LOG_DIR=tmp_path, RUN_ROOT=tmp_path)
     exec(helpers, space)
     return space
 
@@ -537,3 +540,11 @@ def test_crossings_survive_scoring_reload_and_are_reported(run, ns):
     _edit(run, "test", lambda f: f.assign(model_q10=np.nan))
     with pytest.raises(ValueError, match="quantiles"):
         ns["reef_metrics"](run)
+
+
+def test_resource_note_and_flush_are_reported(notebook, tmp_path):
+    note = _runner_helpers(notebook, tmp_path)["resource_note"]()
+    assert "disk free" in note and ("RAM available" in note or "unavailable" in note)
+    code = "\n".join("".join(c["source"]) for c in notebook["cells"] if c["cell_type"] == "code")
+    assert "os.sync()" in code and code.index("os.sync()") < code.index('run_stage("prepare")')
+    assert "started ({resource_note()})" in code and '"resources_after_setup"' in code

@@ -226,6 +226,14 @@ refusing them. It keeps the model's unsorted values and the crossing size, and r
 crossed. Setup also drops Colab's `UV_SYSTEM_PYTHON` from child processes, which removes a harmless
 uv warning.
 
+## Hosted run of `6ad2ac4` — 2026-09-28
+
+The runtime disconnected at the start of `prepare`, right after a fresh install, as in the first run.
+Offline measurements rule out memory pressure from the install: 0.73 GB peak in use, 1.5 GB peak
+unwritten page cache. The next revision flushes the environment to disk (`os.sync()`) before the
+first stage. Every stage start and heartbeat prints available RAM, unwritten data and free disk, so
+a further disconnect leaves evidence in the notebook.
+
 ## Remaining gates
 
 1. Fresh Colab T4 default Run all on this head, recording the kernel and environment interpreters,

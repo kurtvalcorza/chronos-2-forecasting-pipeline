@@ -92,7 +92,7 @@ Source: [NOAA regional methodology](https://coralreefwatch.noaa.gov/product/vs/m
     lock = (ROOT / "tools/reef-requirements.lock").read_text(encoding="utf-8")
     code(
         """# Infrastructure: isolated pinned environment on a managed Python 3.12; the kernel is unchanged.
-import sys, subprocess, pathlib, json, hashlib, base64, os, time, platform
+import sys, subprocess, pathlib, json, hashlib, base64, os, time, platform, shutil
 SETUP_STARTED = time.perf_counter()
 TARGET_PYTHON = "3.12.13"  # uv-managed interpreter, independent of the Colab kernel's Python
 RUN_ROOT = pathlib.Path.cwd() / "reef_capstone_run"
@@ -108,6 +108,20 @@ def child_environment():
     env = {k: v for k, v in os.environ.items() if k not in dropped}
     env.update(MPLBACKEND="Agg", PYTHONUNBUFFERED="1")
     return env
+def resource_note():
+    # One-line machine state, printed at each stage start and heartbeat so that a runtime
+    # disconnect leaves the last known memory and disk state in the saved notebook.
+    try:
+        info = {}
+        with open("/proc/meminfo") as meminfo:
+            for line in meminfo:
+                key, value = line.split(":", 1)
+                info[key] = int(value.split()[0]) / 1048576
+        memory = (f"RAM available {info['MemAvailable']:.1f}/{info['MemTotal']:.1f} GB, "
+                  f"unwritten {info['Dirty'] + info['Writeback']:.1f} GB")
+    except (OSError, KeyError, ValueError):
+        memory = "RAM state unavailable"
+    return f"{memory}, disk free {shutil.disk_usage(RUN_ROOT).free / 1e9:.0f} GB"
 def run_logged(command, log_name, echo=True):
     # Run a child with its output in logs/<name>.log. Poll it, echo new lines, and print a
     # heartbeat every 30 s so a long silent step is visibly alive; on failure show the log tail.
@@ -129,7 +143,8 @@ def run_logged(command, log_name, echo=True):
                     print(line, flush=True)
             shown = max(shown, len(complete))
             if returncode is None and time.perf_counter() - last_beat >= 30:
-                print(f"  ... {log_name} still working, {time.perf_counter() - started:.0f} s", flush=True)
+                print(f"  ... {log_name} still working, {time.perf_counter() - started:.0f} s"
+                      f" ({resource_note()})", flush=True)
                 last_beat = time.perf_counter()
     if returncode:
         tail = "\\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-30:])
@@ -156,6 +171,10 @@ print("Installing the hash-locked environment (a few minutes on a fresh runtime)
 seconds = run_logged([sys.executable, "-m", "uv", "pip", "sync", "--python", PYTHON,
                       "--require-hashes", RUN_ROOT / "requirements.lock"], "setup_sync", echo=False)
 print(f"Locked packages installed in {seconds:.0f} s (log: {LOG_DIR / 'setup_sync.log'}).")
+# Finish writing the ~7 GB environment to disk before any stage starts reading from it.
+flush_started = time.perf_counter()
+os.sync()
+print(f"Installed files flushed to disk in {time.perf_counter() - flush_started:.0f} s ({resource_note()}).")
 print(f"Isolated Python {TARGET_PYTHON} dependencies ready (kernel Python {platform.python_version()});"
       " the notebook kernel does not need a restart.")
 _ = (RUN_ROOT / "setup_summary.json").write_text(json.dumps({
@@ -163,6 +182,7 @@ _ = (RUN_ROOT / "setup_summary.json").write_text(json.dumps({
     "kernel_python": platform.python_version(),
     "environment_python": TARGET_PYTHON,
     "environment_reused": ENV_REUSED,
+    "resources_after_setup": resource_note(),
 }))
 """,
         True,
@@ -237,7 +257,7 @@ compile(RUNNER_SOURCE, "reef_runner.py", "exec")
 SOURCE_IDENTITY["runner_sha256"] = hashlib.sha256(RUNNER_SOURCE.encode()).hexdigest()
 (RUN_ROOT / "source_identity.json").write_text(json.dumps(SOURCE_IDENTITY, indent=2))
 def run_stage(name, *extra):
-    print(f"[{time.strftime('%H:%M:%S')}] stage {name} started", flush=True)
+    print(f"[{time.strftime('%H:%M:%S')}] stage {name} started ({resource_note()})", flush=True)
     command = [PYTHON, RUN_ROOT / "reef_runner.py", name, "--root", RUN_ROOT, *extra]
     seconds = run_logged(command, f"stage_{name}")
     print(f"[{time.strftime('%H:%M:%S')}] stage {name} finished in {seconds:.0f} s", flush=True)

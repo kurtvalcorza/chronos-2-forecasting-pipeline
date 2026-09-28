@@ -396,3 +396,33 @@ Notebook identity is the Git blob of `tutorials/DIMER_Philippine_Reef_Heat_Stres
 - **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
 
 **Status: Candidate.** A complete fresh-T4 Run all is still required.
+
+### Maintainer-supplied Colab execution of `6ad2ac4` — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `6ad2ac4` / `2675506667d0` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all, notebook unmodified | about 2 min to the disconnect | **INCOMPLETE** — the runtime disconnected at the start of `prepare`. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_6ad2ac4.ipynb)
+  is preserved byte for byte. SHA-256 `06008642482e0a196493c28c3c5e8da0c482626cd726f9ceb697096127d0c6f4`.
+- **Source match.** The source is identical to `6ad2ac4`. The BYOD toggles were not ticked.
+- **Executed cells.** Setup completed: the locked sync took 93 s, and uv no longer warned about
+  `--system`. Cells up to `reef-009` ran, with execution counts 1–5. `reef-010` printed
+  `[16:17:13] stage prepare started` and nothing after it, not even the first 30 s heartbeat.
+- **Pattern.** This matches the `f3c4a1e` run: both disconnected seconds after a fresh 6.8 GB install,
+  when the first stage started. The `2de49e1` run passed the same point in 6 s.
+- **Offline measurement.** Local, not Colab. A fresh hash-locked install peaked at:
+  - 0.14 GB uv resident memory;
+  - 0.73 GB total memory in use;
+  - 1.5 GB of dirty and writeback page cache.
+
+  `os.sync()` then took 2 s. Neither memory nor the install explains a disconnect on a 12.7 GB
+  runtime. A disk-writeback stall on Colab's slower disk is possible but unconfirmed. The cause needs
+  Colab's runtime log.
+- **Changes in the next revision.**
+  - Setup calls `os.sync()` after installing, so the environment is on disk before any stage reads it.
+  - Every stage start, every heartbeat and `setup_summary.json` print available RAM, unwritten page
+    cache and free disk. A further disconnect will leave the last machine state in the saved notebook.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
+
+**Status: Candidate.** A complete fresh-T4 Run all is still required.
