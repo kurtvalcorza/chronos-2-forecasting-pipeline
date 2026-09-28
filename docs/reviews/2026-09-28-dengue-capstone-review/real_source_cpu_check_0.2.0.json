@@ -1,0 +1,177 @@
+{
+  "scope": "CPU, real pinned Zenodo archive (SHA-256 verified); stages prepare and baselines only; no GPU or pretrained model",
+  "runtime": "Python 3.12, NumPy 2.5.3, matplotlib 3.10.6; embedded source of revision 0.2.0-candidate",
+  "context_preflight": {
+    "contexts_checked": 1264,
+    "contexts_refused": 0
+  },
+  "plan": {
+    "area": "Quezon City, Philippines",
+    "source_citation": "Zenodo record 21978184 (QC Data sheet), ODC-ODbL 1.0",
+    "validation_origins": 26,
+    "test_origins": 26
+  },
+  "validation_baseline_mae": {
+    "persistence": 16.9327,
+    "ridge": 75.1282,
+    "seasonal": 43.1731
+  },
+  "recorded_before_revision": {
+    "persistence": 16.9327,
+    "seasonal": 43.1731,
+    "ridge": 75.1282
+  },
+  "feature_example": [
+    {
+      "item": "forecast origin (issued after this block)",
+      "value": "",
+      "source_blocks": "2023-B52"
+    },
+    {
+      "item": "target (not observed at issuance)",
+      "value": "",
+      "source_blocks": "2024-B01"
+    },
+    {
+      "item": "cases_lag_0",
+      "value": "72.0",
+      "source_blocks": "2023-B52"
+    },
+    {
+      "item": "cases_lag_1",
+      "value": "69.0",
+      "source_blocks": "2023-B51"
+    },
+    {
+      "item": "cases_lag_2",
+      "value": "85.0",
+      "source_blocks": "2023-B50"
+    },
+    {
+      "item": "cases_lag_3",
+      "value": "71.0",
+      "source_blocks": "2023-B49"
+    },
+    {
+      "item": "cases_lag_4",
+      "value": "100.0",
+      "source_blocks": "2023-B48"
+    },
+    {
+      "item": "cases_lag_8",
+      "value": "98.0",
+      "source_blocks": "2023-B44"
+    },
+    {
+      "item": "cases_lag_12",
+      "value": "147.0",
+      "source_blocks": "2023-B40"
+    },
+    {
+      "item": "cases_lag_52",
+      "value": "67.0",
+      "source_blocks": "2022-B52"
+    },
+    {
+      "item": "cases_mean_4",
+      "value": "74.25",
+      "source_blocks": "2023-B49 .. 2023-B52"
+    },
+    {
+      "item": "cases_mean_8",
+      "value": "95.875",
+      "source_blocks": "2023-B45 .. 2023-B52"
+    },
+    {
+      "item": "cases_mean_12",
+      "value": "103.6667",
+      "source_blocks": "2023-B41 .. 2023-B52"
+    },
+    {
+      "item": "target_block_sin",
+      "value": "0.0",
+      "source_blocks": "target block calendar position (known in advance)"
+    },
+    {
+      "item": "target_block_cos",
+      "value": "1.0",
+      "source_blocks": "target block calendar position (known in advance)"
+    },
+    {
+      "item": "rain_lag_0",
+      "value": "28.9005",
+      "source_blocks": "2023-B52"
+    },
+    {
+      "item": "rain_lag_1",
+      "value": "76.1351",
+      "source_blocks": "2023-B51"
+    },
+    {
+      "item": "rain_lag_2",
+      "value": "20.864",
+      "source_blocks": "2023-B50"
+    },
+    {
+      "item": "rain_lag_3",
+      "value": "10.0761",
+      "source_blocks": "2023-B49"
+    },
+    {
+      "item": "rain_lag_4",
+      "value": "105.2351",
+      "source_blocks": "2023-B48"
+    },
+    {
+      "item": "rain_mean_4",
+      "value": "33.9939",
+      "source_blocks": "2023-B49 .. 2023-B52"
+    },
+    {
+      "item": "rain_mean_8",
+      "value": "45.6504",
+      "source_blocks": "2023-B45 .. 2023-B52"
+    },
+    {
+      "item": "temp_lag_0",
+      "value": "26.9143",
+      "source_blocks": "2023-B52"
+    },
+    {
+      "item": "temp_lag_1",
+      "value": "26.3714",
+      "source_blocks": "2023-B51"
+    },
+    {
+      "item": "temp_lag_2",
+      "value": "27.1857",
+      "source_blocks": "2023-B50"
+    },
+    {
+      "item": "temp_lag_3",
+      "value": "27.4857",
+      "source_blocks": "2023-B49"
+    },
+    {
+      "item": "temp_lag_4",
+      "value": "27.5286",
+      "source_blocks": "2023-B48"
+    },
+    {
+      "item": "temp_mean_4",
+      "value": "26.9893",
+      "source_blocks": "2023-B49 .. 2023-B52"
+    },
+    {
+      "item": "temp_mean_8",
+      "value": "27.1893",
+      "source_blocks": "2023-B45 .. 2023-B52"
+    },
+    {
+      "item": "latest mature training label (cases)",
+      "value": "72",
+      "source_blocks": "2023-B52"
+    }
+  ],
+  "data_note": "Values derive from the ODC-ODbL 1.0 QC Data sheet of Zenodo record 21978184; see the notebook's DATA_LICENSE.md for attribution."
+}
