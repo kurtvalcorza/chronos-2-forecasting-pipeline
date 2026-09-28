@@ -630,7 +630,8 @@ def validate_notebooks() -> None:
     tutorials = ROOT / "tutorials"
     notebooks = sorted(tutorials.glob("*.ipynb"))
     notebook_names = {path.name for path in notebooks}
-    expected_names = {NOTEBOOK_NAME, WORKSHOP_NOTEBOOK_NAME}
+    dengue_name = "DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb"
+    expected_names = {NOTEBOOK_NAME, WORKSHOP_NOTEBOOK_NAME, dengue_name}
     _check(
         notebook_names == expected_names,
         f"tutorial notebooks must be exactly {sorted(expected_names)}, found {sorted(notebook_names)}",
@@ -645,6 +646,16 @@ def validate_notebooks() -> None:
     _validate_parity(path, notebook, code_cells, build)
     _validate_notebook_content(path, code_cells, markdown, embedded)
     registry = _read(tutorials / "README.md")
+    dengue_build = _load_tool("build_dengue_capstone")
+    dengue = json.loads(_read(tutorials / dengue_name))
+    _check(dengue == dengue_build.build(), "Dengue notebook generation parity failed")
+    _check(dengue["metadata"]["dimer"]["status"] == "Candidate", "Dengue remains Candidate")
+    for cell in dengue["cells"]:
+        if cell["cell_type"] == "code":
+            ast.parse(cell["source"])
+            _check(not cell["outputs"] and cell["execution_count"] is None,
+                   "Dengue source notebook must have empty execution outputs")
+    _check(dengue_name in registry, "Dengue notebook missing from registry")
     _check(f"`{path.name}`" in registry, f"{path.name} missing from tutorials/README.md")
     _check(
         f"`{WORKSHOP_NOTEBOOK_NAME}`" in registry,

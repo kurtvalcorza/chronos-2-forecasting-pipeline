@@ -1,5 +1,19 @@
 # Tutorials
 
+## Philippine dengue capstone — Candidate
+
+[`DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb`](DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb)
+is a standalone **E2E / GUIDED** notebook targeting DIMER Notebook Specification 2.2.
+It compares Chronos-2, case-only and weather-informed Mitra, Ridge, persistence and seasonal
+baselines on 832 Quezon City records. The approved scope is an **exploratory published-source-block
+benchmark**: weekly timing, case–weather alignment and historical publication availability
+are unverified. Fresh Colab T4 Run all and full-model reload qualification remain pending.
+
+Generate with `python tools/build_dengue_capstone.py`; verify with `--check`.
+It carries a separate hashed dependency lock compatible with Mitra 1.5.0, uses in-context
+adaptation without gradient training, and accepts optional aggregate BYOD with six complete
+source years. See [implementation and evidence notes](../docs/dengue-capstone.md).
+
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/tutorials/chronos_2_forecasting_colab.ipynb)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-amazon%2Fchronos--2-ffcc4d?style=flat)](https://huggingface.co/amazon/chronos-2)
