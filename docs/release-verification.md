@@ -276,3 +276,44 @@ Code cells changed, so no earlier hosted run describes this revision. **Status: 
 - the optional activity.
 
 The review's learner-observation recommendation is not addressed by code and remains open.
+
+### Maintainer-supplied Colab execution of revision 0.2.0 — 2026-09-28
+
+The maintainer supplied an executed copy of revision `0.2.0-candidate`. It is preserved byte-for-byte as [evidence](execution-evidence/2026-09-28/DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb).
+
+- **Source:** branch `fix/forecasting-review-findings` at `ff27feb`, notebook blob `9b13733993da`. All 50 cell IDs and sources match exactly.
+- **Executed-file SHA-256:** `206cf627caeb8b38f15e16002f2be64fa1291ee897317ef556e105b39a6ec140`.
+- **Runtime:** Colab Tesla T4, host Python 3.13.15. Host packages: NumPy 2.1.3, pandas 2.2.3, matplotlib 3.10.0, packaging 26.3, all within the tested range. Free disk was 202 GB.
+- **Path:** `STANDARD` tier, `SYNTHETIC` sample, default controls.
+- **Execution:** 19 of 19 code cells ran in order, with no error outputs. The completion summary reports revision `0.2.0-candidate`, experiment `20260928T012724Z-3dd52a`, and the status "not evaluated: matching future targets were not provided".
+- **Behaviour of the fixes in the saved outputs:**
+  - **TS-R01:** EDA summarises only the 144 development rows (means 126.39 and 159.26).
+  - **TS-R02:** every runner reports "forecasting 2 series independently", and the conditioning check passed.
+  - **TS-R04:** the complete-grid contract passed for all models, and `skill_series` is 2.
+  - **TS-R05:** the freeze was followed by a verified test run.
+  - **TS-R06:** the report covers only its own experiment folder (36 files, with inventory); its SHA-256 is `f1f54a446c0049dbb26af7f3e8621fbcc44ea117eb7738fdd9b997b0f9082382`.
+  - **TS-R07:** the forecast beyond the data covers 2026-01-05.
+  - **TS-R09:** stage lines and a heartbeat were printed while the models ran.
+  - **Optional improvement:** the early baseline table shows last value 5.53 and seasonal naive 3.60.
+- **Results:**
+
+  | Model | Period | Macro MAE (A / B) | Skill | Coverage | Width |
+  |---|---|---|---|---|---|
+  | TiRex-2 | Validation | 2.438 (2.83 / 2.04) | 0.317 | 0.646 | 5.00 |
+  | TiRex-2 | Test | 1.164 (1.84 / 0.49) | 0.702 | 0.9375 | 4.63 |
+  | Chronos-2 | Validation | 0.267 (0.29 / 0.25) | 0.924 | 1.00 | 3.87 |
+  | Chronos-2 | Test | 0.175 | 0.952 | 1.00 | 1.98 |
+
+  The TiRex-2 figures equal the CPU rerun that regenerated the sample answers, to the displayed precision. The Chronos-2 figures equal the earlier recorded reference.
+- **Evidence boundary:** the saved outputs were inspected, but the execution was not repeated independently.
+
+This satisfies the fresh `STANDARD` synthetic item for revision 0.2.0. The following items remain open:
+
+- `STANDARD` on the Open-Meteo sample;
+- `FULL` on a GPU;
+- BYOD with numeric and leading-zero IDs through export;
+- the rejection paths;
+- a sample or tier switch within one session;
+- the optional activity.
+
+**Status: Candidate.**
