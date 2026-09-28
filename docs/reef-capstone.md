@@ -49,9 +49,32 @@ Optional delay sensitivity is deferred; the implemented default records its zero
 retrospective assumption. BYOD offers validation and forward inference, without claiming
 evaluation when future observations are unavailable. It is disabled by default.
 
+### Dispositions after the 2026-09-28 notebook review
+
+The review of revision `dcd3d90` (findings R1–R6, V1) led to these contract decisions; details and
+evidence are in [reef-review-fixes.md](reef-review-fixes.md).
+
+- **Interpreter.** Setup provisions a uv-managed CPython **3.12.13** for the isolated environment
+  (`uv venv --managed-python`), whatever the Colab kernel's Python. Learners do not select an older
+  runtime version. The kernel and environment interpreter versions are recorded in `setup_summary.json`.
+- **Output completeness.** Every model-output file must contain exactly the frozen plan's
+  region × origin × arm × lead grid, with `target_date = origin + lead`, source-derived references
+  equal to the snapshot and all Chronos quantiles present. Scoring, lock, reload and report refuse
+  anything else. Recomputed support must equal the plan (184 test, 115 common-2024, 69 eligible-2025).
+- **Presentation.** The notebook prints a validation-only comparison after the context activity and
+  six compact result tables (A–F: support, regional errors, interval diagnostics, high-stress errors,
+  4/8 °C-week events, paired differences) after scoring. Complete tables remain in `metrics.csv`.
+- **Lock.** The test stage requires unchanged configuration, frozen origins, seasonal reference,
+  dataset/model manifests, source identity and baseline/validation/activity forecasts. Restarting a
+  stage removes its own and all later stage records.
+- **Forward outputs.** The outlook keeps raw and constrained HotSpot, Chronos quantiles, clipping and
+  DHW components. BYOD reads region IDs literally and writes each input's forecasts and receipt to
+  `byod/<input sha256 prefix>/`.
+- **Serialization.** JSON records use native numeric types; the blanket `default=str` fallback is removed.
+
 ## Qualification procedure
 
-Open the notebook in a fresh Python 3.12 Colab T4 runtime and use default Run all.
+Open the notebook in a fresh Colab T4 runtime (the default runtime version) and use default Run all.
 Preserve the executed notebook and `reef_evidence.zip`. Confirm no restart, rerun, manual edit,
 authentication, or private data was needed. Record the exact notebook SHA-256 and Git revision
 externally alongside the run; source manifests inside the notebook identify its generated code.

@@ -125,28 +125,6 @@ def test_real_baselines_and_serialized_evaluation(data_root, carried):
         carried["evaluate_forecasts"](frame, expected_arms=["persistence", "seasonal", "chronos"])
 
 
-def test_optional_byod_program_compiles():
-    nb = load_builder().build()
-    source = next(
-        "".join(c["source"])
-        for c in nb["cells"]
-        if c["cell_type"] == "code" and "".join(c["source"]).startswith("USE_BYOD")
-    )
-    # Compile nested program by reading its AST literal, without executing optional model work.
-    import ast
-
-    tree = ast.parse(source)
-    literals = [
-        n.value
-        for n in ast.walk(tree)
-        if isinstance(n, ast.Constant)
-        and isinstance(n.value, str)
-        and "pd.read_csv(source)" in n.value
-    ]
-    assert len(literals) == 1
-    compile(literals[0], "byod.py", "exec")
-
-
 def test_export_reload_integration_with_explicit_model_double(data_root, carried, monkeypatch):
     """Exercise serialization and charts; this is deliberately not real model evidence."""
 

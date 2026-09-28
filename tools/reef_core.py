@@ -1,6 +1,7 @@
 """Standalone numerical contract for the Philippine reef capstone (CPU only)."""
 
 import io
+import json
 
 import numpy as np
 import pandas as pd
@@ -28,8 +29,29 @@ REEF_NAMES = [
 ]
 
 
+FORECAST_KEYS = ["region_id", "origin", "arm", "lead"]
+QUANTILE_COLUMNS = ["raw_q10", "raw_q50", "raw_q90", "q10", "q50", "q90"]
+QUANTILE_ARMS = {"chronos", "chronos_180"}
+
+
+def json_native(value: object) -> object:
+    """JSON default for scientific records: native numbers, never blanket strings."""
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        return float(value)
+    if isinstance(value, pd.Timestamp):
+        return str(value.date()) if value == value.normalize() else value.isoformat()
+    raise TypeError(f"Not JSON-serializable: {type(value).__name__}")
+
+
 def _finite_nonnegative(values: object, label: str) -> np.ndarray:
-    arr = np.asarray(values, dtype=float)
+    try:
+        arr = np.asarray(values, dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label}: numeric values required") from exc
     if not np.isfinite(arr).all() or (arr < 0).any():
         raise ValueError(f"{label}: finite nonnegative values required")
     return arr
@@ -86,6 +108,17 @@ def parse_noaa(text: str, region: str) -> pd.DataFrame:
     out.loc[~out.baa_valid, "legacy_baa_7day"] = np.nan
     out.attrs["metadata"] = meta
     return out.sort_values("date").reset_index(drop=True)
+
+
+def read_byod_csv(path: object) -> pd.DataFrame:
+    """Read BYOD text literally: region IDs such as 001 or NA keep their exact spelling."""
+    frame = pd.read_csv(path, dtype=str, keep_default_na=False, na_filter=False)
+    for column in ["hotspot_c", "dhw_c_weeks"]:
+        if column in frame:
+            if (frame[column].str.strip() == "").any():
+                raise ValueError(f"{column}: blank values are not allowed")
+            frame[column] = _finite_nonnegative(frame[column], column)
+    return frame
 
 
 def validate_byod(
@@ -318,6 +351,71 @@ def forecast_frame(
     return out
 
 
+def validate_forecast_grid(
+    frame: pd.DataFrame, plan: pd.DataFrame, arms: object, panel: pd.DataFrame | None = None
+) -> pd.DataFrame:
+    """Require exactly one row per planned region x origin x arm x lead, with date identity.
+
+    ``plan`` holds the frozen eligible origins (region_id, origin, split). Missing whole arms,
+    regions or origins, extra keys, shifted target dates, inconsistent source-derived
+    references and absent Chronos quantiles are refused before any score is calculated.
+    """
+    arms = list(arms)
+    needed = FORECAST_KEYS + ["split", "target_date", "hotspot_c", "raw_hotspot_c"]
+    needed += ["actual_hotspot_c", "actual_dhw_c_weeks", "origin_dhw_c_weeks", "dhw_c_weeks"]
+    missing_columns = [c for c in needed if c not in frame]
+    if QUANTILE_ARMS & set(arms):
+        missing_columns += [c for c in QUANTILE_COLUMNS if c not in frame]
+    if missing_columns:
+        raise ValueError(f"Forecast file lacks required columns: {missing_columns}")
+    data = frame.copy()
+    data["origin"] = pd.to_datetime(data.origin)
+    data["target_date"] = pd.to_datetime(data.target_date)
+    data["lead"] = pd.to_numeric(data.lead, errors="raise")
+    if data.duplicated(FORECAST_KEYS).any():
+        raise ValueError("Duplicate forecast rows")
+    planned = plan[["region_id", "origin", "split"]].copy()
+    planned["origin"] = pd.to_datetime(planned.origin)
+    if planned.duplicated(["region_id", "origin"]).any():
+        raise ValueError("Duplicate planned origins")
+    expected = planned.merge(pd.DataFrame({"arm": arms}), how="cross").merge(
+        pd.DataFrame({"lead": np.arange(1, 29)}), how="cross"
+    )
+    key = FORECAST_KEYS + ["split"]
+    joined = expected.merge(data[key], how="outer", on=key, indicator=True)
+    absent = joined[joined._merge == "left_only"]
+    extra = joined[joined._merge == "right_only"]
+    if len(absent):
+        groups = absent.drop_duplicates(["region_id", "origin", "arm"])
+        raise ValueError(
+            f"Missing planned forecasts: {len(absent)} rows in {len(groups)} region-origin-arm "
+            f"groups, e.g. {groups.iloc[0][['region_id', 'arm']].tolist()} "
+            f"{groups.iloc[0].origin.date()}"
+        )
+    if len(extra):
+        raise ValueError(f"Unplanned forecast rows (key, arm or split): {len(extra)}")
+    shifted = data.target_date != data.origin + pd.to_timedelta(data.lead, unit="D")
+    if shifted.any():
+        raise ValueError(f"target_date must equal origin + lead; {int(shifted.sum())} rows differ")
+    model_rows = data[data.arm.isin(QUANTILE_ARMS)]
+    if len(model_rows):
+        values = model_rows[QUANTILE_COLUMNS].to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError("Required Chronos quantiles are missing or nonfinite")
+    if panel is not None:
+        idx = pd.MultiIndex.from_arrays([data.region_id, data.target_date])
+        origin_idx = pd.MultiIndex.from_arrays([data.region_id, data.origin])
+        references = {
+            "actual_hotspot_c": panel.hotspot_c.reindex(idx).to_numpy(),
+            "actual_dhw_c_weeks": panel.dhw_c_weeks.reindex(idx).to_numpy(),
+            "origin_dhw_c_weeks": panel.dhw_c_weeks.reindex(origin_idx).to_numpy(),
+        }
+        for column, truth in references.items():
+            if not np.allclose(data[column].to_numpy(dtype=float), truth, atol=1e-9, rtol=0):
+                raise ValueError(f"{column} disagrees with the frozen source data")
+    return data
+
+
 def evaluate_forecasts(frame: pd.DataFrame, expected_arms: object = None) -> dict:
     """Descriptive region/macro metrics; no iid uncertainty or ecological labels."""
     metrics, thresholds, paired = [], [], []
@@ -352,10 +450,10 @@ def evaluate_forecasts(frame: pd.DataFrame, expected_arms: object = None) -> dic
             if not np.isfinite(qvalues).all() or (np.diff(qvalues, axis=1) < 0).any():
                 raise ValueError("Invalid serialized quantiles")
     for split, sg in evaluated.groupby("split"):
-        for _region, rg in sg.groupby("region_id"):
-            arm_origins = [set(g.origin) for _, g in rg.groupby("arm")]
-            if any(s != arm_origins[0] for s in arm_origins):
-                raise ValueError("Models must use identical comparison origins")
+        # Compare whole region-origin sets, so an arm absent from a region cannot hide.
+        arm_keys = [set(zip(g.region_id, g.origin, strict=True)) for _, g in sg.groupby("arm")]
+        if any(s != arm_keys[0] for s in arm_keys):
+            raise ValueError("Models must use identical comparison origins")
         panels = [("full", sg)] + (
             [(str(y), sg[pd.to_datetime(sg.origin).dt.year == y]) for y in [2024, 2025]]
             if split == "test"
@@ -372,7 +470,7 @@ def evaluate_forecasts(frame: pd.DataFrame, expected_arms: object = None) -> dic
                         period=period,
                         region_id=region,
                         arm=arm,
-                        horizon=horizon,
+                        horizon=int(horizon),
                         origins=int(prefix.origin.nunique()),
                         days=int(len(prefix)),
                     )
@@ -530,9 +628,6 @@ def evaluate_forecasts(frame: pd.DataFrame, expected_arms: object = None) -> dic
         .reset_index()
     )
     macro = macro.merge(support)
-    # JSON conversion maps unavailable metrics to null, never NaN.
-    import json
-
     error_table = pd.DataFrame(paired)
     paired_differences = []
     for keys, group in error_table.groupby(["split", "period", "region_id", "horizon", "origin"]):
@@ -553,10 +648,13 @@ def evaluate_forecasts(frame: pd.DataFrame, expected_arms: object = None) -> dic
                             mae_difference=float(errors[model_arm] - errors[baseline]),
                         )
                     )
-    return dict(
+    report = dict(
         metrics=json.loads(table.to_json(orient="records")),
         macro=json.loads(macro.to_json(orient="records")),
         thresholds=thresholds,
         per_origin_errors=paired,
         paired_differences=paired_differences,
     )
+    # Unavailable metrics are null, never NaN; NumPy scalars become native JSON numbers so a
+    # serialized report equals its fresh recomputation under any pandas version.
+    return json.loads(json.dumps(report, allow_nan=False, default=json_native))
