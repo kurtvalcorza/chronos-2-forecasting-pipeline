@@ -61,7 +61,7 @@ def build_notebook():
             },
             "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
             "language_info": {"name": "python", "version": "3.12"},
-            "workshop_revision": "0.1.0-candidate",
+            "workshop_revision": "0.2.0-candidate",
         },
         "nbformat": 4,
         "nbformat_minor": 5,

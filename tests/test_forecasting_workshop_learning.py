@@ -60,11 +60,15 @@ def test_byod_path_reaches_validation_splits_and_real_baseline_scoring(tmp_path,
     assert ns["panel"]["n_series"] == 2
     assert len(ns["validation_truth"]) == 48
     scored, _, aggregate = ns["evaluate_forecasts"](
-        ns["validation_seasonal"], ns["validation_truth"], ns["validation_seasonal"]
+        ns["validation_seasonal"],
+        ns["validation_truth"],
+        ns["validation_seasonal"],
+        ["seasonal_naive"],
+        "validation",
     )
     assert len(scored) == 48
     assert np.isfinite(aggregate["macro_mae"]).all()
-    assert (tmp_path / "outputs/data/dataset_manifest.json").exists()
+    assert (ns["OUTPUT_ROOT"] / "data/dataset_manifest.json").exists()
 
 
 @pytest.mark.parametrize(
@@ -89,7 +93,7 @@ def test_byod_rejects_incompatible_input_before_models(tmp_path, monkeypatch, co
     ns = setup_byod(tmp_path, monkeypatch, frame.to_csv(index=False).encode())
     with pytest.raises(ValueError, match=message):
         exec(source("3.2 Check the data before any model download"), ns)
-    assert not (tmp_path / "outputs/data/dataset_manifest.json").exists()
+    assert not list(tmp_path.rglob("dataset_manifest.json"))
 
 
 def test_activity_is_optional_and_preserves_the_frozen_comparison(tmp_path, monkeypatch):
@@ -106,7 +110,7 @@ def test_activity_is_optional_and_preserves_the_frozen_comparison(tmp_path, monk
     activity = source("Optional validation-only seasonal-period comparison")
     exec(activity, ns)
     assert "seasonal_activity" not in ns
-    assert not (tmp_path / "outputs/activities").exists()
+    assert not (ns["OUTPUT_ROOT"] / "activities").exists()
     exec(activity.replace("RUN_SEASONAL_ACTIVITY = False", "RUN_SEASONAL_ACTIVITY = True"), ns)
     result = ns["seasonal_activity"]
     assert len(result) == 4
@@ -120,4 +124,4 @@ def test_activity_is_optional_and_preserves_the_frozen_comparison(tmp_path, monk
     pd.testing.assert_frame_equal(ns["validation_seasonal"], baseline_before)
     assert ns["SEASON_LENGTH"] == 24
     assert all(path.read_bytes() == contents for path, contents in canonical_files.items())
-    assert (tmp_path / "outputs/activities/seasonal_period_comparison.csv").exists()
+    assert (ns["OUTPUT_ROOT"] / "activities/seasonal_period_comparison.csv").exists()
