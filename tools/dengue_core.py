@@ -14,10 +14,35 @@ import numpy as np
 
 CASE_LAGS = (0, 1, 2, 3, 4, 8, 12, 52)
 WEATHER_LAGS = (0, 1, 2, 3, 4)
+TEMP_BOUNDS_C = (-30.0, 60.0)
+UNITS = {
+    "cases": "reported cases per source block (nonnegative integer count)",
+    "rain": "mm per source block (nonnegative)",
+    "temp": "degrees Celsius",
+}
+
+
+def value_problem(name: str, value: Any) -> str | None:
+    """Shared default/BYOD semantics for one selected value; None when valid."""
+    if value is None or isinstance(value, bool):
+        return "missing; missing is never replaced by zero"
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "not a number"
+    if not np.isfinite(numeric):
+        return "not finite"
+    if name == "cases" and (numeric < 0 or numeric != int(numeric)):
+        return "must be a nonnegative integer count"
+    if name == "rain" and numeric < 0:
+        return "must be nonnegative mm per source block"
+    if name == "temp" and not TEMP_BOUNDS_C[0] <= numeric <= TEMP_BOUNDS_C[1]:
+        return "outside the declared Celsius range -30 to 60"
+    return None
 
 
 def validate_rows(rows: list[dict[str, Any]]) -> None:
-    """Reject incomplete, unordered source cycles and missing selected values."""
+    """Reject incomplete, unordered source cycles and missing or invalid selected values."""
     if len(rows) < 260 or len(rows) % 52:
         raise ValueError("Need at least five complete 52-block source years")
     first = rows[0]["year"]
@@ -28,15 +53,9 @@ def validate_rows(rows: list[dict[str, Any]]) -> None:
         if row.get("year") != year or row.get("block") != block:
             raise ValueError(f"Missing, repeated or unordered source block at row {i}")
         for name in ("cases", "rain", "temp"):
-            value = row.get(name)
-            if value is None or isinstance(value, bool):
-                raise ValueError(f"Missing/invalid {name} at row {i}; missing is not zero")
-            try:
-                numeric = float(value)
-            except (TypeError, ValueError) as exc:
-                raise ValueError(f"Invalid {name} at row {i}") from exc
-            if not np.isfinite(numeric) or (name != "temp" and numeric < 0):
-                raise ValueError(f"Invalid {name} at row {i}")
+            problem = value_problem(name, row.get(name))
+            if problem:
+                raise ValueError(f"Invalid {name} at row {i}: {problem}")
 
 
 def origins(rows: list[dict[str, Any]], years: list[int]) -> list[int]:
@@ -98,6 +117,25 @@ def feature_row(
     result = np.asarray(values, dtype=np.float64)
     if not np.isfinite(result).all():
         raise ValueError("Selected features contain nonfinite values")
+    return result
+
+
+def feature_sources(
+    rows: list[dict[str, Any]], origin: int, horizon: int, delay: int = 0, weather: bool = False
+) -> list[tuple[str, list[int]]]:
+    """Source-block indices read by each feature of ``feature_row`` (same order)."""
+    cutoff = origin - delay
+    result = [(f"cases_lag_{lag}", [cutoff - lag]) for lag in CASE_LAGS]
+    result += [(f"cases_mean_{n}", list(range(cutoff - n + 1, cutoff + 1))) for n in (4, 8, 12)]
+    result += [("target_block_sin", []), ("target_block_cos", [])]
+    if weather:
+        for variable in ("rain", "temp"):
+            result += [(f"{variable}_lag_{lag}", [cutoff - lag]) for lag in WEATHER_LAGS]
+            result += [
+                (f"{variable}_mean_{n}", list(range(cutoff - n + 1, cutoff + 1))) for n in (4, 8)
+            ]
+    if [name for name, _ in result] != feature_names(weather):
+        raise AssertionError("Feature source trace out of step with feature_names")
     return result
 
 

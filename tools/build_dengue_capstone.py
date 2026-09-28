@@ -60,11 +60,16 @@ from IPython.display import Image, Markdown, FileLink, display
 USE_BYOD = False # @param {type:"boolean"}
 BYOD_CSV = "" # @param {type:"string"}
 BYOD_SOURCE_BLOCKS_CONFIRMED = False # @param {type:"boolean"}
+BYOD_AREA = "" # @param {type:"string"}
+BYOD_SOURCE_CITATION = "" # @param {type:"string"}
 # Optional BYOD: manually place your aggregate CSV in Colab, then set the controls.
 # Exact columns: year,block,cases,rain,temp. At least six complete 52-block years.
-# Counts, rainfall in mm/block, temperature in Celsius. No individual records.
+# Integer counts, rainfall in mm/block, temperature in Celsius. No individual records.
+# Name the area and cite the source: they label outputs and provenance, never predictors.
 if USE_BYOD and (not BYOD_SOURCE_BLOCKS_CONFIRMED or not Path(BYOD_CSV).is_file()):
     raise ValueError('Confirm aggregate source-block definitions/units and provide an existing CSV.')
+if USE_BYOD and not (BYOD_AREA.strip() and BYOD_SOURCE_CITATION.strip()):
+    raise ValueError('Name the BYOD area and cite its source; another area is never relabelled Quezon City.')
 if platform.system() != 'Linux' or platform.machine() != 'x86_64':
     raise RuntimeError('Use a fresh Colab Linux x86-64 T4 runtime.')
 try:
@@ -123,15 +128,37 @@ def record(name):
 def figure(name):
     display(Image(filename=str(ROOT/'results'/name)))
 
-def table(name, limit=12):
+def table(name, columns, limit=None):
+    # Columns are chosen by meaning; the linked CSV keeps every column and row.
     path=ROOT/'results'/name
     with path.open(newline='',encoding='utf-8') as handle:
-        reader=csv.DictReader(handle); rows=list(reader); columns=reader.fieldnames
-    visible=columns[:9]
+        reader=csv.DictReader(handle); rows=list(reader); fields=reader.fieldnames
+    missing=[c for c in columns if c not in fields]
+    if missing:
+        raise KeyError(f'{name} lacks columns {missing}')
+    shown=rows if limit is None else rows[:limit]
     clean=lambda value: str(value).replace('|','/').replace('\\n',' ')
-    lines=['| '+' | '.join(visible)+' |','| '+' | '.join('---' for _ in visible)+' |']
-    lines+=['| '+' | '.join(clean(row[k]) for k in visible)+' |' for row in rows[:limit]]
-    display(Markdown('\\n'.join(lines))); print('Total rows:',len(rows)); display(FileLink(str(path)))
+    lines=['| '+' | '.join(columns)+' |','| '+' | '.join('---' for _ in columns)+' |']
+    lines+=['| '+' | '.join(clean(row[c]) for c in columns)+' |' for row in shown]
+    display(Markdown('\\n'.join(lines)))
+    print(f'Showing {len(shown)} of {len(rows)} rows. All columns in the CSV:',', '.join(fields))
+    display(FileLink(str(path)))
+
+def consume():
+    # Rebuild from results.zip in a new directory holding only the embedded code: no data.json,
+    # run_config.json or other original-run files. Verified model snapshots are declared inputs.
+    consumer=ROOT.parent/(ROOT.name+'-consumer')
+    shutil.rmtree(consumer,ignore_errors=True)  # notebook-owned; a re-run starts clean
+    consumer.mkdir(parents=True)
+    for name, text in FILES.items():
+        (consumer/name).write_bytes(text.encode('utf-8'))
+    command=[str(PYTHON),'-u',str(consumer/'dengue_runtime.py'),'--consume',str(ROOT/'results/results.zip'),
+             '--workdir',str(consumer/'check'),'--models',str(ROOT/'models')]
+    result=subprocess.run(command,env=ENV,cwd=consumer,capture_output=True,text=True)
+    print(result.stdout[-4000:])
+    if result.returncode:
+        raise RuntimeError('Bundle reconstruction failed:\\n'+result.stderr[-4000:])
+    print(json.dumps(json.loads((consumer/'check/consumer_verification.json').read_text()),indent=2))
 """
 
 
@@ -141,12 +168,12 @@ def build():
     def md(text):
         cells.append({"cell_type": "markdown", "metadata": {}, "source": text.strip() + "\n"})
 
-    def code(text):
+    def code(text, metadata=None):
         ast.parse(text)
         cells.append(
             {
                 "cell_type": "code",
-                "metadata": {},
+                "metadata": metadata or {},
                 "source": text.strip() + "\n",
                 "execution_count": None,
                 "outputs": [],
@@ -155,7 +182,7 @@ def build():
 
     md("""# Philippine Dengue Forecasting: Do Weather Signals Improve Predictions?
 
-**Exploratory published-source-block benchmark · Candidate · E2E / GUIDED · NOTEBOOK_SPEC 2.2**
+**Exploratory published-source-block benchmark · Revision 0.2.0 · Candidate · E2E / GUIDED · NOTEBOOK_SPEC 2.2**
 
 Can past rainfall and temperature improve forecasts of Quezon City's reported dengue counts one to four reporting blocks ahead? You will compare six systems, change one availability assumption, and conclude using measured evidence.
 
@@ -171,12 +198,13 @@ By the end, identify a forecast origin and horizon, explain time leakage, compar
     code(PREFLIGHT)
     md("""## Infrastructure — reproducible local environment
 
-The embedded source below is part of this notebook. It does not fetch DIMER scripts or call workers. An isolated Python environment pins dependencies compatible with both models. All stages run locally in this Colab runtime in separate processes.
+The next cell is collapsed: it carries the embedded source (about 230,000 characters), checks each file against its SHA-256, and builds an isolated Python environment pinned for both models. Expand it to read the code; you do not need to. It does not fetch DIMER scripts or call workers. All stages run locally in this Colab runtime in separate processes.
 
-Optional BYOD is disabled above. It accepts only aggregate `year,block,cases,rain,temp` data in documented units with six complete 52-block years: at least two history years plus two validation and two test years. The same pipeline runs afterward; no individual health records are accepted.""")
+Optional BYOD is disabled above. It accepts only aggregate `year,block,cases,rain,temp` data with six complete 52-block years: at least two history years plus two validation and two test years. Cases must be nonnegative integer counts, rainfall nonnegative mm per block and temperature in Celsius (−30 to 60). Every row needs all five values; the notebook names the file, line and column of any refusal. Name the area and cite the source in `BYOD_AREA` and `BYOD_SOURCE_CITATION`: they label captions and provenance and are never predictors. Before any model is downloaded, every Mitra context the experiment will need is checked; a constant-count stretch stops the run there, with the affected contexts listed. No individual health records are accepted.""")
     files = carried_files()
     code(
-        "FILES = "
+        "# @title Embedded source, integrity check and isolated environment (collapsed; expand to read)\n"
+        + "FILES = "
         + repr(files)
         + """
 for name, text in FILES.items():
@@ -184,9 +212,10 @@ for name, text in FILES.items():
 provenance=json.loads(FILES['source.json'])
 for name, checksum in provenance['files'].items():
     assert hashlib.sha256((ROOT/name).read_bytes()).hexdigest()==checksum
-(ROOT/'run_config.json').write_text(json.dumps({'byod_csv': str(Path(BYOD_CSV).resolve()) if USE_BYOD else None, 'source_blocks_confirmed': BYOD_SOURCE_BLOCKS_CONFIRMED}),encoding='utf-8')
+(ROOT/'run_config.json').write_text(json.dumps({'byod_csv': str(Path(BYOD_CSV).resolve()) if USE_BYOD else None, 'source_blocks_confirmed': BYOD_SOURCE_BLOCKS_CONFIRMED, 'area': BYOD_AREA.strip() if USE_BYOD else None, 'source_citation': BYOD_SOURCE_CITATION.strip() if USE_BYOD else None}),encoding='utf-8')
 """
-        + BOOTSTRAP
+        + BOOTSTRAP,
+        {"cellView": "form", "jupyter": {"source_hidden": True}},
     )
     md("""## 1. Know the source before predicting
 
@@ -196,9 +225,9 @@ The database uses ODC-ODbL 1.0, with source-specific terms retained in `DATA_LIC
 
 **Predict:** what could go wrong if an apparent zero actually meant “not reported”? Why might surveillance during 2020–2021 differ?
 
-**What to notice:** 832 rows and 26 origins per evaluation partition are expected for the default source. The audit must explicitly report the unresolved calendar and availability limitations.""")
+**What to notice:** 832 rows and 26 origins per evaluation partition are expected for the default source. The audit must explicitly report the unresolved calendar and availability limitations. The context check reports how many planned model contexts it examined.""")
     code(
-        "run('prepare')\nrecord('plan.json')\ntable('origin_manifest.csv')\nfigure('prepare.png')\ndisplay(FileLink(str(ROOT/'dataset_audit.json')))\ndisplay(FileLink(str(ROOT/'DATA_LICENSE.md')))"
+        "run('prepare')\nplan=json.loads((ROOT/'results/plan.json').read_text())\nprint('Area:',plan['area'],'· Source:',plan['source_citation'])\nrecord('plan.json')\nrecord('context_preflight.json')\ntable('origin_manifest.csv',['partition','origin_key','horizon','target_key','cutoff'],limit=8)\nfigure('prepare.png')\ndisplay(FileLink(str(ROOT/'dataset_audit.json')))\ndisplay(FileLink(str(ROOT/'DATA_LICENSE.md')))"
     )
     md("""## 2. Build a fair chronological comparison
 
@@ -208,9 +237,11 @@ Default history: 2010–2021; validation: 2022–2023; test: 2024–2025. Each e
 
 We assume zero reporting delay initially. Event-date truncation cannot reconstruct historical publication vintages: final-run weather and revised counts may not have been available at the time. Foundation-model pretraining overlap is also unknown.
 
+**Trace one row before trusting the rest.** The first table below takes the first test origin, horizon 1, and lists every weather-model feature with its value and the source blocks it reads. Every block is at or before the origin; the target block is not observed at issuance. The last row is the most recent training label that was already mature. The audit table then checks the same rule for every origin.
+
 **Predict:** will persistence or the same block last year work better? Ridge fits a transparent log-count regression using past counts and known target-block seasonality. Negative inverse-transformed estimates are floored at zero and flagged; forecasts are not rounded for scoring.""")
     code(
-        "run('baselines')\nrecord('baseline_metrics.json')\nfigure('baselines.png')\ntable('availability_audit.csv')"
+        "run('baselines')\ntable('feature_example.csv',['item','value','source_blocks'])\ntable('availability_audit.csv',['partition','origin','horizon','cutoff','max_training_target','max_training_input','future_input_used'],limit=8)\nrecord('baseline_metrics.json')\nfigure('baselines.png')"
     )
     md("""<details><summary>Interpretation checkpoint</summary>
 A seasonal baseline can capture recurring patterns but miss changing intensity. Persistence can work over short horizons but miss turning points. Neither guarantees good high-case forecasts. Features and training labels must satisfy their own availability cutoffs, not merely precede the final test year.
@@ -234,9 +265,11 @@ Settings are now locked. **MAE** is the average absolute count error; lower is b
 
 The paired weather comparison reports weather MAE minus case-only MAE. Negative favours weather. A bootstrap resamples contiguous groups of four origins, keeping their horizons together; its interval is descriptive with only two evaluation years.
 
-Chronos's nominal 80% model interval is not a guaranteed calibrated interval. Inspect its actual coverage and width. Mitra and Ridge have point forecasts, not borrowed Chronos intervals.""")
+Chronos's nominal 80% model interval is not a guaranteed calibrated interval. Inspect its actual coverage and width. Mitra and Ridge have point forecasts, not borrowed Chronos intervals.
+
+The largest-misses table shows each miss's published count (`reference`), the forecast, the signed error (forecast minus reference; negative means underprediction) and its size. Pick one and explain it: was it a high-case block, and did every system miss it?""")
     code(
-        "run('test')\nrecord('metrics.json')\nrecord('paired_comparison.json')\nrecord('high_case_metrics.json')\nrecord('interval_metrics.json')\nfigure('test.png')\nfigure('test_forecasts.png')\ntable('largest_misses.csv')"
+        "run('test')\nrecord('metrics.json')\nrecord('paired_comparison.json')\nrecord('high_case_metrics.json')\nrecord('interval_metrics.json')\nfigure('test.png')\nfigure('test_forecasts.png')\ntable('largest_misses.csv',['system','target_key','horizon','reference','prediction','error','abs_error'],limit=10)"
     )
     md("""<details><summary>Worked interpretation guidance</summary>
 If adding weather lowers average MAE but worsens the longest horizon or high-case errors, report that trade-off. An interval containing zero does not establish that the models are identical. A consistent gain on these rows still does not validate the source timing, prove causality or establish future operational performance.
@@ -246,23 +279,27 @@ If adding weather lowers average MAE but worsens the longest horizon or high-cas
 
 **Predict → change → run → observe → explain.** The following completed activity changes only the availability cutoff from zero to two blocks on validation origins. Target blocks stay identical; Chronos must forecast two additional steps from its earlier cutoff. Mitra's labels must also be mature by that cutoff.
 
-This two-block delay is illustrative, not an estimate of actual reporting delay. Canonical test outputs and the locked experiment remain unchanged. Compare delay metrics with the zero-delay validation results.""")
+This two-block delay is illustrative, not an estimate of actual reporting delay. Canonical test outputs and the locked experiment remain unchanged. The first table pairs each system's zero-delay and two-block validation MAE on the same 104 targets; `change` is delay-two minus zero-delay, so a positive value means the delay hurt. The second table shows individual paired forecasts.""")
     code(
-        "run('activity')\nrecord('delay_metrics.json')\nfigure('activity.png')\ntable('validation_delay_activity.csv')"
+        "run('activity')\ntable('delay_summary.csv',['system','pairs','mae_delay_0','mae_delay_2','change'])\ntable('delay_comparison.csv',['system','target_key','horizon','reference','prediction_delay_0','prediction_delay_2','abs_error_change'],limit=12)\nfigure('activity.png')\nrecord('delay_metrics.json')"
     )
     md("""## 6. Forecast beyond the final source block
 
 Fit/context information now extends through the last published row. The next four block forecasts have no observed reference in this dataset. We export them without an accuracy score or a claim about today's real-world dengue situation.
 
-**What to notice:** the original source year/block labels continue, while references remain blank. These are source-block projections, not reconstructed dates.""")
-    code("run('future')\ntable('future_predictions.csv')")
+**What to notice:** the original source year/block labels continue. The first table places all six systems side by side for the four target blocks. The second lists all 24 forecasts: `prediction` is the value used (never below zero), `raw_prediction` and `clipped` show any flooring, and `q10`/`q50`/`q90` are Chronos's nominal quantiles (blank for systems without intervals). There is no reference column because these blocks have not been observed. These are source-block projections, not reconstructed dates.""")
+    code(
+        "run('future')\ntable('future_forecast_view.csv',['target_key','horizon','persistence','seasonal','ridge','chronos','mitra_cases','mitra_weather'])\ntable('future_predictions.csv',['system','target_key','horizon','prediction','raw_prediction','clipped','q10','q50','q90'])"
+    )
     md("""## 7. Export, reconstruct and verify
 
 The notebook saves safe numeric context and preprocessing state, pinned model identities and checksums. A fresh process reconstructs both models plus the fitted Ridge state, then reproduces the final completed origin and unscored final inference. It verifies all four horizons and Chronos quantiles with declared tolerances.
 
-Results include predictions, metrics, availability audit, source/licence notices, stage receipts and verification. The ZIP excludes the source archive and model weights. Preserve the executed notebook alongside it for qualification evidence.""")
+Results include predictions, metrics, availability audit, source/licence notices, stage receipts and verification. The ZIP excludes the source archive and model weights. It does retain aggregate numeric support contexts (lagged counts, and rain and temperature for weather Mitra) for two origins; `artifact_manifest.json` says exactly what. The summary records the area, limitations, Python, device, precision and package versions, with the resource figures labelled as targets.
+
+**Reuse the bundle elsewhere.** The last step extracts `results.zip` into a new directory that holds only this notebook's embedded code, then reproduces the same forecasts from the bundle alone. It needs the verified model snapshots, but not the original run directory, its data file or its settings. Elsewhere, run the embedded `dengue_runtime.py --consume results.zip --workdir <new dir> --models <snapshot cache>` next to `source.json` and `model_manifest.json`. Preserve the executed notebook alongside the ZIP for qualification evidence.""")
     code(
-        "run('reload')\nrecord('verification.json')\nrun('report')\nrecord('run_summary.json')\ndisplay(FileLink(str(ROOT/'results/results.zip')))"
+        "run('reload')\nrecord('verification.json')\nrun('report')\nrecord('run_summary.json')\ndisplay(FileLink(str(ROOT/'results/results.zip')))\nconsume()"
     )
     md("""## 8. Conclude with evidence
 
@@ -286,6 +323,7 @@ Sources: [pinned dataset](https://zenodo.org/records/21978184), [UPRI-NOAH docum
                 "profile": "E2E",
                 "mode": "GUIDED",
                 "status": "Candidate",
+                "revision": "0.2.0-candidate",
                 "scope": "exploratory_published_source_blocks",
             },
         },

@@ -8,6 +8,7 @@ import gc
 import hashlib
 import json
 import os
+import platform
 import time
 import zipfile
 from pathlib import Path
@@ -30,6 +31,24 @@ STAGES = (
 )
 SYSTEMS = ("persistence", "seasonal", "ridge", "chronos", "mitra_cases", "mitra_weather")
 SCOPE = "exploratory_published_source_blocks"
+BYOD_FIELDS = ["year", "block", "cases", "rain", "temp"]
+DEFAULT_AREA = "Quezon City, Philippines"
+DEFAULT_SOURCE = "Zenodo record 21978184 (QC Data sheet), ODC-ODbL 1.0"
+RESOURCE_TARGETS = {
+    "kind": "targets, not measurements",
+    "wall_minutes": 60,
+    "free_disk_gib": 20,
+    "peak_gpu_allocated_gib": 12,
+}
+LIMITATIONS = [
+    "Published source-block order only: calendar dates and case-weather alignment are unverified",
+    "Final data vintages: revised counts and retrospective IMERG/ERA5-Land products do not "
+    "reconstruct what was available when each forecast would have been issued",
+    "Zero reporting delay is an assumption; the two-block delay activity is illustrative",
+    "Foundation-model pretraining overlap with this series is unknown",
+    "Two evaluation years (26 origins) limit every comparison; bootstrap intervals are descriptive",
+    "Reported counts, not population-adjusted incidence; not an operational warning system",
+]
 
 
 def read(path: Path):
@@ -92,6 +111,152 @@ def selected_window(root: Path) -> int:
     if lock["identity"] != identity(root):
         raise ValueError("Experiment source changed after lock")
     return lock["window"]
+
+
+def text_field(value, label: str, limit: int = 160) -> str:
+    """Plain one-line provenance text; never used as a predictor."""
+    text = str(value or "").strip()
+    if not text or len(text) > limit or not text.isprintable():
+        raise ValueError(f"{label} must be one printable line of 1-{limit} characters")
+    return text
+
+
+def byod_rows(path: Path) -> list[dict]:
+    """Parse the aggregate BYOD CSV, naming the file, line and column of each refusal."""
+    rows = []
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.reader(handle)
+        header = next(reader, None)
+        if header != BYOD_FIELDS:
+            raise ValueError(
+                f"{path.name}: header must be exactly year,block,cases,rain,temp (found {header}); "
+                "reject extra personal fields and any other extra field"
+            )
+        for line, values in enumerate(reader, start=2):
+            where = f"{path.name} line {line}"
+            if len(values) != len(BYOD_FIELDS):
+                raise ValueError(
+                    f"{where}: expected 5 values, found {len(values)}; "
+                    "extra or missing values are refused"
+                )
+            record = {}
+            for field, raw in zip(BYOD_FIELDS, values, strict=True):
+                text = raw.strip()
+                if not text:
+                    raise ValueError(
+                        f"{where}, column {field}: missing value; missing is never replaced by zero"
+                    )
+                if field in ("year", "block"):
+                    try:
+                        record[field] = int(text)
+                    except ValueError as exc:
+                        raise ValueError(f"{where}, column {field}: must be an integer") from exc
+                    continue
+                try:
+                    number = float(text)
+                except ValueError as exc:
+                    raise ValueError(f"{where}, column {field}: not a number") from exc
+                problem = core.value_problem(field, number)
+                if problem:
+                    raise ValueError(f"{where}, column {field}: {problem}")
+                record[field] = int(number) if field == "cases" else number
+            rows.append(record)
+    return rows
+
+
+def planned_contexts(rows, plan):
+    """Every support task the model stages can request: partitions, delays, windows, weather."""
+    tasks = [("validation", o, delay) for o in plan["validation"] for delay in (0, 2)]
+    tasks += [("test", o, 0) for o in plan["test"]]
+    tasks += [("future", len(rows) - 1, 0)]
+    for partition, origin, delay in tasks:
+        for h in range(1, 5):
+            for window in plan["windows"]:
+                for weather in (False, True):
+                    yield partition, origin, h, window, delay, weather
+
+
+def context_preflight(root, rows, plan) -> None:
+    """Refuse an experiment whose mandatory Mitra contexts cannot be fitted, before any model.
+
+    Policy: no origin is dropped, no variance is invented and no fallback is labelled Mitra.
+    """
+    checked, problems = 0, []
+    for partition, origin, h, window, delay, weather in planned_contexts(rows, plan):
+        task = core.training_task(rows, origin, h, window=window, delay=delay, weather=weather)
+        checked += 1
+        problem = models.support_problem(task["X"], task["y"])
+        if problem:
+            problems.append(
+                {
+                    "partition": partition,
+                    "origin_key": key(rows, origin),
+                    "horizon": h,
+                    "window": window,
+                    "delay": delay,
+                    "system": "mitra_weather" if weather else "mitra_cases",
+                    "problem": problem,
+                }
+            )
+    write(
+        output(root) / "context_preflight.json",
+        {
+            "policy": "reject before model staging; no dropped origins, invented variance "
+            "or relabelled fallback",
+            "contexts_checked": checked,
+            "contexts_refused": len(problems),
+            "refused": problems[:50],
+        },
+    )
+    if problems:
+        first = problems[0]
+        raise ValueError(
+            f"{len(problems)} of {checked} planned Mitra contexts cannot be fitted "
+            f"(first: {first['partition']} origin {first['origin_key']}, horizon "
+            f"{first['horizon']}, window {first['window']}, delay {first['delay']}: "
+            f"{first['problem']}). Both Mitra systems are mandatory, so the experiment stops "
+            "before any model is downloaded; see results/context_preflight.json."
+        )
+
+
+def feature_example(rows, plan) -> list[dict]:
+    """Trace one weather-feature row and its latest mature label to source blocks."""
+    origin, h = plan["test"][0], 1
+    values = core.feature_row(rows, origin, h, weather=True)
+    trace = core.feature_sources(rows, origin, h, weather=True)
+
+    def span(indices):
+        if not indices:
+            return "target block calendar position (known in advance)"
+        first, last = key(rows, indices[0]), key(rows, indices[-1])
+        return first if first == last else f"{first} .. {last}"
+
+    task = core.training_task(rows, origin, h, weather=True)
+    label = int(max(task["target_indices"]))
+    result = [
+        {
+            "item": "forecast origin (issued after this block)",
+            "value": "",
+            "source_blocks": key(rows, origin),
+        },
+        {
+            "item": "target (not observed at issuance)",
+            "value": "",
+            "source_blocks": key(rows, origin + h),
+        },
+    ]
+    result += [
+        {"item": name, "value": round(float(v), 4), "source_blocks": span(indices)}
+        for (name, indices), v in zip(trace, values, strict=True)
+    ]
+    result.append(
+        {
+            "item": "latest mature training label (cases)",
+            "value": rows[label]["cases"],
+            "source_blocks": key(rows, label),
+        }
+    )
+    return result
 
 
 def fit_ridge(X, y, query):
@@ -291,7 +456,10 @@ def figures(root, stage):
                 if start >= 0:
                     ax.axvspan(start, start + 104, alpha=0.12, color=color)
         axes[-1].set_xlabel("Published source-block index (not verified dates)")
-        fig.suptitle("Published alignment · orange validation / green test; gray if COVID flagged")
+        fig.suptitle(
+            f"{plan['area']} · published alignment · orange validation / green test; "
+            "gray if COVID flagged"
+        )
     else:
         name = {
             "baselines": "baseline_metrics.json",
@@ -341,8 +509,10 @@ def figures(root, stage):
                 )
             else:
                 axes[1].plot(x, [p["prediction"] - p["reference"] for p in subset], label=system)
+        area = read(out / "plan.json")["area"]
         axes[0].set(
-            ylabel="Cases", title="Four-block forecasts · same targets; raw Chronos interval"
+            ylabel="Cases",
+            title=f"{area} · four-block forecasts · same targets; raw Chronos interval",
         )
         axes[1].axhline(0, color="black", linewidth=0.7)
         axes[1].set(xlabel="Published source-block index", ylabel="Prediction − reference")
@@ -351,10 +521,28 @@ def figures(root, stage):
         fig.tight_layout()
         fig.savefig(out / "test_forecasts.png", dpi=130)
         plt.close(fig)
-        misses = sorted(pred, key=lambda p: abs(p["prediction"] - p["reference"]), reverse=True)[
-            :20
-        ]
-        table(out / "largest_misses.csv", misses)
+
+
+def largest_misses(predictions) -> list[dict]:
+    """Learner view: each miss with its published count, forecast and signed error."""
+    misses = sorted(predictions, key=lambda p: abs(p["prediction"] - p["reference"]), reverse=True)[
+        :20
+    ]
+    return [
+        {
+            "system": p["system"],
+            "origin_key": p["origin_key"],
+            "target_key": p["target_key"],
+            "horizon": p["horizon"],
+            "reference": p["reference"],
+            "prediction": round(p["prediction"], 3),
+            "error": round(p["prediction"] - p["reference"], 3),
+            "abs_error": round(abs(p["prediction"] - p["reference"]), 3),
+            "raw_prediction": round(p["raw_prediction"], 3),
+            "clipped": p["clipped"],
+        }
+        for p in misses
+    ]
 
 
 def prepare(root):
@@ -363,20 +551,9 @@ def prepare(root):
     if config.get("byod_csv"):
         if not config.get("source_blocks_confirmed"):
             raise ValueError("BYOD requires aggregate schema, units and source-block confirmation")
-        with Path(config["byod_csv"]).open(encoding="utf-8", newline="") as handle:
-            reader = csv.DictReader(handle)
-            if reader.fieldnames != ["year", "block", "cases", "rain", "temp"]:
-                raise ValueError(
-                    "BYOD accepts only year,block,cases,rain,temp; reject extra personal fields"
-                )
-            source = list(reader)
-        rows = [
-            {
-                k: int(r[k]) if k in ("year", "block") else float(r[k])
-                for k in ("year", "block", "cases", "rain", "temp")
-            }
-            for r in source
-        ]
+        area = text_field(config.get("area"), "BYOD_AREA", 120)
+        citation = text_field(config.get("source_citation"), "BYOD_SOURCE_CITATION")
+        rows = byod_rows(Path(config["byod_csv"]))
         core.validate_rows(rows)
         if len(rows) < 6 * 52:
             raise ValueError(
@@ -388,6 +565,9 @@ def prepare(root):
             {
                 "scope": SCOPE,
                 "source": "BYOD",
+                "area": area,
+                "source_citation": citation,
+                "units": core.UNITS,
                 "source_sha256": sha(Path(config["byod_csv"])),
                 "rows": len(rows),
                 "timing_verified": False,
@@ -399,6 +579,7 @@ def prepare(root):
         )
     else:
         rows = data.acquire(root)
+        area, citation = DEFAULT_AREA, DEFAULT_SOURCE
     core.validate_rows(rows)
     years = sorted({r["year"] for r in rows})
     val_years, test_years = years[-4:-2], years[-2:]
@@ -416,10 +597,15 @@ def prepare(root):
         ),
         "calendar_verified": False,
         "alignment_verified": False,
+        "area": area,
+        "source_citation": citation,
+        "units": core.UNITS,
     }
     if len(plan["test"]) != 26 or len(plan["validation"]) != 26:
         raise ValueError("Expected 26 origins per partition; no silent reduction")
     write(output(root) / "plan.json", plan)
+    context_preflight(root, rows, plan)
+    table(output(root) / "feature_example.csv", feature_example(rows, plan))
     table(
         output(root) / "origin_manifest.csv",
         [
@@ -525,6 +711,7 @@ def test(root):
     assert_cohort(predictions, plan["test"], rows)
     write(output(root) / "test_predictions.json", predictions)
     table(output(root) / "predictions.csv", predictions)
+    table(output(root) / "largest_misses.csv", largest_misses(predictions))
     write(output(root) / "metrics.json", scores(predictions))
 
     def ordered(system):
@@ -619,7 +806,53 @@ def activity(root):
         predictions.extend(p)
     assert_cohort(predictions, plan["validation"], rows)
     table(output(root) / "validation_delay_activity.csv", predictions)
-    write(output(root) / "delay_metrics.json", scores(predictions))
+    delayed = scores(predictions)
+    write(output(root) / "delay_metrics.json", delayed)
+    baseline = {
+        (p["system"], p["origin"], p["horizon"]): p
+        for p in read(output(root) / "validation_predictions.json")
+    }
+    paired = []
+    order = sorted(
+        predictions, key=lambda p: (SYSTEMS.index(p["system"]), p["origin"], p["horizon"])
+    )
+    for p in order:
+        zero = baseline[(p["system"], p["origin"], p["horizon"])]
+        if zero["target_index"] != p["target_index"] or zero["reference"] != p["reference"]:
+            raise ValueError("Delay activity is not paired with zero-delay validation targets")
+        paired.append(
+            {
+                "system": p["system"],
+                "origin_key": p["origin_key"],
+                "target_key": p["target_key"],
+                "horizon": p["horizon"],
+                "reference": p["reference"],
+                "prediction_delay_0": round(zero["prediction"], 3),
+                "prediction_delay_2": round(p["prediction"], 3),
+                "abs_error_delay_0": round(abs(zero["prediction"] - zero["reference"]), 3),
+                "abs_error_delay_2": round(abs(p["prediction"] - p["reference"]), 3),
+                "abs_error_change": round(
+                    abs(p["prediction"] - p["reference"])
+                    - abs(zero["prediction"] - zero["reference"]),
+                    3,
+                ),
+            }
+        )
+    table(output(root) / "delay_comparison.csv", paired)
+    zero_scores = read(output(root) / "validation_metrics.json")
+    table(
+        output(root) / "delay_summary.csv",
+        [
+            {
+                "system": system,
+                "pairs": delayed[system]["pairs"],
+                "mae_delay_0": round(zero_scores[system]["mae"], 3),
+                "mae_delay_2": round(delayed[system]["mae"], 3),
+                "change": round(delayed[system]["mae"] - zero_scores[system]["mae"], 3),
+            }
+            for system in SYSTEMS
+        ],
+    )
 
 
 def future(root):
@@ -633,6 +866,18 @@ def future(root):
         write(output(root) / f"artifact_future_{system}.json", state)
     write(output(root) / "future_predictions.json", predictions)
     table(output(root) / "future_predictions.csv", predictions)
+    by_target = {}
+    for p in predictions:
+        by_target.setdefault((p["horizon"], p["target_key"]), {})[p["system"]] = round(
+            p["prediction"], 2
+        )
+    table(
+        output(root) / "future_forecast_view.csv",
+        [
+            {"target_key": target, "horizon": h, **{s: values[s] for s in SYSTEMS}}
+            for (h, target), values in sorted(by_target.items())
+        ],
+    )
     artifacts = {p.name: sha(p) for p in output(root).glob("artifact_*.json")}
     write(
         output(root) / "artifact_manifest.json",
@@ -647,6 +892,14 @@ def future(root):
             "target_transform": "log1p for Mitra/Ridge; inverse expm1 then floor at zero",
             "chronos_target": "raw case counts; original quantiles retained",
             "worker_adapter_compatibility": "not claimed",
+            "bundle_identity": bundle_identity(
+                {n: root / n for n in ("model_manifest.json", "source.json", "dataset_audit.json")},
+                output(root),
+                sha(root / "data.json"),
+            ),
+            "retained_data": "Aggregate numeric support contexts only: lagged case counts "
+            "(plus lagged rain and temperature for mitra_weather) for the final completed test "
+            "origin and the future origin, and fitted Ridge state. No individual records.",
         },
     )
 
@@ -669,14 +922,32 @@ def reload(root):
     for name, checksum in manifest["files"].items():
         if Path(name).name != name or sha(out / name) != checksum:
             raise ValueError("Artifact hash mismatch")
+    checked, maximum = reproduce(out, root / "models", read(root / "model_manifest.json"))
+    write(
+        out / "verification.json",
+        {
+            "passed": True,
+            "predictions_checked": checked,
+            "max_absolute_difference": maximum,
+            "atol": 1e-3,
+            "rtol": 1e-4,
+            "fresh_process": True,
+            "pid": os.getpid(),
+            "scope": "same workspace; see consumer_verification.json for the exported bundle",
+        },
+    )
+
+
+def reproduce(out: Path, cache: Path, model_manifest: dict) -> tuple[int, float]:
+    """Rebuild every saved context and compare with its recorded prediction."""
     maximum = 0.0
     checked = 0
     for system in ("ridge", "chronos", "mitra_cases", "mitra_weather"):
         model = None
         if system == "chronos":
-            model = models.load_chronos(root / "models", read(root / "model_manifest.json"))
+            model = models.load_chronos(cache, model_manifest)
         elif system.startswith("mitra"):
-            model = models.load_mitra(root / "models", read(root / "model_manifest.json"))
+            model = models.load_mitra(cache, model_manifest)
         try:
             for label, expected_name in [
                 ("test", "reload_expected_test.json"),
@@ -717,24 +988,94 @@ def reload(root):
                         )
                         raw.append(point(float(np.asarray(estimate).reshape(-1)[0]))[0])
                 reference = np.array([p["raw_prediction"] for p in expected])
-                np.testing.assert_allclose(raw, reference, atol=1e-3, rtol=1e-4)
+                if not np.allclose(raw, reference, atol=1e-3, rtol=1e-4):
+                    raise ValueError(f"Saved {label} {system} context does not reproduce")
                 maximum = max(maximum, float(np.max(np.abs(np.asarray(raw) - reference))))
                 checked += len(expected)
         finally:
             del model
             free_gpu()
-    write(
-        out / "verification.json",
-        {
-            "passed": True,
-            "predictions_checked": checked,
-            "max_absolute_difference": maximum,
-            "atol": 1e-3,
-            "rtol": 1e-4,
-            "fresh_process": True,
-            "pid": os.getpid(),
-        },
+    return checked, maximum
+
+
+def bundle_identity(provenance: dict, out: Path, data_sha256: str) -> str:
+    """Identity a bundle consumer can recompute: no original workspace or run path needed."""
+    identities = {name: sha(path) for name, path in provenance.items()}
+    for name in ("feature_schema.json", "experiment_lock.json", "plan.json"):
+        identities[name] = sha(out / name)
+    identities["data_sha256"] = data_sha256
+    for module in (core, data, models):
+        identities[Path(module.__file__).name] = sha(Path(module.__file__))
+    identities["runtime"] = sha(Path(__file__))
+    return digest(identities)
+
+
+def consume(bundle: Path, workdir: Path, cache: Path, code: Path | None = None) -> dict:
+    """Reconstruct the exported contexts from results.zip alone, plus trusted code and weights.
+
+    ``code`` holds the notebook's embedded files (source.json, model_manifest.json and the
+    modules). The original run directory, its data.json and run_config.json are never read.
+    """
+    code = Path(code or Path(__file__).resolve().parent)
+    target = Path(workdir) / "bundle"
+    target.mkdir(parents=True, exist_ok=False)
+    with zipfile.ZipFile(bundle) as archive:
+        members = archive.infolist()
+        names = [m.filename for m in members]
+        if len(set(names)) != len(names) or any(
+            Path(n).name != n or n in ("", ".", "..") or m.file_size > 100 * 1024**2
+            for n, m in zip(names, members, strict=True)
+        ):
+            raise ValueError("Bundle members must be unique, flat and bounded")
+        listed = json.loads(archive.read("checksums.json"))
+        if set(names) != {*listed, "checksums.json"}:
+            raise ValueError("Bundle members differ from checksums.json")
+        for name in names:
+            (target / name).write_bytes(archive.read(name))
+    for name, checksum in listed.items():
+        if sha(target / name) != checksum:
+            raise ValueError(f"Bundle member changed: {name}")
+    for name in ("source.json", "model_manifest.json"):
+        if (target / name).read_bytes() != (code / name).read_bytes():
+            raise ValueError(f"Bundle {name} differs from the trusted embedded copy")
+    for name, checksum in read(code / "source.json").get("files", {}).items():
+        if Path(name).name != name or sha(code / name) != checksum:
+            raise ValueError("Trusted embedded source changed: " + name)
+    manifest = read(target / "artifact_manifest.json")
+    if (
+        manifest.get("format") != "dimer_dengue_forecast_contexts"
+        or manifest.get("format_version") != 1
+    ):
+        raise ValueError("Unsupported forecast context artifact format")
+    for field, name in (
+        ("feature_schema_sha256", "feature_schema.json"),
+        ("experiment_lock_sha256", "experiment_lock.json"),
+    ):
+        if manifest[field] != sha(target / name):
+            raise ValueError("Artifact feature schema or experiment lock changed")
+    for name, checksum in manifest["files"].items():
+        if Path(name).name != name or sha(target / name) != checksum:
+            raise ValueError("Artifact hash mismatch")
+    expected_identity = bundle_identity(
+        {n: target / n for n in ("model_manifest.json", "source.json", "dataset_audit.json")},
+        target,
+        read(target / "data_manifest.json")["data_sha256"],
     )
+    if manifest.get("bundle_identity") != expected_identity:
+        raise ValueError("Bundle provenance, configuration or code identity changed")
+    checked, maximum = reproduce(target, Path(cache), read(code / "model_manifest.json"))
+    result = {
+        "passed": True,
+        "bundle_sha256": sha(Path(bundle)),
+        "predictions_checked": checked,
+        "max_absolute_difference": maximum,
+        "atol": 1e-3,
+        "rtol": 1e-4,
+        "original_workspace_read": False,
+        "inputs": "results.zip, trusted embedded code/manifests and verified model snapshots",
+    }
+    write(Path(workdir) / "consumer_verification.json", result)
+    return result
 
 
 def report(root):
@@ -750,12 +1091,7 @@ def report(root):
         raise ValueError("CSV prediction mismatch")
     if not read(out / "verification.json")["passed"]:
         raise ValueError("Reload not verified")
-    import importlib.metadata
-
-    environment = {
-        name: importlib.metadata.version(name)
-        for name in ("numpy", "torch", "chronos-forecasting", "transformers")
-    }
+    environment = runtime_environment()
     write(out / "environment.json", environment)
     for name in ("dataset_audit.json", "model_manifest.json", "source.json", "DATA_LICENSE.md"):
         (out / name).write_bytes((root / name).read_bytes())
@@ -768,14 +1104,29 @@ def report(root):
         },
     )
     receipts = {s: read(out / f"receipt_{s}.json") for s in STAGES[:-1]}
+    plan = read(out / "plan.json")
+    audit = read(root / "dataset_audit.json")
     write(
         out / "run_summary.json",
         {
             "scope": SCOPE,
             "status": "executed_candidate",
+            "area": plan["area"],
+            "source_citation": plan["source_citation"],
+            "units": plan["units"],
             "timing_verified": False,
             "weather_alignment_verified": False,
             "prospective_validation": False,
+            "limitations": LIMITATIONS + list(audit.get("limitations", [])),
+            "environment": environment,
+            "resource_targets": RESOURCE_TARGETS,
+            "resource_measurements": {
+                "stage_seconds": {s: r.get("seconds") for s, r in receipts.items()},
+                "peak_allocated_gpu_bytes": max(
+                    [r.get("peak_allocated_gpu_bytes") or 0 for r in receipts.values()] or [0]
+                ),
+            },
+            "source_audit": "dataset_audit.json",
             "metrics": read(out / "metrics.json"),
             "receipts": receipts,
             "reload": read(out / "verification.json"),
@@ -808,11 +1159,61 @@ def report(root):
         raise ValueError("Export exceeds 100 MiB bound")
 
 
+def runtime_environment() -> dict:
+    """Python, device, precision and the package versions that shape preprocessing/inference."""
+    import importlib.metadata
+
+    packages = {}
+    for name in (
+        "numpy",
+        "pandas",
+        "scikit-learn",
+        "torch",
+        "chronos-forecasting",
+        "transformers",
+        "autogluon.tabular",
+        "safetensors",
+        "matplotlib",
+    ):
+        try:
+            packages[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            packages[name] = None
+    device = "cpu"
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            device = torch.cuda.get_device_name(0)
+    except ImportError:
+        pass
+    except (AssertionError, RuntimeError) as exc:
+        device = f"unavailable: {exc}"
+    return {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "device": device,
+        "precision": "float32 (Chronos dtype; Mitra precision override)",
+        "packages": packages,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--stage", choices=STAGES, required=True)
+    parser.add_argument("--root", type=Path)
+    parser.add_argument("--stage", choices=STAGES)
+    parser.add_argument("--consume", type=Path, help="results.zip to reconstruct from alone")
+    parser.add_argument("--workdir", type=Path)
+    parser.add_argument("--models", type=Path)
     args = parser.parse_args()
+    if args.consume:
+        if not (args.workdir and args.models) or args.root or args.stage:
+            parser.error("--consume needs --workdir and --models, and no --root/--stage")
+        result = consume(args.consume, args.workdir, args.models)
+        print(f"consume: PASS ({result['predictions_checked']} predictions)", flush=True)
+        return
+    if not (args.root and args.stage):
+        parser.error("--root and --stage are required")
     root = args.root.resolve()
     out = output(root)
     out.mkdir(parents=True, exist_ok=True)

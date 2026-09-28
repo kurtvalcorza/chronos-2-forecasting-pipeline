@@ -238,7 +238,13 @@ def test_byod_rejects_extra_personal_column(root, rows):
     path = root / "byod.csv"
     runtime.table(path, [dict(r, patient_name="synthetic") for r in rows])
     runtime.write(
-        root / "run_config.json", {"byod_csv": str(path), "source_blocks_confirmed": True}
+        root / "run_config.json",
+        {
+            "byod_csv": str(path),
+            "source_blocks_confirmed": True,
+            "area": "Synthetic test area",
+            "source_citation": "Synthetic fixture",
+        },
     )
     with pytest.raises(ValueError, match="extra personal fields"):
         runtime.prepare(root)
@@ -248,7 +254,13 @@ def test_byod_rejects_five_years(root, rows):
     path = root / "byod.csv"
     runtime.table(path, rows[: 5 * 52])
     runtime.write(
-        root / "run_config.json", {"byod_csv": str(path), "source_blocks_confirmed": True}
+        root / "run_config.json",
+        {
+            "byod_csv": str(path),
+            "source_blocks_confirmed": True,
+            "area": "Synthetic test area",
+            "source_citation": "Synthetic fixture",
+        },
     )
     with pytest.raises(ValueError, match="six complete"):
         runtime.prepare(root)
@@ -266,7 +278,13 @@ def test_byod_six_years_preserves_fixed_cohorts(root, rows):
     path = root / "byod.csv"
     runtime.table(path, rows[: 6 * 52])
     runtime.write(
-        root / "run_config.json", {"byod_csv": str(path), "source_blocks_confirmed": True}
+        root / "run_config.json",
+        {
+            "byod_csv": str(path),
+            "source_blocks_confirmed": True,
+            "area": "Synthetic test area",
+            "source_citation": "Synthetic fixture",
+        },
     )
     runtime.prepare(root)
     plan = runtime.read(root / "results" / "plan.json")

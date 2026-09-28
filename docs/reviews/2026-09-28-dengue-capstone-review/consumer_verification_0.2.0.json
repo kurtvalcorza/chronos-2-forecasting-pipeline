@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "bundle_sha256": "4d2d7d131cf8b2cc568b47a794411fa04a3eab8302ae7d6eabe486ffad2871bb",
+  "predictions_checked": 32,
+  "max_absolute_difference": 0.0,
+  "atol": 0.001,
+  "rtol": 0.0001,
+  "original_workspace_read": false,
+  "inputs": "results.zip, trusted embedded code/manifests and verified model snapshots",
+  "method": "consume_fixture.py in a separate OS process: fresh code dir holding only the notebook-embedded files, the reviewer harness's synthetic results.zip, original run directory moved away; model adapters are the reviewer's deterministic review doubles (no pretrained model, no GPU)"
+}

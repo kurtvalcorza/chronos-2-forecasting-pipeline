@@ -165,6 +165,18 @@ def load_mitra(cache: str | Path, manifest: dict) -> Any:
     return model
 
 
+def support_problem(X: Any, y_log: Any) -> str | None:
+    """Context rule Mitra needs; checked before any model staging and again per call."""
+    support, target = np.asarray(X, dtype=np.float64), np.asarray(y_log, dtype=np.float64)
+    if support.ndim != 2 or target.shape != (len(support),) or not 2 <= len(support) <= 8192:
+        return "needs 2 to 8192 support rows with one target each"
+    if np.ptp(target) == 0:
+        return "all mature support targets are identical (constant target)"
+    if not np.any(np.ptp(support, axis=0) > 0):
+        return "no support feature varies"
+    return None
+
+
 def mitra_predict(model: Any, X: Any, y_log: Any, Xquery: Any) -> np.ndarray:
     """Fresh context-only conditioning; return log-target estimates without clipping.
 
@@ -186,7 +198,7 @@ def mitra_predict(model: Any, X: Any, y_log: Any, Xquery: Any) -> np.ndarray:
         raise ValueError("Mitra requires compatible support/target/query arrays")
     if not all(np.isfinite(a).all() for a in (support, target, query)):
         raise ValueError("Mitra inputs must be finite; impute from support only beforehand")
-    if np.ptp(target) == 0 or not np.any(np.ptp(support, axis=0) > 0):
+    if support_problem(support, target):
         raise ValueError(
             "Mitra requires nonconstant support targets and at least one varying feature"
         )

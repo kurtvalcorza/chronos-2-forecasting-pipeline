@@ -1,0 +1,444 @@
+{
+  "scope": "CPU review; synthetic series and model doubles only. Not Colab/GPU/model-performance evidence.",
+  "environment": {
+    "python": "3.12.12 (main, Feb 12 2026, 00:42:14) [Clang 21.1.4 ]",
+    "numpy": "2.5.3"
+  },
+  "results": [
+    {
+      "name": "01_notebook_and_embedded_identity",
+      "status": "completed",
+      "observations": {
+        "git_blob": "e73a627cd02c1c07ff500b5e85f75340c5d4b8f7",
+        "sha256": "98b1f683980982313257298bfb6dd00da473ee900fbbae57beee2db43945336e",
+        "cells": 19,
+        "code_cells": 9,
+        "outputs": 0,
+        "bound_files": 7
+      }
+    },
+    {
+      "name": "02_availability_target_maturity_weather_pairing",
+      "status": "completed",
+      "observations": {
+        "checks": [
+          {
+            "delay": 0,
+            "horizon": 1,
+            "window": 52,
+            "support_n": 51,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 0,
+            "horizon": 1,
+            "window": 104,
+            "support_n": 103,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 0,
+            "horizon": 2,
+            "window": 52,
+            "support_n": 50,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 0,
+            "horizon": 2,
+            "window": 104,
+            "support_n": 102,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 0,
+            "horizon": 3,
+            "window": 52,
+            "support_n": 49,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 0,
+            "horizon": 3,
+            "window": 104,
+            "support_n": 101,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 0,
+            "horizon": 4,
+            "window": 52,
+            "support_n": 48,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 0,
+            "horizon": 4,
+            "window": 104,
+            "support_n": 100,
+            "latest_target": 727,
+            "cutoff": 727
+          },
+          {
+            "delay": 2,
+            "horizon": 1,
+            "window": 52,
+            "support_n": 49,
+            "latest_target": 725,
+            "cutoff": 725
+          },
+          {
+            "delay": 2,
+            "horizon": 1,
+            "window": 104,
+            "support_n": 101,
+            "latest_target": 725,
+            "cutoff": 725
+          },
+          {
+            "delay": 2,
+            "horizon": 2,
+            "window": 52,
+            "support_n": 48,
+            "latest_target": 725,
+            "cutoff": 725
+          },
+          {
+            "delay": 2,
+            "horizon": 2,
+            "window": 104,
+            "support_n": 100,
+            "latest_target": 725,
+            "cutoff": 725
+          },
+          {
+            "delay": 2,
+            "horizon": 3,
+            "window": 52,
+            "support_n": 47,
+            "latest_target": 725,
+            "cutoff": 725
+          },
+          {
+            "delay": 2,
+            "horizon": 3,
+            "window": 104,
+            "support_n": 99,
+            "latest_target": 725,
+            "cutoff": 725
+          },
+          {
+            "delay": 2,
+            "horizon": 4,
+            "window": 52,
+            "support_n": 46,
+            "latest_target": 725,
+            "cutoff": 725
+          },
+          {
+            "delay": 2,
+            "horizon": 4,
+            "window": 104,
+            "support_n": 98,
+            "latest_target": 725,
+            "cutoff": 725
+          }
+        ],
+        "poison_future_unchanged": true,
+        "case_weather_same_rows_and_targets": true,
+        "year_boundary": [
+          2024,
+          1
+        ]
+      }
+    },
+    {
+      "name": "03_metrics_intervals_and_block_bootstrap",
+      "status": "completed",
+      "observations": {
+        "known_metrics": {
+          "n": 2,
+          "mae": 1.5,
+          "rmse": 1.5811388300841898,
+          "bias": -0.5
+        },
+        "intervals": {
+          "n": 2,
+          "median_mae": 0.5,
+          "coverage_80": 1.0,
+          "mean_width": 4.5,
+          "pinball_loss": 0.2333333333333333
+        },
+        "bootstrap": {
+          "difference_b_minus_a": -1.0,
+          "ci95": [
+            -1.0,
+            -1.0
+          ],
+          "n_origins": 26,
+          "n_pairs": 104,
+          "n_groups": 7,
+          "group_sizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2
+          ],
+          "replicates": 2000,
+          "seed": 42
+        },
+        "refusals": {
+          "nonfinite_metric": {
+            "type": "ValueError",
+            "message": "Expected nonempty paired finite arrays of identical shape"
+          },
+          "crossed_quantiles": {
+            "type": "ValueError",
+            "message": "Crossing quantiles refused"
+          }
+        },
+        "raw": [
+          -0.6321205588285577,
+          0.0,
+          2.25
+        ],
+        "effective": [
+          0.0,
+          0.0,
+          2.25
+        ]
+      }
+    },
+    {
+      "name": "04_chronos_output_boundary_and_delay_alignment",
+      "status": "completed",
+      "observations": {
+        "delay": 2,
+        "effective_horizon": 6,
+        "selected_medians": [
+          3.0,
+          4.0,
+          5.0,
+          6.0
+        ],
+        "history_latest_index": 725,
+        "history_size": 104,
+        "bad_shape_nan_crossing_rejected": true
+      }
+    },
+    {
+      "name": "05_constant_BYOD_accepted_before_Mitra_refusal",
+      "status": "probe_error",
+      "error": "1264 of 1264 planned Mitra contexts cannot be fitted (first: validation origin 2011-B52, horizon 1, window 52, delay 0: all mature support targets are identical (constant target)). Both Mitra systems are mandatory, so the experiment stops before any model is downloaded; see results/context_preflight.json.",
+      "traceback": "Traceback (most recent call last):\n  File \"<review-dir>/probes.py\", line 19, in wrap\n    result=f(); RESULTS.append({'name':name,'status':'completed','observations':result}); print(name,'COMPLETED',flush=True)\n           ^^^\n  File \"<review-dir>/probes.py\", line 105, in p05\n    r=rows(6,0);root=setup('constant_byod',r);run.prepare(root);run.baselines(root)\n                                              ^^^^^^^^^^^^^^^^^\n  File \"<review-dir>/embedded/dengue_runtime.py\", line 607, in prepare\n    context_preflight(root, rows, plan)\n  File \"<review-dir>/embedded/dengue_runtime.py\", line 213, in context_preflight\n    raise ValueError(\nValueError: 1264 of 1264 planned Mitra contexts cannot be fitted (first: validation origin 2011-B52, horizon 1, window 52, delay 0: all mature support targets are identical (constant target)). Both Mitra systems are mandatory, so the experiment stops before any model is downloaded; see results/context_preflight.json.\n"
+    },
+    {
+      "name": "06_BYOD_semantic_and_row_width_checks",
+      "status": "completed",
+      "observations": {
+        "fractional_cases": {
+          "type": "ValueError",
+          "message": "input.csv line 2, column cases: must be a nonnegative integer count"
+        },
+        "out_of_range_temperature": {
+          "type": "ValueError",
+          "message": "input.csv line 2, column temp: outside the declared Celsius range -30 to 60"
+        },
+        "missing_cases": {
+          "type": "ValueError",
+          "message": "input.csv line 2, column cases: missing value; missing is never replaced by zero"
+        },
+        "negative_cases": {
+          "type": "ValueError",
+          "message": "input.csv line 2, column cases: must be a nonnegative integer count"
+        },
+        "extra_row_field": {
+          "type": "ValueError",
+          "message": "input.csv line 2: expected 5 values, found 6; extra or missing values are refused"
+        },
+        "duplicate_header": {
+          "type": "ValueError",
+          "message": "input.csv: header must be exactly year,block,cases,rain,temp (found ['year', 'block', 'cases', 'rain', 'rain']); reject extra personal fields and any other extra field"
+        },
+        "five_years": {
+          "type": "ValueError",
+          "message": "Need six complete source years: two history, two validation, two test"
+        }
+      }
+    },
+    {
+      "name": "07_complete_cohort_integrity",
+      "status": "completed",
+      "observations": {
+        "complete_passes": true,
+        "refusals": {
+          "missing": {
+            "type": "ValueError",
+            "message": "Incomplete or duplicated cohort: mitra_weather"
+          },
+          "duplicate": {
+            "type": "ValueError",
+            "message": "Incomplete or duplicated cohort: persistence"
+          },
+          "changed_reference": {
+            "type": "ValueError",
+            "message": "Paired target/cutoff/reference disagreement"
+          }
+        }
+      }
+    },
+    {
+      "name": "08_all_stages_synthetic_integration_and_real_Ridge",
+      "status": "completed",
+      "observations": {
+        "scope": "All stage orchestration with both model families replaced by deterministic doubles, GPU gate bypassed; CPU Ridge is real. Environment versions for absent model packages marked as doubles.",
+        "origins": 26,
+        "systems": 6,
+        "test_pairs_per_system": 104,
+        "test_rows": 624,
+        "future_rows": 24,
+        "future_target_keys": [
+          "2026-B01",
+          "2026-B02",
+          "2026-B03",
+          "2026-B04"
+        ],
+        "reload": {
+          "passed": true,
+          "predictions_checked": 32,
+          "max_absolute_difference": 0.0,
+          "atol": 0.001,
+          "rtol": 0.0001,
+          "fresh_process": true,
+          "pid": 1650,
+          "scope": "same workspace; see consumer_verification.json for the exported bundle"
+        },
+        "root": "<review-dir>/probe_outputs/synthetic_full_run"
+      }
+    },
+    {
+      "name": "09_learner_table_hides_all_future_forecasts",
+      "status": "probe_error",
+      "error": "table() missing 1 required positional argument: 'columns'",
+      "traceback": "Traceback (most recent call last):\n  File \"<review-dir>/probes.py\", line 19, in wrap\n    result=f(); RESULTS.append({'name':name,'status':'completed','observations':result}); print(name,'COMPLETED',flush=True)\n           ^^^\n  File \"<review-dir>/probes.py\", line 178, in p09\n    with contextlib.redirect_stdout(io.StringIO()) as log:ns['table']('future_predictions.csv')\n                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: table() missing 1 required positional argument: 'columns'\n"
+    },
+    {
+      "name": "10_delay_activity_isolation",
+      "status": "completed",
+      "observations": {
+        "canonical_files_unchanged": {
+          "test_predictions.json": "b5e0146f9ebe32bdac2ceec59d3a0d74dc1acdcef6d7ea7758ddef7903aaa4fc",
+          "predictions.csv": "6a40490d5cab5512841d8dec458b90601d28dd78a41b579f5393444f7057e591",
+          "metrics.json": "351a42dafbc413b4f3b05179f5aebb7f50cbf59d25b3a36d0135a5787c194627",
+          "experiment_lock.json": "3a695813ee586f8604622f512306eeaba9a0b96b19414e9d03d324665d83983d"
+        },
+        "identical_624_validation_keys": true,
+        "all_cutoffs_shifted_two": true
+      }
+    },
+    {
+      "name": "11_artifact_tamper_and_csv_refusals",
+      "status": "completed",
+      "observations": {
+        "artifact_refusal": {
+          "type": "subprocess_error",
+          "message": "Traceback (most recent call last):\n  File \"<review-dir>/reload_fixture.py\", line 17, in <module>\n    if '--direct' in sys.argv:r.reload(pathlib.Path(root))\n                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<review-dir>/embedded/dengue_runtime.py\", line 924, in reload\n    raise ValueError(\"Artifact hash mismatch\")\nValueError: Artifact hash mismatch\n"
+        },
+        "CSV_refusal": {
+          "type": "ValueError",
+          "message": "CSV prediction mismatch"
+        }
+      }
+    },
+    {
+      "name": "12_export_reconstruction_missing_dependencies",
+      "status": "completed",
+      "observations": {
+        "archive_member_count": 62,
+        "all_listed_member_hashes_verified": true,
+        "missing_external_dependencies": [
+          "data.json",
+          "run_config.json"
+        ],
+        "first_failure_even_with_trusted_notebook_source_supplied": {
+          "type": "FileNotFoundError",
+          "message": "[Errno 2] No such file or directory: '<review-dir>/probe_outputs/archive_only_reconstruction/data.json'"
+        },
+        "same_workspace_separate_process_control_passed": {
+          "passed": true,
+          "predictions_checked": 32,
+          "max_absolute_difference": 0.0,
+          "atol": 0.001,
+          "rtol": 0.0001,
+          "fresh_process": true,
+          "pid": 1650,
+          "scope": "same workspace; see consumer_verification.json for the exported bundle"
+        }
+      }
+    },
+    {
+      "name": "13_run_summary_missing_publication_vintage_caveat_and_area",
+      "status": "completed",
+      "observations": {
+        "summary_fields": [
+          "scope",
+          "status",
+          "area",
+          "source_citation",
+          "units",
+          "timing_verified",
+          "weather_alignment_verified",
+          "prospective_validation",
+          "limitations",
+          "environment",
+          "resource_targets",
+          "resource_measurements",
+          "source_audit",
+          "metrics",
+          "receipts",
+          "reload"
+        ],
+        "BYOD_audit_fields": [
+          "scope",
+          "source",
+          "area",
+          "source_citation",
+          "units",
+          "source_sha256",
+          "rows",
+          "timing_verified",
+          "weather_alignment_verified"
+        ],
+        "BYOD_area_name_recorded": true,
+        "summary_explicit_final_vintage_caveat": true,
+        "note": "Timing/alignment/prospective flags are false. Original notebook and conclusion_template contain richer caveats."
+      }
+    },
+    {
+      "name": "14_strict_source_data_numeric_controls",
+      "status": "completed",
+      "observations": {
+        "source_validator_rejects_fractional_cases": {
+          "type": "ValueError",
+          "message": "Cases must be nonnegative integer counts"
+        },
+        "source_validator_rejects_extreme_temp": {
+          "type": "ValueError",
+          "message": "Weather outside declared physical bounds"
+        },
+        "contrast": "BYOD validator accepts both in probe06"
+      }
+    }
+  ],
+  "revision_note": "Reviewer harness re-run against revision 0.2.0-candidate: embedded/, bootstrap.py and input_notebook.ipynb replaced by the regenerated notebook's content; the only harness edit adds area/source_citation to its BYOD run_config (line 35). probe_error on 05 and 09 means the reproduced defect no longer occurs (constant BYOD refused at preparation; table() now requires semantic columns). Probe 12 still exercises the same-workspace reload(), which remains workspace-bound by design; the archive-only path is the new --consume entry point, checked by consume_fixture.py."
+}

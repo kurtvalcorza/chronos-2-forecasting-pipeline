@@ -1,7 +1,8 @@
 # Philippine dengue capstone — implementation and evidence
 
-Status: **Candidate**. Fresh Colab T4 Run all, actual pretrained-model performance and full-model
-reload verification remain pending. No GPU or pretrained weights were used locally for this build.
+Status: **Candidate**, revision `0.2.0-candidate` (see the review section at the end). Fresh Colab
+T4 Run all, actual pretrained-model performance, full-model reload and bundle-reconstruction
+verification remain pending. No GPU or pretrained weights were used locally for this build.
 
 ## Approved interpretation
 
@@ -82,3 +83,71 @@ ruff check src tests tools
 ```
 
 No commit, push or publication is included in this local build.
+
+## Revision 0.2.0-candidate — Notebook Review Framework v1 findings (2026-09-28)
+
+A review of PR #20 at `209d8f5` (notebook blob `66309b6a`) concluded **Needs revision** and
+recommended requesting changes. It reported three major findings (DENGUE-01 to 03) and three
+smaller ones (DENGUE-04 to 06). It also recorded that the availability, maturity, pairing,
+interval, cohort and activity-isolation controls passed its checks. Those controls are unchanged.
+The review and its probe ZIP are archived in
+[`reviews/2026-09-28-dengue-capstone-review/`](reviews/2026-09-28-dengue-capstone-review/).
+
+`tests/test_dengue_review_fixes.py` adds 30 tests. They execute the notebook's own table helper
+and section cells, plus the embedded runtime, on synthetic series with model doubles. All 30 fail
+on `209d8f5`.
+
+| Finding | Correction in 0.2.0 | Acceptance check |
+|---|---|---|
+| **DENGUE-01** (major): tables showed the first nine columns and twelve rows, so the forecasts, clipping, quantiles and three systems were hidden | `table(name, columns, limit)` selects columns by name and refuses a missing column. The runtime writes learner views: `future_forecast_view.csv` (four target blocks by six systems), `largest_misses.csv` (reference, prediction, signed and absolute error), `delay_summary.csv` (paired zero-delay and two-block MAE with the change) and `delay_comparison.csv` (paired forecasts). Full CSVs keep every column | The section-6 cell shows the four-by-six view and all 24 forecasts, with no reference column. Each largest miss shows `error = prediction − reference`. The delay summary equals both metric files over 104 pairs per system |
+| **DENGUE-02** (major): BYOD accepted fractional counts, a temperature of 500 and extra row values; a missing value gave a raw error; constant support failed only inside Mitra, after the models were loaded | `core.value_problem` is shared by the default and BYOD paths: nonnegative integer counts, nonnegative rain, and Celsius from −30 to 60. The BYOD parser names the file, line and column, and refuses wrong-width rows. `prepare` checks all 1,264 planned Mitra contexts (both partitions, both windows, delays 0 and 2, both systems, and the future origin) with the adapter's own `support_problem` rule. It stops before any model is staged and writes `context_preflight.json` | Six malformed-value cases are refused with line and column. Zero counts in a varying series pass. An all-zero series is refused (1,264 of 1,264 contexts) without loading a model. A locally constant stretch is named by origin, horizon, window and delay. The real pinned source checks 1,264 contexts and refuses none |
+| **DENGUE-03** (major): reload needed the original `data.json` and `run_config.json`, which the ZIP lacks | A new `dengue_runtime.py --consume results.zip --workdir DIR --models CACHE` entry point extracts the bundle safely and verifies every member hash. It requires `source.json` and `model_manifest.json` to equal the trusted embedded copies, and it checks the lock and feature-schema hashes and a `bundle_identity`. That identity covers the provenance, plan, lock, recorded data digest and code, but no run path. It then reproduces the final test origin and the future forecasts. Section 7 runs it from a new directory holding only the embedded code. The artifact manifest discloses the aggregate support data it retains. Same-workspace `reload` is unchanged | After the original run directory is deleted, the bundle reproduces all 32 predictions. A changed lock, area, plan or data digest, an extra member, a different model manifest, and a changed support context (even with updated hashes) are each refused. The reviewer's ZIP reconstructs in a separate process (`consumer_verification_0.2.0.json`) |
+| **DENGUE-04**: BYOD provenance had no area | New `BYOD_AREA` and `BYOD_SOURCE_CITATION` controls are required for BYOD. They go into `plan.json`, `dataset_audit.json`, figure titles and `run_summary.json`, with the units; they are never predictors. The default path records Quezon City | A missing or multi-line area is refused; the recorded values are checked |
+| **DENGUE-05**: long carrier cell; no traced feature row; delay comparison split across two files | The carrier cell is collapsed (`cellView: form`, `source_hidden`) with a title and an explanation above it. `feature_example.csv` traces every weather-model feature of the first test origin to its source blocks, plus the latest mature label. Section 5 shows the paired delay view | Metadata check; each traced block is at or before the origin, and each value equals `feature_row` |
+| **DENGUE-06**: the summary lacked limitations and runtime identity | `run_summary.json` carries the limitations (calendar, final data vintages, delay, pretraining overlap, evaluation span), area, source, units and environment. The environment covers Python, platform, device, precision, and NumPy, pandas, scikit-learn, torch, Chronos, Transformers, AutoGluon, safetensors and Matplotlib versions. Resource figures are labelled as targets, next to the measured stage seconds and peak GPU allocation | Field check on a complete synthetic run |
+
+### Specification amendment A1 (applies from revision 0.2.0)
+
+These choices were already documented above; they are now recorded as a versioned amendment to
+the capstone specification:
+
+1. **Scope:** an exploratory published-source-block benchmark (approved 2026-09-27). Performance
+   claims about verified weekly timing, alignment or prospective availability are out of scope.
+2. **BYOD minimum:** six complete 52-block years (the draft said five): two history years, then
+   two validation and two test years.
+3. **Complete cases only:** missing selected values are refused, never imputed or set to zero.
+   The draft's median imputation is not implemented.
+4. **Constant support:** when any planned Mitra context has a constant target or no varying
+   feature, the whole experiment stops before model staging. The affected contexts are listed.
+   No origin is dropped, no variance is invented, and no fallback is reported as a Mitra forecast.
+5. **Units and area:** counts are nonnegative integers, rain is nonnegative mm per block and
+   temperature is Celsius from −30 to 60, on both paths. BYOD names its area and source.
+
+### Verification of revision 0.2.0 (not hosted execution evidence)
+
+- **Repository checks:** `ruff check src tests tools`, both notebook generation checks and
+  release-asset validation pass. `pytest -m "not integration"` gives 482 passed, 22 deselected:
+  the earlier 453 plus the 29 new tests.
+- **Reviewer's harness, re-run against the regenerated notebook's embedded source**
+  (`revised_probe_results_0.2.0.json`). The only harness change adds the new BYOD area fields.
+  - Probes 05 and 09 now stop at the corrected behaviour (constant BYOD refused during
+    preparation; `table()` needs named columns).
+  - Probe 06 records every malformed value refused with line and column.
+  - The other probes complete as before, including the synthetic 624-row run and the 32-prediction
+    same-workspace reload.
+- **Bundle consumer:** `consume_fixture.py` ran in a separate process on the harness's synthetic
+  ZIP, from a fresh code directory, with the original run directory moved away. It reproduced 32
+  predictions with a maximum difference of 0.0 (`consumer_verification_0.2.0.json`). Its model
+  adapters were review doubles.
+- **Real source on CPU:** `prepare` and `baselines` ran on the SHA-verified Zenodo archive
+  (`real_source_cpu_check_0.2.0.json`). The preflight checked 1,264 contexts and refused none. The
+  validation MAE is unchanged: persistence 16.9327, seasonal naïve 43.1731, Ridge 75.1282.
+
+Still required, at this exact revision:
+
+- a fresh Colab T4 Run all with the real models, including the bundle-consumer step and the
+  actual resource figures;
+- a representative authorized BYOD run with separate invalid-input cases;
+- the learner observation described in the review.
+
+Status stays **Candidate**.
