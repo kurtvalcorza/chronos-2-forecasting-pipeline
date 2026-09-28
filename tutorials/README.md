@@ -9,8 +9,9 @@ baselines on 832 Quezon City records. The approved scope is an **exploratory pub
 benchmark**: weekly timing, case–weather alignment and historical publication availability
 are unverified. Revision `0.2.0-candidate` addresses the 2026-09-28 Notebook Review Framework v1
 findings: visible forecast and error tables, shared BYOD value checks with a context preflight, and
-reconstruction from the exported bundle alone. Fresh Colab T4 Run all, real-model reload and bundle
-reconstruction, and hosted BYOD qualification remain pending.
+reconstruction from the exported bundle alone. A fresh Colab T4 Run all of that exact revision
+passed on 2026-09-28, including real-model reload and bundle reconstruction. Hosted BYOD
+qualification and learner observation remain pending.
 
 Generate with `python tools/build_dengue_capstone.py`; verify with `--check`.
 It carries a separate hashed dependency lock compatible with Mitra 1.5.0, uses in-context

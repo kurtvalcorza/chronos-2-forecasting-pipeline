@@ -143,11 +143,68 @@ the capstone specification:
   (`real_source_cpu_check_0.2.0.json`). The preflight checked 1,264 contexts and refused none. The
   validation MAE is unchanged: persistence 16.9327, seasonal naïve 43.1731, Ridge 75.1282.
 
-Still required, at this exact revision:
+Still required at this exact revision (the first item is closed by the run recorded below):
 
 - a fresh Colab T4 Run all with the real models, including the bundle-consumer step and the
   actual resource figures;
 - a representative authorized BYOD run with separate invalid-input cases;
 - the learner observation described in the review.
+
+Status stays **Candidate**.
+
+## Maintainer-supplied Colab execution of revision 0.2.0 — 2026-09-28
+
+The maintainer supplied an executed Colab copy of revision `0.2.0-candidate`, preserved
+byte-for-byte as
+[evidence](execution-evidence/2026-09-28/DIMER_Philippine_Dengue_Forecasting_Capstone_0.2.0.ipynb).
+
+- **Source:** commit `bd35d0d`, notebook blob `a8a4348b`. All 19 cell ids and sources match the
+  committed notebook exactly, with no Colab `# @title` or parameter edits. Default settings were
+  used, with BYOD off.
+- **Executed-file SHA-256:** `85efcb065e402f934be98ff03e778bb55995d19728ab2c037badb2d9b101f838`.
+- **Runtime:** Google Colab, Tesla T4. The isolated environment ran Python 3.12.12 with torch 2.9.1,
+  chronos-forecasting 2.3.1, autogluon.tabular 1.5.0, transformers 4.57.6, NumPy 2.3.5, pandas
+  2.3.3, scikit-learn 1.7.2, safetensors 0.8.0 and Matplotlib 3.10.8, all at float32.
+- **Execution:** 9/9 code cells ran with counts 1–9 in order, and there are no saved errors.
+  Every stage printed `PASS`: prepare, baselines, validation, lock, test, activity, future,
+  reload and report. The last cell printed `consume: PASS (32 predictions)`.
+- **Resources (measured):**
+  - Stage times: prepare 34.1 s, baselines 1.0 s, validation 118.7 s, lock 0.0 s, test 66.8 s,
+    activity 72.6 s, future 15.9 s, reload 18.4 s; 327.9 s in total. That excludes the
+    environment build and the model downloads, whose time the saved outputs do not print.
+  - Peak allocated GPU memory: 0.48 GiB (512,901,632 bytes), against the 12 GiB target.
+  - The 60-minute and 20-GiB targets were not measured end to end.
+
+| Journey or check | Result |
+|---|---|
+| Source and context preflight | 832 rows; 26 validation and 26 test origins; 1,264 of 1,264 planned Mitra contexts admitted (DENGUE-02); area "Quezon City, Philippines" printed and shown in figure titles (DENGUE-04) |
+| Traced feature row (DENGUE-05) | First test origin 2023-B52 → target 2024-B01. All 27 features read only blocks at or before 2023-B52 (the two seasonal terms read none); the latest mature label is 2023-B52 (72 cases) |
+| Validation (zero delay, 104 pairs each) | Equal-horizon MAE: persistence 16.93, Chronos 18.63, Mitra + weather 19.61, Mitra case-only 20.50, seasonal naïve 43.17, Ridge 75.13. The Mitra window selected was 52 (MAE 20.50 vs 21.01 at 104) |
+| Held-out test (104 pairs each) | MAE: Chronos 57.70, persistence 59.05, Mitra + weather 64.79, Mitra case-only 71.41, seasonal naïve 109.83, Ridge 111.20 |
+| Weather ablation | Mitra + weather minus case-only: −6.61 MAE, bootstrap interval [−21.48, 6.44] over 7 origin groups. The interval contains zero; descriptive only |
+| High-case blocks (35 test pairs above 242.4) | MAE: Chronos 90.62, persistence 99.31, Mitra case-only 111.26, Mitra + weather 111.66, seasonal 195.60, Ridge 204.67 |
+| Chronos nominal 80% interval | Coverage 0.69 / 0.65 / 0.62 / 0.54 for horizons 1–4, below nominal |
+| Largest misses (DENGUE-01) | 10 of 20 shown with reference, prediction and signed error. The largest is Ridge at 2025-B10: 1,229 vs 321 |
+| Delay activity (DENGUE-01/05) | Paired zero-delay vs two-block MAE change: persistence +6.04, seasonal 0.00, Ridge +33.92, Chronos +5.16, Mitra case-only +3.03, Mitra + weather +5.06 |
+| Future forecasts (DENGUE-01) | All 24 shown: the four-by-six view plus the detail table, with Chronos q10/q50/q90. No flooring occurred. No reference column |
+| Same-workspace reload | 32 predictions, max difference 0.0, fresh process |
+| Bundle reconstruction (DENGUE-03) | `consume: PASS (32 predictions)`, max difference 0.0, `original_workspace_read: false`, bundle SHA-256 `bd49e267…` |
+| Run summary (DENGUE-06) | Limitations, area, units, environment and resource targets present, with the targets labelled as not measurements |
+| BYOD, invalid inputs | Not assessed in this run (BYOD off by default) |
+
+These are retrospective source-block results under the published alignment. They are not
+verified weekly or operational forecasts. The paired weather interval includes zero, so no
+weather gain is claimed.
+
+**Evidence boundary:** saved outputs were inspected; execution was not independently repeated.
+The exported files and `results.zip` were not supplied separately, so the bundle's bytes were not
+inspected. In `test_forecasts.png`, the systems' colours differ between the two panels; each
+legend is correct.
+
+**Still open:**
+
+- a representative authorized BYOD run with invalid-input cases;
+- the learner observation;
+- an end-to-end wall-clock and disk measurement against the 60-minute and 20-GiB targets.
 
 Status stays **Candidate**.
