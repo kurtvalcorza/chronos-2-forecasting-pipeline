@@ -573,3 +573,56 @@ and for BYOD. A saved Colab Run all is still needed if the release gate requires
 
 **Status: Candidate.** This is complete hosted evidence for the current head on Kaggle T4. A saved
 Colab Run all is still needed if the release gate requires Colab.
+
+### Maintainer-supplied Colab execution of `d55d51c` — 2026-09-29
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-29 | `d55d51c` / `238285bda22a` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all; BYOD toggles not ticked | 84 s locked sync, then 229 s of stages (05:42:39–05:46:28) | **PASSED** — 14/14 code cells executed in order, no errors. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-29/DIMER_Philippine_Reef_Heat_Stress_Capstone_d55d51c.ipynb)
+  is preserved byte for byte. SHA-256 `38155442baac3b3eb42cf8bfd93de8423afeae62e2ed9c974d7238aa9f5e9106`.
+- **Source match.** The source equals `d55d51c` except for empty `# @title` lines that Colab inserted at
+  the top of seven collapsed cells (`reef-003` to `reef-010`, `reef-016`). They are not substantive. Cell
+  ids and order are unchanged, and execution counts run 1–14.
+- **Runtime.** Colab `gpuType` T4; 12.7 GB RAM; 195 GB disk free after setup. Setup printed
+  `Isolated Python 3.12.13 dependencies ready (kernel Python 3.13.15)`: hosted evidence of the R1
+  entry path from a non-3.12 kernel on a complete run.
+- **Stages.** Every stage printed its child PID and the runner's `imports loaded` checkpoint.
+
+  | Stage | Time | Result |
+  |---|---|---|
+  | `prepare` | 7 s | Passed; 76,220 records; origin table as planned |
+  | Baselines | 41 s | Passed; 299 origins |
+  | Validation | 45 s | Passed; 115 origins, 0 crossing days, peak GPU 0.51 GB |
+  | 180-day activity | 21 s | Passed; 1 crossing day of 0.000023 °C, rearranged |
+  | compare / lock | — | Passed; 365-day context retained |
+  | test / score | 36 s / 14 s | Passed; 184 origins, tables A–F printed |
+  | future | 9 s | Passed; origin 2026-09-26, southern and western excluded |
+  | reload / report | 28 s / 23 s | Passed; fresh-process baseline, DHW and real-model parity; `reef_evidence.zip` exported |
+  | Summary (`reef-023`) | — | Passed; the 14-day table and three figures displayed |
+
+- **Results.** The printed validation and test tables and the primary 14-day summary equal the Kaggle
+  runs of `77a116d` and `d55d51c` to the printed precision. The full-test 14-day HotSpot MAE is 0.153
+  for Chronos, 0.152 for persistence and 0.213 for seasonal.
+- **Figures.** All three figures were inspected: the outlook, the DHW components and the failure
+  examples. The outlook title names the frozen origin and the excluded regions. In the Eastern and
+  Northern panels the Chronos DHW line lies under the seasonal line, because its forecast HotSpot stays
+  near zero; this is model behaviour, not a plotting defect.
+- **Journeys.**
+
+  | Journey | Verdict |
+  |---|---|
+  | Entry from a non-3.12 kernel (R1) | **Passed** |
+  | Default Run all, all mandatory stages | **Passed** |
+  | Real Chronos-2 validation, activity and test | **Passed** |
+  | Fresh-process reload parity | **Passed** |
+  | Stage diagnostics (PID and checkpoint lines) | **Passed** |
+  | BYOD | Not assessed in this run (toggles not ticked); passed on Kaggle T4 at this head |
+  | Export re-run, repeated Run all | Not assessed in this run |
+
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated. The
+  evidence bundle itself was not supplied, so its contents were not inspected for this run.
+
+**Status: Candidate.** Hosted evidence at `d55d51c` now covers every mandatory stage on both Colab T4 and
+Kaggle T4, the R1 entry path on Colab, and BYOD on Kaggle. Promotion is the maintainer's decision.

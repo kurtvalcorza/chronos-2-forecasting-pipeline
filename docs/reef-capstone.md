@@ -1,6 +1,6 @@
 # Philippine Reef Heat-Stress Outlook
 
-**Status: Candidate — a Kaggle T4 Run all with BYOD passed at `77a116d` and at `d55d51c`; a saved Colab T4 Run all is pending.**
+**Status: Candidate — complete hosted Run all at `d55d51c` on Colab T4 and on Kaggle T4 (with BYOD); awaiting maintainer review.**
 
 The standalone guided notebook compares Chronos-2, persistence and a seasonal reference
 on five NOAA Coral Reef Watch Philippine regional HotSpot series. It forecasts 28 daily
