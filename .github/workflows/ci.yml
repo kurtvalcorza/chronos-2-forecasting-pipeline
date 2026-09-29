@@ -49,6 +49,9 @@ jobs:
       - name: Standalone notebook parity (NOTEBOOK_SPEC 1.1 PAR3)
         run: uv run python tools/build_notebook.py --check
 
+      - name: Dengue capstone generation parity
+        run: uv run python tools/build_dengue_capstone.py --check
+
   integration:
     name: CPU live tutorial against pinned weights
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'

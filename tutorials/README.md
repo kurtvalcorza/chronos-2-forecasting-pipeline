@@ -10,6 +10,24 @@ seasonal forecasts, derived DHW, validation experiments, optional BYOD and porta
 **Candidate; review findings R1–R6/V1 addressed in source. Revision `d55d51c` passed a complete Colab T4 Run all from a Python 3.13 kernel, and a complete Kaggle T4 Run all with BYOD; printed metrics match across runs. Earlier Colab runs on 2026-09-28 were incomplete (three disconnects at the first stage and one quantile-crossing refusal, now handled). Awaiting maintainer review.**
 [Build and qualification notes](../docs/reef-capstone.md) · [review fixes](../docs/reef-review-fixes.md).
 
+## Philippine dengue capstone — Candidate
+
+[`DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb`](DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb)
+is a standalone **E2E / GUIDED** notebook targeting DIMER Notebook Specification 2.2.
+It compares Chronos-2, case-only and weather-informed Mitra, Ridge, persistence and seasonal
+baselines on 832 Quezon City records. The approved scope is an **exploratory published-source-block
+benchmark**: weekly timing, case–weather alignment and historical publication availability
+are unverified. Revision `0.2.0-candidate` addresses the 2026-09-28 Notebook Review Framework v1
+findings: visible forecast and error tables, shared BYOD value checks with a context preflight, and
+reconstruction from the exported bundle alone. A fresh Colab T4 Run all of that exact revision
+passed on 2026-09-28, including real-model reload and bundle reconstruction. Hosted BYOD
+qualification and learner observation remain pending.
+
+Generate with `python tools/build_dengue_capstone.py`; verify with `--check`.
+It carries a separate hashed dependency lock compatible with Mitra 1.5.0, uses in-context
+adaptation without gradient training, and accepts optional aggregate BYOD with six complete
+source years. See [implementation and evidence notes](../docs/dengue-capstone.md).
+
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/tutorials/chronos_2_forecasting_colab.ipynb)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-amazon%2Fchronos--2-ffcc4d?style=flat)](https://huggingface.co/amazon/chronos-2)
