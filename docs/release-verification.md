@@ -527,3 +527,49 @@ recorded as observations, not evidence. They do show `prepare` completing twice 
 
 **Status: Candidate.** The `77a116d` Kaggle run is complete hosted evidence for every mandatory stage
 and for BYOD. A saved Colab Run all is still needed if the release gate requires Colab.
+
+### Kaggle T4 execution of `d55d51c` with BYOD — 2026-09-29
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-29 | `d55d51c` / `238285bda22a` | Kaggle, Tesla T4 (`kurtvalcorza/dimer-nb2-philippine-reef-heat-stress-capstone` v2), fresh nbclient kernel on Python 3.12.13 | Run all with `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED` ticked, path empty | 363.8 s | **PASSED** — 14/14 code cells executed in order, no errors. |
+
+- **Files.** Both are preserved byte for byte:
+  - the [executed notebook](execution-evidence/2026-09-29/DIMER_Philippine_Reef_Heat_Stress_Capstone_d55d51c_kaggle_byod.ipynb),
+    SHA-256 `11c1341f306fb5b32ee5bde6819b0e8f4962ec45bcae6e59617830d56e641946`;
+  - the executor's [run summary](execution-evidence/2026-09-29/DIMER_Philippine_Reef_Heat_Stress_Capstone_d55d51c_kaggle_run_summary.json),
+    SHA-256 `1c773bdff499f999af8ce135c9c30fa5ba9375ab16622891490c3799b1964a19`.
+- **Source match.** The executor fetched the notebook at the full commit SHA and verified blob
+  `238285bda22a83a12238b2a0001f96396ea47144`. It then changed only the two `# @param` toggle lines
+  (input blob `8fe90c98f4ce`). `inspect_run.py` confirms that is the only source difference and that
+  execution counts run 1–14 in order.
+- **Runtime.** Same Kaggle GPU image as the `77a116d` run (`sha256:37c64f7dd9c5…`); Tesla T4, driver
+  580.159.04. The Hugging Face cache was empty at start.
+- **Diagnostics from `d55d51c`, observed working.**
+  - `prepare` printed `child pid 149 launched`, `[runner pid 149] imports loaded; stage prepare` and
+    `Loaded 76220 regional daily records from the verified archive.`
+  - Every stage log opens with `=== attempt started … ===` and closes with `=== exit 0 after … s ===`.
+- **Parity with the `77a116d` run.** All model and data outputs are byte-identical to the `77a116d`
+  Kaggle run: the baseline, validation, activity and test forecasts, `forecasts.csv`, `metrics.json`,
+  `metrics.csv`, `outlook.csv`, the origin manifest, the seasonal reference, `failure_examples.csv`
+  and the BYOD forecasts. The files that differ hold only:
+  - stage timings;
+  - the runner and `reef_runtime.py` digests, which the logging change was expected to alter;
+  - checksums and bundle entries derived from those.
+- **Journeys.**
+
+  | Journey | Verdict |
+  |---|---|
+  | Default Run all, all mandatory stages | **Passed** |
+  | Real Chronos-2 validation, activity and test | **Passed** (1 activity crossing day of 0.000023 °C, rearranged) |
+  | Fresh-process reload parity | **Passed** |
+  | BYOD with the generated example | **Passed** (`byod/bae569f03fe0b80f/`) |
+  | Stage diagnostics (PID, checkpoints, per-attempt logs) | **Passed** |
+  | Entry from a non-3.12 kernel | Not assessed in this run |
+  | Repeated Run all in a warm runtime | Not assessed in this run |
+
+- **Evidence boundary.** The Kaggle executor ran the committed bytes; the outputs, run summary and run
+  files were inspected and compared with the `77a116d` run. Kaggle is not Colab.
+
+**Status: Candidate.** This is complete hosted evidence for the current head on Kaggle T4. A saved
+Colab Run all is still needed if the release gate requires Colab.

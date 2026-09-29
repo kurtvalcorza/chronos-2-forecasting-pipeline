@@ -7,7 +7,7 @@ is a NOTEBOOK_SPEC 2.2 `TASK-INFERENCE` / `GUIDED` notebook for a fresh Colab T4
 its own isolated Python 3.12.13 environment.
 Its embedded NOAA sample supports a chronological comparison of Chronos-2, persistence and
 seasonal forecasts, derived DHW, validation experiments, optional BYOD and portable evidence.
-**Candidate; review findings R1–R6/V1 addressed in source. Revision `77a116d` passed a complete Kaggle T4 Run all with BYOD (14/14 cells, 339 s). Four Colab T4 runs on 2026-09-28 were incomplete (three disconnects at the first stage and one quantile-crossing refusal, now handled). A saved Colab Run all is pending.**
+**Candidate; review findings R1–R6/V1 addressed in source. Revisions `77a116d` and `d55d51c` each passed a complete Kaggle T4 Run all with BYOD (14/14 cells, with byte-identical forecasts and metrics). Four Colab T4 runs on 2026-09-28 were incomplete (three disconnects at the first stage and one quantile-crossing refusal, now handled). A saved Colab Run all is pending.**
 [Build and qualification notes](../docs/reef-capstone.md) · [review fixes](../docs/reef-review-fixes.md).
 
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
