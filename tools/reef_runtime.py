@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import io
 import json
+import os
 import platform
 import time
 import zipfile
@@ -143,6 +144,7 @@ def reef_stage_forecasts(root: Path, panel: pd.DataFrame, plan: pd.DataFrame, st
 
 def reef_prepare(root: Path) -> None:
     panel = reef_load_data(root)
+    print(f"Loaded {len(panel)} regional daily records from the verified archive.", flush=True)
     origins = origin_manifest(panel)
     origins.to_csv(root / "origin_manifest.csv", index=False)
     seasonal = fit_seasonal(panel)
@@ -895,6 +897,8 @@ def reef_main() -> None:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--csv", type=Path)
     args = parser.parse_args()
+    # Checkpoint: the child started and its imports loaded (separates launch from stage failures).
+    print(f"[runner pid {os.getpid()}] imports loaded; stage {args.stage}", flush=True)
     root = args.root.resolve()
     if args.stage == "byod":
         reef_byod(root, args.csv)

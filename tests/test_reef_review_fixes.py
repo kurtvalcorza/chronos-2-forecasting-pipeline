@@ -465,7 +465,7 @@ def test_child_stages_get_clean_environment_and_logs(notebook, tmp_path, monkeyp
     )
     helpers["run_logged"]([sys.executable, "-c", probe], "probe")
     assert "None Agg None" in capsys.readouterr().out
-    assert (tmp_path / "probe.log").read_text().strip() == "None Agg None"
+    assert "None Agg None" in (tmp_path / "probe.log").read_text().splitlines()
     with pytest.raises(RuntimeError, match="exit code 3") as failure:
         helpers["run_logged"](
             [sys.executable, "-c", "print('last words'); raise SystemExit(3)"], "fails"
@@ -479,6 +479,79 @@ def test_setup_and_stages_use_logged_runner(notebook):
     assert 'run_logged(command, f"stage_{name}")' in code
     assert "still working" in code
     assert '_ = (RUN_ROOT / "setup_summary.json").write_text' in code
+
+
+# Hosted runs 2026-09-28 (77a116d): stage diagnostics survive retries, interrupts and signals -----
+
+
+def test_retry_appends_to_the_stage_log(notebook, tmp_path, capsys):
+    import sys
+
+    helpers = _runner_helpers(notebook, tmp_path)
+    helpers["run_logged"]([sys.executable, "-c", "print('first attempt')"], "stage_x")
+    helpers["run_logged"]([sys.executable, "-c", "print('second attempt')"], "stage_x")
+    log = (tmp_path / "stage_x.log").read_text()
+    assert log.count("=== attempt started") == 2
+    assert log.count("=== exit 0") == 2
+    assert log.index("first attempt") < log.index("second attempt")
+    out = capsys.readouterr().out
+    assert out.count("second attempt") == 1 and out.count("first attempt") == 1
+    assert "child pid" in out
+
+
+def test_failure_tail_covers_only_the_current_attempt(notebook, tmp_path):
+    import sys
+
+    helpers = _runner_helpers(notebook, tmp_path)
+    helpers["run_logged"]([sys.executable, "-c", "print('old attempt')"], "stage_y")
+    with pytest.raises(RuntimeError, match="exit code 2") as failure:
+        helpers["run_logged"]([sys.executable, "-c", "raise SystemExit(2)"], "stage_y")
+    assert "old attempt" not in str(failure.value)
+
+
+def test_interrupted_cell_stops_its_child(notebook, tmp_path):
+    import subprocess
+    import sys
+    import types
+
+    started = []
+
+    class InterruptedPopen(subprocess.Popen):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            started.append(self)
+
+        def wait(self, timeout=None):
+            if timeout == 5:
+                raise KeyboardInterrupt
+            return super().wait(timeout)
+
+    helpers = _runner_helpers(notebook, tmp_path)
+    helpers["subprocess"] = types.SimpleNamespace(
+        Popen=InterruptedPopen,
+        STDOUT=subprocess.STDOUT,
+        TimeoutExpired=subprocess.TimeoutExpired,
+    )
+    with pytest.raises(KeyboardInterrupt):
+        helpers["run_logged"]([sys.executable, "-c", "import time; time.sleep(120)"], "slow")
+    assert len(started) == 1 and started[0].poll() is not None
+
+
+@pytest.mark.skipif(__import__("sys").platform == "win32", reason="POSIX signal exit codes")
+def test_signal_exit_is_named(notebook, tmp_path):
+    import sys
+
+    helpers = _runner_helpers(notebook, tmp_path)
+    kill = "import os, signal; os.kill(os.getpid(), signal.SIGKILL)"
+    with pytest.raises(RuntimeError, match="signal SIGKILL"):
+        helpers["run_logged"]([sys.executable, "-c", kill], "killed")
+
+
+def test_stage_child_checkpoints(notebook):
+    code = "\n".join("".join(c["source"]) for c in notebook["cells"] if c["cell_type"] == "code")
+    assert '[PYTHON, "-u", "-X", "faulthandler", RUN_ROOT / "reef_runner.py"' in code
+    assert "imports loaded; stage" in code
+    assert "regional daily records from the verified archive" in code
 
 
 # Hosted run 2026-09-28 (2de49e1): Chronos-2 emitted crossing quantiles in the activity stage ----

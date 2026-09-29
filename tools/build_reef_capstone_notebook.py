@@ -123,32 +123,59 @@ def resource_note():
         memory = "RAM state unavailable"
     return f"{memory}, disk free {shutil.disk_usage(RUN_ROOT).free / 1e9:.0f} GB"
 def run_logged(command, log_name, echo=True):
-    # Run a child with its output in logs/<name>.log. Poll it, echo new lines, and print a
-    # heartbeat every 30 s so a long silent step is visibly alive; on failure show the log tail.
+    # Run a child with its output appended to logs/<name>.log under a per-attempt header, so a
+    # retry keeps the earlier attempt's log. Poll it, echo new lines, and print a heartbeat every
+    # 30 s so a long silent step is visibly alive; on failure show the log tail. An interrupted
+    # cell stops its child instead of leaving it running, and a signal is reported by name.
+    import signal
     started = last_beat = time.perf_counter()
     log_path, shown, returncode = LOG_DIR / f"{log_name}.log", 0, None
-    with log_path.open("w", encoding="utf-8") as log:
+    with log_path.open("a", encoding="utf-8") as log:
+        log.write(f"=== attempt started {time.strftime('%Y-%m-%d %H:%M:%S')} ===\\n")
+        log.flush()
+        offset = log_path.stat().st_size
+        def attempt_text():
+            return log_path.read_bytes()[offset:].decode("utf-8", errors="replace")
         process = subprocess.Popen([str(part) for part in command], stdout=log,
                                    stderr=subprocess.STDOUT, env=child_environment())
-        while returncode is None:
-            try:
-                returncode = process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                pass
-            text = log_path.read_text(encoding="utf-8", errors="replace")
-            lines = text.splitlines()
-            complete = lines if text.endswith("\\n") or returncode is not None else lines[:-1]
-            if echo:
-                for line in complete[shown:]:
-                    print(line, flush=True)
-            shown = max(shown, len(complete))
-            if returncode is None and time.perf_counter() - last_beat >= 30:
-                print(f"  ... {log_name} still working, {time.perf_counter() - started:.0f} s"
-                      f" ({resource_note()})", flush=True)
-                last_beat = time.perf_counter()
+        if echo:
+            print(f"  child pid {process.pid} launched", flush=True)
+        try:
+            while returncode is None:
+                try:
+                    returncode = process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+                text = attempt_text()
+                lines = text.splitlines()
+                complete = lines if text.endswith("\\n") or returncode is not None else lines[:-1]
+                if echo:
+                    for line in complete[shown:]:
+                        print(line, flush=True)
+                shown = max(shown, len(complete))
+                if returncode is None and time.perf_counter() - last_beat >= 30:
+                    print(f"  ... {log_name} still working, {time.perf_counter() - started:.0f} s"
+                          f" ({resource_note()})", flush=True)
+                    last_beat = time.perf_counter()
+        finally:
+            if returncode is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                print(f"  {log_name} interrupted; child pid {process.pid} stopped", flush=True)
+        log.write(f"=== exit {returncode} after {time.perf_counter() - started:.0f} s ===\\n")
     if returncode:
-        tail = "\\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-30:])
-        raise RuntimeError(f"{log_name} failed with exit code {returncode}; log: {log_path}\\n{tail}")
+        tail = "\\n".join(attempt_text().splitlines()[-30:])
+        reason = f"exit code {returncode}"
+        if returncode < 0:
+            try:
+                reason = f"signal {signal.Signals(-returncode).name} ({reason})"
+            except ValueError:
+                pass
+        raise RuntimeError(f"{log_name} failed with {reason}; log: {log_path}\\n{tail}")
     return time.perf_counter() - started
 run_logged([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "uv==0.10.12"],
            "setup_uv", echo=False)
@@ -258,7 +285,9 @@ SOURCE_IDENTITY["runner_sha256"] = hashlib.sha256(RUNNER_SOURCE.encode()).hexdig
 (RUN_ROOT / "source_identity.json").write_text(json.dumps(SOURCE_IDENTITY, indent=2))
 def run_stage(name, *extra):
     print(f"[{time.strftime('%H:%M:%S')}] stage {name} started ({resource_note()})", flush=True)
-    command = [PYTHON, RUN_ROOT / "reef_runner.py", name, "--root", RUN_ROOT, *extra]
+    # -u and faulthandler: a crash inside the child leaves its Python traceback in the log.
+    command = [PYTHON, "-u", "-X", "faulthandler", RUN_ROOT / "reef_runner.py", name,
+               "--root", RUN_ROOT, *extra]
     seconds = run_logged(command, f"stage_{name}")
     print(f"[{time.strftime('%H:%M:%S')}] stage {name} finished in {seconds:.0f} s", flush=True)
 run_stage("prepare")

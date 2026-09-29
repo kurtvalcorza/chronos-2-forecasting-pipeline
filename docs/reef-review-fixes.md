@@ -234,6 +234,33 @@ unwritten page cache. The next revision flushes the environment to disk (`os.syn
 first stage. Every stage start and heartbeat prints available RAM, unwritten data and free disk, so
 a further disconnect leaves evidence in the notebook.
 
+## Hosted runs of `77a116d` — 2026-09-28
+
+The maintainer's Colab run disconnected at the start of `prepare` again. The saved notebook stops at
+`stage prepare started`, with 11.6 GB RAM available, and shows no child error and no heartbeat. A
+Kaggle T4 Run all of the same commit, with BYOD, passed all 14 code cells in 339 s. Two agent-driven
+Colab T4 attempts completed `prepare` in 4 s and every model stage. The stage code is therefore not
+the cause, and the Colab disconnects remain unexplained.
+
+The saved notebook could not show where the child was when output stopped. The next revision closes
+those gaps:
+
+- **Launch and import checkpoints.** The parent prints the child's PID, and the runner prints
+  `[runner pid N] imports loaded; stage <name>` before any work. `prepare` reports the number of
+  records it loaded.
+- **Crash traces.** Children run with `python -u -X faulthandler`, so a segmentation fault or abort
+  leaves a Python traceback in the stage log.
+- **Logs kept across retries.** Stage logs are appended under an `=== attempt started ... ===` header
+  and end with `=== exit <code> after <n> s ===`. Re-running a stage no longer erases the previous
+  attempt's log. A failure shows only the current attempt's tail.
+- **No orphaned children.** An interrupted cell terminates its child (then kills it after 10 s)
+  and says so.
+- **Signals named.** A negative exit code is reported as the signal's name, for example
+  `signal SIGKILL (exit code -9)`.
+
+User-visible changes: the stage output gains the child-PID line, the runner checkpoint line and the
+`prepare` record count. Stage logs now hold every attempt.
+
 ## Remaining gates
 
 1. Fresh Colab T4 default Run all on this head, recording the kernel and environment interpreters,
