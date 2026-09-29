@@ -1,0 +1,65 @@
+{
+  "status": "passed",
+  "scope": "data assets only; no hosted/model execution",
+  "archive": {
+    "filename": "noaa_crw_philippines_2026-09-28.zip",
+    "bytes": 1040559,
+    "sha256": "320a04998ff0f0ce4a66264fc83b585c0fafd653844d533468d98a84d6d07b43",
+    "format": "zip"
+  },
+  "regions": [
+    {
+      "region_id": "central",
+      "rows": 15244,
+      "missing_dates": 0,
+      "complete_84_day_windows": 15161,
+      "dhw_max_absolute_error": 4.285714285856557e-05
+    },
+    {
+      "region_id": "eastern",
+      "rows": 15244,
+      "missing_dates": 0,
+      "complete_84_day_windows": 15161,
+      "dhw_max_absolute_error": 4.285714285856557e-05
+    },
+    {
+      "region_id": "northern",
+      "rows": 15244,
+      "missing_dates": 0,
+      "complete_84_day_windows": 15161,
+      "dhw_max_absolute_error": 4.285714285856557e-05
+    },
+    {
+      "region_id": "southern",
+      "rows": 15219,
+      "missing_dates": 25,
+      "complete_84_day_windows": 14880,
+      "dhw_max_absolute_error": 4.285714285856557e-05
+    },
+    {
+      "region_id": "western",
+      "rows": 15219,
+      "missing_dates": 25,
+      "complete_84_day_windows": 14880,
+      "dhw_max_absolute_error": 4.285714285856557e-05
+    }
+  ],
+  "total_rows": 76170,
+  "total_source_bytes": 6324302,
+  "tests": {
+    "five_member_allowlist": true,
+    "source_hashes_match_audit": true,
+    "member_hashes": true,
+    "calendar_gap_lists": true,
+    "no_duplicate_dates": true,
+    "finite_numeric_fields": true,
+    "dhw_complete_calendar_windows": true,
+    "deterministic_rebuild_same_environment": true,
+    "original_audit_bytes_preserved": true
+  },
+  "limitations": [
+    "No hosted run performed",
+    "ZIP deflate byte reproducibility tested in this Python/zlib environment; original supplied archive SHA is authoritative",
+    "Regional stress indicators do not establish ecological damage"
+  ]
+}

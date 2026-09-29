@@ -24,6 +24,7 @@ PACKAGE = "chronos2_pipeline"
 REPO_NAME = "chronos-2-forecasting-pipeline"
 NOTEBOOK_NAME = "chronos_2_forecasting_colab.ipynb"
 WORKSHOP_NOTEBOOK_NAME = "DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb"
+REEF_NOTEBOOK_NAME = "DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb"
 EXPECTED_PROFILE = "TASK-INFERENCE"
 EXPECTED_MODEL_ID = "amazon/chronos-2"
 PIPELINE_CLASS = "LoadedModel"
@@ -631,7 +632,7 @@ def validate_notebooks() -> None:
     notebooks = sorted(tutorials.glob("*.ipynb"))
     notebook_names = {path.name for path in notebooks}
     dengue_name = "DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb"
-    expected_names = {NOTEBOOK_NAME, WORKSHOP_NOTEBOOK_NAME, dengue_name}
+    expected_names = {NOTEBOOK_NAME, WORKSHOP_NOTEBOOK_NAME, REEF_NOTEBOOK_NAME, dengue_name}
     _check(
         notebook_names == expected_names,
         f"tutorial notebooks must be exactly {sorted(expected_names)}, found {sorted(notebook_names)}",
@@ -646,6 +647,15 @@ def validate_notebooks() -> None:
     _validate_parity(path, notebook, code_cells, build)
     _validate_notebook_content(path, code_cells, markdown, embedded)
     registry = _read(tutorials / "README.md")
+    reef = json.loads(_read(tutorials / REEF_NOTEBOOK_NAME))
+    reef_builder = _load_tool("build_reef_capstone_notebook")
+    _check(reef == reef_builder.build(), "Reef notebook differs from deterministic builder")
+    _check(reef["metadata"]["dimer"]["notebook_spec"] == "2.2", "Reef spec declaration missing")
+    for cell in reef["cells"]:
+        if cell["cell_type"] == "code":
+            ast.parse("".join(cell["source"]))
+            _check(not cell["outputs"], "Reef source notebook must have clean outputs")
+    _check(f"`{REEF_NOTEBOOK_NAME}`" in registry, "Reef notebook absent from registry")
     dengue_build = _load_tool("build_dengue_capstone")
     dengue = json.loads(_read(tutorials / dengue_name))
     _check(dengue == dengue_build.build(), "Dengue notebook generation parity failed")

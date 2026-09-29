@@ -1,5 +1,15 @@
 # Tutorials
 
+## Philippine Reef Heat-Stress Outlook capstone
+
+[`DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb`](DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb)
+is a NOTEBOOK_SPEC 2.2 `TASK-INFERENCE` / `GUIDED` notebook for a fresh Colab T4; setup provisions
+its own isolated Python 3.12.13 environment.
+Its embedded NOAA sample supports a chronological comparison of Chronos-2, persistence and
+seasonal forecasts, derived DHW, validation experiments, optional BYOD and portable evidence.
+**Candidate; review findings R1–R6/V1 addressed in source. Revision `d55d51c` passed a complete Colab T4 Run all from a Python 3.13 kernel, and a complete Kaggle T4 Run all with BYOD; printed metrics match across runs. Earlier Colab runs on 2026-09-28 were incomplete (three disconnects at the first stage and one quantile-crossing refusal, now handled). Awaiting maintainer review.**
+[Build and qualification notes](../docs/reef-capstone.md) · [review fixes](../docs/reef-review-fixes.md).
+
 ## Philippine dengue capstone — Candidate
 
 [`DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb`](DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb)

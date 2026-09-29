@@ -1,0 +1,46 @@
+{
+  "status": "implemented_cpu_verified",
+  "files": [
+    "tools/reef_core.py",
+    "tests/test_reef_core.py"
+  ],
+  "tests": {
+    "command": "python -m pytest --noconftest tests/test_reef_core.py -q",
+    "passed": 15,
+    "exit_code": 0,
+    "interpreter": "mitra-classifier-pipeline/.venv/Scripts/python.exe",
+    "baseline": "New core and focused test module; no prior reef implementation. Existing repository suite not run by this agent."
+  },
+  "data_check": {
+    "regions": 5,
+    "validation_origins": 115,
+    "test_origins": 184,
+    "test_2024_each_region": 23,
+    "test_2025_northern_central_eastern_each": 23,
+    "test_2025_western_southern_each": 0,
+    "dhw_max_abs_error": 4.285714285856557e-05,
+    "complete_dhw_windows_per_complete_region": 15161,
+    "complete_dhw_windows_per_gapped_region": 14880
+  },
+  "api": [
+    "parse_noaa(text,region)",
+    "validate_byod(frame,units=\"degC\",semantics_confirmed=False)",
+    "daily_panel(frames)",
+    "reconstruct_dhw(hotspot_series)",
+    "context_at(panel,region,origin,length=365)",
+    "origin_manifest(panel)",
+    "fit_seasonal(panel)",
+    "baseline_forecasts(context,dates,seasonal,region)",
+    "compose_dhw(context,predictions)",
+    "forecast_frame(panel,region,origin,arm,raw,split,quantiles=None)",
+    "evaluate_forecasts(frame,expected_arms=None)"
+  ],
+  "limitations": [
+    "No GPU/model inference or hosted qualification performed.",
+    "Use evaluate_forecasts expected_arms to reject wholly absent model arms.",
+    "Origin eligibility imposes annual end boundaries, matching specification verified counts.",
+    "Delayed sensitivity is not implemented in this core; optional notebook section must describe deferred status or implement calendar-aware hidden-day logic.",
+    "compose_dhw receives an already continuous context; context_at enforces this before default use.",
+    "BYOD validator requires365 days; backtest outcome support is separately checked by origin_manifest."
+  ]
+}

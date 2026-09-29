@@ -1,0 +1,657 @@
+{
+  "retrieved_utc": "2026-09-28T05:26:03.426497+00:00",
+  "stations": [
+    {
+      "region": "northern",
+      "url": "https://coralreefwatch.noaa.gov/product/vs/data/northern_philippines.txt",
+      "bytes": 1265691,
+      "sha256": "a963b9a5b13283f8bf8d9b8ce577db887e7ec9792e36b05b8a59c62eb424b3ae",
+      "rows": 15244,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "duplicate_dates": 0,
+      "missing_dates": [],
+      "nulls": {
+        "SST_MIN": 0,
+        "SST_MAX": 0,
+        "SST@90th_HS": 0,
+        "SSTA@90th_HS": 0,
+        "90th_HS>0": 0,
+        "DHW_from_90th_HS>1": 0,
+        "BAA_7day_max": 0
+      },
+      "nonfinite": 0,
+      "ranges": {
+        "SST_MIN": [
+          21.81,
+          30.13
+        ],
+        "SST_MAX": [
+          25.65,
+          33.16
+        ],
+        "SST@90th_HS": [
+          25.29,
+          31.81
+        ],
+        "SSTA@90th_HS": [
+          -1.5814,
+          2.7306
+        ],
+        "90th_HS>0": [
+          0.0,
+          2.48
+        ],
+        "DHW_from_90th_HS>1": [
+          0.0,
+          18.4271
+        ],
+        "BAA_7day_max": [
+          0.0,
+          4.0
+        ]
+      },
+      "sst_order_violations": 0,
+      "years": {
+        "2020": {
+          "rows": 366,
+          "days_DHW_ge4": 135,
+          "days_DHW_ge8": 93
+        },
+        "2021": {
+          "rows": 365,
+          "days_DHW_ge4": 89,
+          "days_DHW_ge8": 28
+        },
+        "2022": {
+          "rows": 365,
+          "days_DHW_ge4": 111,
+          "days_DHW_ge8": 49
+        },
+        "2023": {
+          "rows": 365,
+          "days_DHW_ge4": 93,
+          "days_DHW_ge8": 0
+        },
+        "2024": {
+          "rows": 366,
+          "days_DHW_ge4": 173,
+          "days_DHW_ge8": 125
+        },
+        "2025": {
+          "rows": 365,
+          "days_DHW_ge4": 93,
+          "days_DHW_ge8": 31
+        },
+        "2026": {
+          "rows": 269,
+          "days_DHW_ge4": 100,
+          "days_DHW_ge8": 53
+        }
+      },
+      "header": [
+        "Name:",
+        "Northern Philippines",
+        " ",
+        "Polygon Middle Longitude:",
+        "121.1250 ",
+        " ",
+        "Polygon Middle Latitude:",
+        "17.7500 ",
+        " ",
+        "Averaged Maximum Monthly Mean:",
+        "29.3190",
+        " ",
+        "Averaged Monthly Mean (Jan-Dec):",
+        "25.8719 25.8707 26.5681 27.8169 28.9228 29.3190 29.1547 29.0952 28.8795 28.4326 27.5883 26.5747",
+        " ",
+        "First Valid DHW Date:",
+        "1985 25 03",
+        " ",
+        "First Valid BAA Date:",
+        "1985 31 03",
+        " ",
+        "YYYY MM DD SST_MIN SST_MAX SST@90th_HS SSTA@90th_HS 90th_HS>0 DHW_from_90th_HS>1 BAA_7day_max"
+      ],
+      "calendar_dhw_check": {
+        "threshold": "HotSpot >= 1 C",
+        "window_days": 84,
+        "compared_days": 15161,
+        "excluded_days": 83,
+        "max_absolute_error": 4.285714285856557e-05
+      }
+    },
+    {
+      "region": "central",
+      "url": "https://coralreefwatch.noaa.gov/product/vs/data/central_philippines.txt",
+      "bytes": 1265690,
+      "sha256": "84ce50cf4698d05f8f0e45a524ca381c57b3f8acef24b35bccb5f8e9bc936866",
+      "rows": 15244,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "duplicate_dates": 0,
+      "missing_dates": [],
+      "nulls": {
+        "SST_MIN": 0,
+        "SST_MAX": 0,
+        "SST@90th_HS": 0,
+        "SSTA@90th_HS": 0,
+        "90th_HS>0": 0,
+        "DHW_from_90th_HS>1": 0,
+        "BAA_7day_max": 0
+      },
+      "nonfinite": 0,
+      "ranges": {
+        "SST_MIN": [
+          23.38,
+          30.24
+        ],
+        "SST_MAX": [
+          25.46,
+          32.4
+        ],
+        "SST@90th_HS": [
+          24.74,
+          31.75
+        ],
+        "SSTA@90th_HS": [
+          -1.6375,
+          2.8539
+        ],
+        "90th_HS>0": [
+          0.0,
+          2.15
+        ],
+        "DHW_from_90th_HS>1": [
+          0.0,
+          15.0671
+        ],
+        "BAA_7day_max": [
+          0.0,
+          4.0
+        ]
+      },
+      "sst_order_violations": 0,
+      "years": {
+        "2020": {
+          "rows": 366,
+          "days_DHW_ge4": 129,
+          "days_DHW_ge8": 88
+        },
+        "2021": {
+          "rows": 365,
+          "days_DHW_ge4": 65,
+          "days_DHW_ge8": 0
+        },
+        "2022": {
+          "rows": 365,
+          "days_DHW_ge4": 85,
+          "days_DHW_ge8": 23
+        },
+        "2023": {
+          "rows": 365,
+          "days_DHW_ge4": 74,
+          "days_DHW_ge8": 0
+        },
+        "2024": {
+          "rows": 366,
+          "days_DHW_ge4": 143,
+          "days_DHW_ge8": 93
+        },
+        "2025": {
+          "rows": 365,
+          "days_DHW_ge4": 78,
+          "days_DHW_ge8": 0
+        },
+        "2026": {
+          "rows": 269,
+          "days_DHW_ge4": 99,
+          "days_DHW_ge8": 61
+        }
+      },
+      "header": [
+        "Name:",
+        "Central Philippines",
+        " ",
+        "Polygon Middle Longitude:",
+        "122.2250 ",
+        " ",
+        "Polygon Middle Latitude:",
+        "13.9500 ",
+        " ",
+        "Averaged Maximum Monthly Mean:",
+        "29.4649",
+        " ",
+        "Averaged Monthly Mean (Jan-Dec):",
+        "26.3312 26.4062 26.9643 28.2079 29.0951 29.4649 29.1777 29.0508 28.8687 28.7693 28.0604 27.0411",
+        " ",
+        "First Valid DHW Date:",
+        "1985 25 03",
+        " ",
+        "First Valid BAA Date:",
+        "1985 31 03",
+        " ",
+        "YYYY MM DD SST_MIN SST_MAX SST@90th_HS SSTA@90th_HS 90th_HS>0 DHW_from_90th_HS>1 BAA_7day_max"
+      ],
+      "calendar_dhw_check": {
+        "threshold": "HotSpot >= 1 C",
+        "window_days": 84,
+        "compared_days": 15161,
+        "excluded_days": 83,
+        "max_absolute_error": 4.285714285856557e-05
+      }
+    },
+    {
+      "region": "western",
+      "url": "https://coralreefwatch.noaa.gov/product/vs/data/western_philippines.txt",
+      "bytes": 1263615,
+      "sha256": "5521c5ac1415fdb986b533dd2aa6c0116a736093bbb3b839362956b935daa65f",
+      "rows": 15219,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "duplicate_dates": 0,
+      "missing_dates": [
+        "2025-01-05",
+        "2025-01-13",
+        "2025-10-02",
+        "2025-10-03",
+        "2025-10-04",
+        "2025-10-05",
+        "2025-10-06",
+        "2025-10-07",
+        "2025-10-08",
+        "2025-10-09",
+        "2025-10-10",
+        "2025-10-11",
+        "2025-10-12",
+        "2025-10-13",
+        "2025-10-14",
+        "2025-10-15",
+        "2025-10-16",
+        "2025-10-17",
+        "2025-10-18",
+        "2025-10-19",
+        "2025-10-20",
+        "2025-10-21",
+        "2025-10-22",
+        "2025-10-23",
+        "2026-03-24"
+      ],
+      "nulls": {
+        "SST_MIN": 0,
+        "SST_MAX": 0,
+        "SST@90th_HS": 0,
+        "SSTA@90th_HS": 0,
+        "90th_HS>0": 0,
+        "DHW_from_90th_HS>1": 0,
+        "BAA_7day_max": 0
+      },
+      "nonfinite": 0,
+      "ranges": {
+        "SST_MIN": [
+          24.01,
+          30.41
+        ],
+        "SST_MAX": [
+          25.67,
+          32.42
+        ],
+        "SST@90th_HS": [
+          25.14,
+          31.67
+        ],
+        "SSTA@90th_HS": [
+          -2.0419,
+          2.7074
+        ],
+        "90th_HS>0": [
+          0.0,
+          2.27
+        ],
+        "DHW_from_90th_HS>1": [
+          0.0,
+          12.1271
+        ],
+        "BAA_7day_max": [
+          0.0,
+          4.0
+        ]
+      },
+      "sst_order_violations": 0,
+      "years": {
+        "2020": {
+          "rows": 366,
+          "days_DHW_ge4": 93,
+          "days_DHW_ge8": 52
+        },
+        "2021": {
+          "rows": 365,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2022": {
+          "rows": 365,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2023": {
+          "rows": 365,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2024": {
+          "rows": 366,
+          "days_DHW_ge4": 110,
+          "days_DHW_ge8": 67
+        },
+        "2025": {
+          "rows": 341,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2026": {
+          "rows": 268,
+          "days_DHW_ge4": 69,
+          "days_DHW_ge8": 0
+        }
+      },
+      "header": [
+        "Name:",
+        "Western Philippines",
+        " ",
+        "Polygon Middle Longitude:",
+        "119.2250 ",
+        " ",
+        "Polygon Middle Latitude:",
+        "10.5000 ",
+        " ",
+        "Averaged Maximum Monthly Mean:",
+        "29.5744",
+        " ",
+        "Averaged Monthly Mean (Jan-Dec):",
+        "27.0452 26.9262 27.4969 28.7737 29.5744 29.5368 29.1178 28.9615 28.8717 28.9941 28.7477 28.0026",
+        " ",
+        "First Valid DHW Date:",
+        "1985 25 03",
+        " ",
+        "First Valid BAA Date:",
+        "1985 31 03",
+        " ",
+        "YYYY MM DD SST_MIN SST_MAX SST@90th_HS SSTA@90th_HS 90th_HS>0 DHW_from_90th_HS>1 BAA_7day_max"
+      ],
+      "calendar_dhw_check": {
+        "threshold": "HotSpot >= 1 C",
+        "window_days": 84,
+        "compared_days": 14880,
+        "excluded_days": 364,
+        "max_absolute_error": 4.285714285856557e-05
+      }
+    },
+    {
+      "region": "eastern",
+      "url": "https://coralreefwatch.noaa.gov/product/vs/data/eastern_philippines.txt",
+      "bytes": 1265690,
+      "sha256": "b4d7c93e8232947f8dfce0c6203f9e019e9e62b8e41d7e8dd2d6d82e35c7ccee",
+      "rows": 15244,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "duplicate_dates": 0,
+      "missing_dates": [],
+      "nulls": {
+        "SST_MIN": 0,
+        "SST_MAX": 0,
+        "SST@90th_HS": 0,
+        "SSTA@90th_HS": 0,
+        "90th_HS>0": 0,
+        "DHW_from_90th_HS>1": 0,
+        "BAA_7day_max": 0
+      },
+      "nonfinite": 0,
+      "ranges": {
+        "SST_MIN": [
+          23.3,
+          30.14
+        ],
+        "SST_MAX": [
+          25.44,
+          32.22
+        ],
+        "SST@90th_HS": [
+          24.92,
+          31.58
+        ],
+        "SSTA@90th_HS": [
+          -2.0481,
+          2.4577
+        ],
+        "90th_HS>0": [
+          0.0,
+          2.05
+        ],
+        "DHW_from_90th_HS>1": [
+          0.0,
+          11.9086
+        ],
+        "BAA_7day_max": [
+          0.0,
+          4.0
+        ]
+      },
+      "sst_order_violations": 0,
+      "years": {
+        "2020": {
+          "rows": 366,
+          "days_DHW_ge4": 97,
+          "days_DHW_ge8": 0
+        },
+        "2021": {
+          "rows": 365,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2022": {
+          "rows": 365,
+          "days_DHW_ge4": 49,
+          "days_DHW_ge8": 0
+        },
+        "2023": {
+          "rows": 365,
+          "days_DHW_ge4": 83,
+          "days_DHW_ge8": 0
+        },
+        "2024": {
+          "rows": 366,
+          "days_DHW_ge4": 166,
+          "days_DHW_ge8": 82
+        },
+        "2025": {
+          "rows": 365,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2026": {
+          "rows": 269,
+          "days_DHW_ge4": 87,
+          "days_DHW_ge8": 36
+        }
+      },
+      "header": [
+        "Name:",
+        "Eastern Philippines",
+        " ",
+        "Polygon Middle Longitude:",
+        "123.9000 ",
+        " ",
+        "Polygon Middle Latitude:",
+        "10.9500 ",
+        " ",
+        "Averaged Maximum Monthly Mean:",
+        "29.3806",
+        " ",
+        "Averaged Monthly Mean (Jan-Dec):",
+        "26.6314 26.5392 26.9920 28.1114 28.9801 29.3806 29.1126 28.9466 28.9099 28.9724 28.4451 27.4278",
+        " ",
+        "First Valid DHW Date:",
+        "1985 25 03",
+        " ",
+        "First Valid BAA Date:",
+        "1985 31 03",
+        " ",
+        "YYYY MM DD SST_MIN SST_MAX SST@90th_HS SSTA@90th_HS 90th_HS>0 DHW_from_90th_HS>1 BAA_7day_max"
+      ],
+      "calendar_dhw_check": {
+        "threshold": "HotSpot >= 1 C",
+        "window_days": 84,
+        "compared_days": 15161,
+        "excluded_days": 83,
+        "max_absolute_error": 4.285714285856557e-05
+      }
+    },
+    {
+      "region": "southern",
+      "url": "https://coralreefwatch.noaa.gov/product/vs/data/southern_philippines.txt",
+      "bytes": 1263616,
+      "sha256": "3b04a206b4c95031c7ad53e6c5a01b1616f05bbf2c4010de9f3155d75dcdd933",
+      "rows": 15219,
+      "start": "1985-01-01",
+      "end": "2026-09-26",
+      "duplicate_dates": 0,
+      "missing_dates": [
+        "2025-01-05",
+        "2025-01-13",
+        "2025-10-02",
+        "2025-10-03",
+        "2025-10-04",
+        "2025-10-05",
+        "2025-10-06",
+        "2025-10-07",
+        "2025-10-08",
+        "2025-10-09",
+        "2025-10-10",
+        "2025-10-11",
+        "2025-10-12",
+        "2025-10-13",
+        "2025-10-14",
+        "2025-10-15",
+        "2025-10-16",
+        "2025-10-17",
+        "2025-10-18",
+        "2025-10-19",
+        "2025-10-20",
+        "2025-10-21",
+        "2025-10-22",
+        "2025-10-23",
+        "2026-03-24"
+      ],
+      "nulls": {
+        "SST_MIN": 0,
+        "SST_MAX": 0,
+        "SST@90th_HS": 0,
+        "SSTA@90th_HS": 0,
+        "90th_HS>0": 0,
+        "DHW_from_90th_HS>1": 0,
+        "BAA_7day_max": 0
+      },
+      "nonfinite": 0,
+      "ranges": {
+        "SST_MIN": [
+          23.66,
+          29.93
+        ],
+        "SST_MAX": [
+          26.62,
+          31.84
+        ],
+        "SST@90th_HS": [
+          26.28,
+          31.21
+        ],
+        "SSTA@90th_HS": [
+          -1.6242,
+          2.6716
+        ],
+        "90th_HS>0": [
+          0.0,
+          2.16
+        ],
+        "DHW_from_90th_HS>1": [
+          0.0,
+          10.2271
+        ],
+        "BAA_7day_max": [
+          0.0,
+          4.0
+        ]
+      },
+      "sst_order_violations": 0,
+      "years": {
+        "2020": {
+          "rows": 366,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2021": {
+          "rows": 365,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2022": {
+          "rows": 365,
+          "days_DHW_ge4": 0,
+          "days_DHW_ge8": 0
+        },
+        "2023": {
+          "rows": 365,
+          "days_DHW_ge4": 135,
+          "days_DHW_ge8": 0
+        },
+        "2024": {
+          "rows": 366,
+          "days_DHW_ge4": 195,
+          "days_DHW_ge8": 53
+        },
+        "2025": {
+          "rows": 341,
+          "days_DHW_ge4": 62,
+          "days_DHW_ge8": 0
+        },
+        "2026": {
+          "rows": 268,
+          "days_DHW_ge4": 85,
+          "days_DHW_ge8": 0
+        }
+      },
+      "header": [
+        "Name:",
+        "Southern Philippines",
+        " ",
+        "Polygon Middle Longitude:",
+        "122.9000 ",
+        " ",
+        "Polygon Middle Latitude:",
+        "7.4000  ",
+        " ",
+        "Averaged Maximum Monthly Mean:",
+        "29.0426",
+        " ",
+        "Averaged Monthly Mean (Jan-Dec):",
+        "27.4801 27.2714 27.6225 28.4510 28.9469 29.0426 28.7148 28.7121 28.8250 28.9460 28.7297 28.1214",
+        " ",
+        "First Valid DHW Date:",
+        "1985 25 03",
+        " ",
+        "First Valid BAA Date:",
+        "1985 31 03",
+        " ",
+        "YYYY MM DD SST_MIN SST_MAX SST@90th_HS SSTA@90th_HS 90th_HS>0 DHW_from_90th_HS>1 BAA_7day_max"
+      ],
+      "calendar_dhw_check": {
+        "threshold": "HotSpot >= 1 C",
+        "window_days": 84,
+        "compared_days": 14880,
+        "excluded_days": 364,
+        "max_absolute_error": 4.285714285856557e-05
+      }
+    }
+  ]
+}

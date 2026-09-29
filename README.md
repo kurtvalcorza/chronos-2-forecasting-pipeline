@@ -1,5 +1,10 @@
 # Chronos-2 Forecasting — DIMER Pipeline
 
+The [Philippine Reef Heat-Stress Outlook capstone](tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb)
+compares regional NOAA HotSpot forecasts and derived accumulated stress against simple baselines.
+It is a standalone guided notebook, **Candidate: complete hosted Run all recorded on Colab T4 and Kaggle T4; awaiting maintainer review**.
+See its [data and evidence notes](docs/reef-capstone.md).
+
 The new [Philippine dengue capstone](tutorials/DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb)
 compares case-only and weather-informed forecasting on Quezon City data. It is an exploratory
 source-block benchmark with unresolved source calendar/alignment limitations, and remains
