@@ -426,3 +426,104 @@ Notebook identity is the Git blob of `tutorials/DIMER_Philippine_Reef_Heat_Stres
 - **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
 
 **Status: Candidate.** A complete fresh-T4 Run all is still required.
+
+### Maintainer-supplied Colab execution of `77a116d` — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `77a116d` / `85835a14445b` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all, notebook unmodified | about 2 min to the disconnect | **INCOMPLETE** — the runtime disconnected at the start of `prepare`. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_77a116d.ipynb)
+  is preserved byte for byte. SHA-256 `03d7222959a2033340b14aeb6f5d668d4b552cddb781ce55e0c424434e811658`.
+- **Source match.** Identical to `77a116d`. The BYOD toggles were not ticked.
+- **Executed cells.** Execution counts 1–5 (`reef-003` to `reef-009`). Setup: locked sync 94 s, flush
+  1 s, 11.4/12.7 GB RAM available, 195 GB disk free. `reef-010` holds one line and no execution count:
+  `[22:03:49] stage prepare started (RAM available 11.6/12.7 GB, unwritten 0.0 GB, disk free 195 GB)`.
+- **Reading.** A child that exits non-zero raises `RuntimeError` with its log tail, and a healthy
+  `prepare` prints its origin table within 3–6 s. Neither appeared, and neither did the 30 s heartbeat.
+  So the kernel's output stopped within about 30 s of launching the child, which points at the Colab
+  session rather than the stage. This is an inference: the child's own log did not survive the session.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
+
+### Kaggle T4 execution of `77a116d` with BYOD — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `77a116d` / `85835a14445b` | Kaggle, Tesla T4 (`kurtvalcorza/dimer-nb2-philippine-reef-heat-stress-capstone` v1), fresh nbclient kernel on Python 3.12.13 | Run all with `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED` ticked, path empty | 339.4 s | **PASSED** — 14/14 code cells executed in order, no errors. |
+
+- **Files.** Both are preserved byte for byte:
+  - the [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_77a116d_kaggle_byod.ipynb),
+    SHA-256 `5bba7e4c914fec48350b3e8a6e47133a7dd439bbe9138c74ca371fe770032c6c`;
+  - the executor's [run summary](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_77a116d_kaggle_run_summary.json),
+    SHA-256 `2bba78f4800efb7f5271d10125bb14f841e847dafa63ff9f9456ccd1565be2d4`.
+- **Source match.** The executor fetched the notebook from `raw.githubusercontent.com` at the full
+  commit SHA and verified blob `85835a14445bfad8efc0a7df17affe1b21567f36` before running. It then
+  changed only the two `# @param` toggle lines (input blob `b50e783e8fd5`). `inspect_run.py` confirms
+  that is the only source difference and that cell ids and order are unchanged.
+- **Runtime.**
+  - Kaggle GPU image `sha256:37c64f7dd9c5…`; Tesla T4, driver 580.159.04; 31.3 GB RAM.
+  - The isolated environment reports Python 3.12.13, torch 2.9.1, chronos-forecasting 2.3.1,
+    NumPy 2.3.5, pandas 2.3.3 and transformers 4.57.6.
+  - The Hugging Face cache was empty at start.
+- **Stages.**
+
+  | Stage | Time | Result |
+  |---|---|---|
+  | Setup | 79 s sync, 8 s flush | Passed |
+  | `prepare` | 3 s | Passed. Test/validation origins: 46/23 for central, eastern and northern; 23/23 for southern and western |
+  | Baselines | 49 s | Passed; 299 origins |
+  | Validation | 34 s model time | Passed; 115 origins, 0 crossing days, peak GPU 0.51 GB |
+  | 180-day activity | 24 s model time | Passed; 1 crossing day of 0.000023 °C, rearranged |
+  | compare / lock | — | Passed; 365-day context retained |
+  | test / score | 39 s / 15 s | Passed; 184 origins, tables A–F printed |
+  | future | 9 s | Passed; origin 2026-09-26, 2 regions excluded for missing context |
+  | reload / report | 30 s / 24 s | Passed. Fresh-process baseline, DHW and real-model parity held; `reef_evidence.zip` exported (SHA-256 `06e593e41d4c…`) |
+  | BYOD | 9 s | Passed. `byod/bae569f03fe0b80f/` holds `forecasts.csv` and `receipt.json` (400 rows, 1 region, unscored) |
+
+- **Headline test result (14-day HotSpot MAE, °C).**
+
+  | Period | Chronos | Persistence | Seasonal |
+  |---|---|---|---|
+  | Full test | 0.153 | 0.152 | 0.213 |
+  | Common 2024 | 0.157 | 0.153 | 0.237 |
+  | 2025 (3 regions) | 0.137 | 0.139 | 0.150 |
+- **Kaggle-specific observations.**
+  - uv reported `Using CPython 3.12.13 interpreter at: /usr/bin/python3`. On this image the kernel's
+    Python is already 3.12.13, so the environment was built on it rather than on a downloaded Python.
+    The R1 path from a non-3.12 kernel is covered by the Colab runs above, not by this one.
+  - Every stage printed `Error in sitecustomize; ... No module named 'wrapt'`. The image's
+    `sitecustomize` is visible to an environment built on the image's Python. The message is not a
+    notebook error and did not affect any result.
+- **Journeys.**
+
+  | Journey | Verdict |
+  |---|---|
+  | Default Run all, all mandatory stages | **Passed** |
+  | Real Chronos-2 validation, activity and test | **Passed** |
+  | Fresh-process reload parity | **Passed** |
+  | BYOD with the generated example | **Passed** |
+  | Entry from a non-3.12 kernel | Not assessed in this run |
+  | Repeated Run all in a warm runtime | Not assessed in this run |
+
+- **Evidence boundary.** The Kaggle executor ran the committed bytes; the outputs, run summary and run
+  files were inspected. Kaggle is not Colab, so this run does not explain the Colab disconnects.
+
+### Agent-driven Colab T4 execution of `77a116d` (not preserved) — 2026-09-29
+
+Two further Colab T4 attempts were driven cell by cell through the Colab MCP bridge. Each fetched the
+committed bytes at the full SHA, verified the blob and ran the cells in the notebook kernel with
+`get_ipython().run_cell`.
+
+| Attempt | Setup | `prepare` | Model stages | test / score / future / reload / report |
+|---|---|---|---|---|
+| First | 87 s | 4 s | Completed | Not observed |
+| Second | 82 s | 4 s | Completed | Completed; reload parity held |
+
+Metrics equal the Kaggle run to the printed precision.
+
+In both attempts the bridge went silent at the cell that displays the three figures (`reef-023`), and
+the reconnected runtime was a new VM. No executed notebook or run files survived, so these attempts are
+recorded as observations, not evidence. They do show `prepare` completing twice on a Colab T4 runtime.
+
+**Status: Candidate.** The `77a116d` Kaggle run is complete hosted evidence for every mandatory stage
+and for BYOD. A saved Colab Run all is still needed if the release gate requires Colab.

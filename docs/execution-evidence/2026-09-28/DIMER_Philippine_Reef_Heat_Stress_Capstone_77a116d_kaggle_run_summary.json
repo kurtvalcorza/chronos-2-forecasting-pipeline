@@ -1,0 +1,436 @@
+{
+ "identity": {
+  "repository": "chronos-2-forecasting-pipeline",
+  "candidate_sha": "77a116d8b5ade9ae04a2a606af0744de4b349b24",
+  "notebook": "tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb",
+  "committed_blob": "85835a14445bfad8efc0a7df17affe1b21567f36",
+  "fetched_blob_verified": true,
+  "toggles_applied": [
+   "USE_BYOD=True",
+   "HOTSPOT_SEMANTICS_CONFIRMED=True"
+  ],
+  "executed_input_blob": "b50e783e8fd5059a0af9306bba6de9937eee859b",
+  "kaggle_docker_image": "gcr.io/kaggle-gpu-images/python@sha256:37c64f7dd9c54116ecd1bcc88817c5469b88387388fade02bfa8bf3fc647d461",
+  "kaggle_run_type": "Batch",
+  "os": "Linux-6.12.90+-x86_64-with-glibc2.35",
+  "python": "3.12.13",
+  "cpu_count": 4,
+  "image_versions_before_run": {
+   "torch": "2.10.0+cu128",
+   "numpy": "2.0.2",
+   "transformers": "5.0.0",
+   "tokenizers": "0.22.2",
+   "safetensors": "0.7.0",
+   "huggingface-hub": "1.11.0",
+   "pillow": "11.3.0",
+   "nbclient": "0.10.2",
+   "ipykernel": "6.17.1"
+  },
+  "started": "2026-09-28T22:13:30Z",
+  "nvidia_smi": "Tesla T4, 15360 MiB, 580.159.04\nTesla T4, 15360 MiB, 580.159.04",
+  "hf_cache_clean_at_start": true
+ },
+ "runner": {
+  "ok": true,
+  "started": "2026-09-28T22:13:31Z",
+  "passes": [
+   {
+    "attempt": 1,
+    "started": "2026-09-28T22:13:31Z",
+    "ok": true,
+    "wall_s": 339.3
+   }
+  ],
+  "wall_s": 339.4,
+  "finished": "2026-09-28T22:19:11Z"
+ },
+ "cells": [
+  {
+   "cell": 3,
+   "status": "ok",
+   "started": "2026-09-28T22:13:33.630860Z",
+   "ended": "2026-09-28T22:15:07.111988Z",
+   "stdout_tail": "Using CPython 3.12.13 interpreter at: /usr/bin/python3\nCreating virtual environment at: reef_capstone_run/environment\nActivate with: source reef_capstone_run/environment/bin/activate\nInstalling the hash-locked environment (a few minutes on a fresh runtime)...\n  ... setup_sync still working, 31 s (RAM available 29.9/31.3 GB, unwritten 1.0 GB, disk free 1199 GB)\n  ... setup_sync still working, 61 s (RAM available 29.9/31.3 GB, unwritten 1.2 GB, disk free 1196 GB)\nLocked packages installed in 79 s (log: /content/reef_capstone_run/logs/setup_sync.log).\nInstalled files flushed to disk in 8 s (RAM available 30.0/31.3 GB, unwritten 0.0 GB, disk free 1194 GB).\nIsolated Python 3.12.13 dependencies ready (kernel Python 3.12.13); the notebook kernel does not need a restart.\n",
+   "error": null
+  },
+  {
+   "cell": 5,
+   "status": "ok",
+   "started": "2026-09-28T22:15:07.144084Z",
+   "ended": "2026-09-28T22:15:07.651320Z",
+   "stdout_tail": "NOAA Coral Reef Watch 1985-01-01 through 2026-09-26\n",
+   "error": null
+  },
+  {
+   "cell": 7,
+   "status": "ok",
+   "started": "2026-09-28T22:15:07.656585Z",
+   "ended": "2026-09-28T22:15:07.675600Z",
+   "stdout_tail": "",
+   "error": null
+  },
+  {
+   "cell": 8,
+   "status": "ok",
+   "started": "2026-09-28T22:15:07.679592Z",
+   "ended": "2026-09-28T22:15:07.683956Z",
+   "stdout_tail": "",
+   "error": null
+  },
+  {
+   "cell": 9,
+   "status": "ok",
+   "started": "2026-09-28T22:15:07.688439Z",
+   "ended": "2026-09-28T22:15:07.711686Z",
+   "stdout_tail": "",
+   "error": null
+  },
+  {
+   "cell": 10,
+   "status": "ok",
+   "started": "2026-09-28T22:15:07.715311Z",
+   "ended": "2026-09-28T22:15:10.674578Z",
+   "stdout_tail": "[22:15:07] stage prepare started (RAM available 30.0/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\nsplit      test  validation\nregion_id                  \ncentral      46          23\neastern      46          23\nnorthern     46          23\nsouthern     23          23\nwestern      23          23\nDHW reconstructed within 0.0001 °C-weeks. Frozen origins and settings saved.\n[22:15:10] stage prepare finished in 3 s\n",
+   "error": null
+  },
+  {
+   "cell": 12,
+   "status": "ok",
+   "started": "2026-09-28T22:15:10.680646Z",
+   "ended": "2026-09-28T22:15:59.981596Z",
+   "stdout_tail": "[22:15:10] stage baselines started (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\nbaselines: 25/299 origins\nbaselines: 50/299 origins\nbaselines: 75/299 origins\nbaselines: 100/299 origins\nbaselines: 125/299 origins\nbaselines: 150/299 origins\nbaselines: 175/299 origins\nbaselines: 200/299 origins\nbaselines: 225/299 origins\n  ... stage_baselines still working, 30 s (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nbaselines: 250/299 origins\nbaselines: 275/299 origins\n{'stage': 'baselines', 'origins': 299, 'seconds': 48.70377930699999, 'complete': True, 'rows': 16744}\n[22:15:59] stage baselines finished in 49 s\nBaseline forecasts saved. Both arms use exactly the planned contexts and outcomes.\n",
+   "error": null
+  },
+  {
+   "cell": 14,
+   "status": "ok",
+   "started": "2026-09-28T22:15:59.985312Z",
+   "ended": "2026-09-28T22:16:35.566389Z",
+   "stdout_tail": "[22:15:59] stage validation started (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\nvalidation: 25/115 origins\nvalidation: 50/115 origins\nvalidation: 75/115 origins\n  ... stage_validation still working, 30 s (RAM available 29.0/31.3 GB, unwritten 0.5 GB, disk free 1194 GB)\nvalidation: 100/115 origins\n{'stage': 'validation', 'origins': 115, 'seconds': 34.00329094800003, 'complete': True, 'rows': 3220, 'quantile_crossing_days': 0, 'quantile_crossing_max_c': 0.0, 'peak_gpu_bytes': 513587712}\n[22:16:35] stage validation finished in 36 s\n",
+   "error": null
+  },
+  {
+   "cell": 16,
+   "status": "ok",
+   "started": "2026-09-28T22:16:35.570262Z",
+   "ended": "2026-09-28T22:17:05.924605Z",
+   "stdout_tail": "5      115  1610\n        chronos       28        0.229             0.727        5      115  3220\n    chronos_180       28        0.258             0.744        5      115  3220\ndhw_persistence       28          n/a             1.016        5      115   115\n    persistence       28        0.232             0.756        5      115  3220\n       seasonal       28        0.187             0.562        5      115  3220\n\n14-day HotSpot MAE by region: 365-day default (chronos) vs 180-day activity:\nregion_id  chronos  chronos_180  180 minus 365  origins\n  central    0.140        0.150          0.010       23\n  eastern    0.179        0.198          0.019       23\n northern    0.176        0.189          0.013       23\n southern    0.163        0.172          0.009       23\n  western    0.149        0.169          0.020       23\n\nTrace a valid context: central, origin 2023-01-01.\n  365-day context 2022-01-02 to 2023-01-01;\n  180-day context 2022-07-06 to 2023-01-01 (its final 180 days);\n  targets 2023-01-02 to 2023-01-29.\nTrace a rejected origin: southern, 2025-01-15: incomplete_365_day_context.\nThe 365-day test default stays fixed whichever validation context wins.\n[22:17:04] stage compare finished in 3 s\n[22:17:04] stage lock started (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\n365-day context retained. Test settings locked.\n[22:17:05] stage lock finished in 1 s\n",
+   "error": null
+  },
+  {
+   "cell": 18,
+   "status": "ok",
+   "started": "2026-09-28T22:17:05.929151Z",
+   "ended": "2026-09-28T22:17:59.275421Z",
+   "stdout_tail": " 146             9        n/a   0.000 no predicted positives: precision undefined\n      28   8 °C-wk new_exceedance     persistence 155   8   4   1 142             9      0.667   0.889                                            \n      28   8 °C-wk new_exceedance        seasonal 155   5   4   4 142             9      0.556   0.556                                            \n\nF. Paired 14-day MAE difference, Chronos minus baseline, per region-origin (°C).\n   Negative values favour Chronos. The last three columns are shares of region-origins\n   where Chronos was better, tied or worse. Descriptive only; no significance test.\nperiod    baseline  pairs  mean_difference  median_difference  chronos_better   tie  chronos_worse\n  2024 persistence    115            0.004              0.001           0.400 0.000          0.600\n  2024    seasonal    115           -0.079             -0.002           0.513 0.000          0.487\n  2025 persistence     69           -0.002              0.002           0.391 0.000          0.609\n  2025    seasonal     69           -0.013              0.002           0.435 0.000          0.565\n  full persistence    184            0.001              0.001           0.397 0.000          0.603\n  full    seasonal    184           -0.055              0.000           0.484 0.000          0.516\n\nComplete tables: metrics.csv (scope/table columns) inside reef_evidence.zip.\nSaved metrics for independent fresh-process reconstruction.\n[22:17:59] stage score finished in 15 s\n",
+   "error": null
+  },
+  {
+   "cell": 20,
+   "status": "ok",
+   "started": "2026-09-28T22:17:59.285248Z",
+   "ended": "2026-09-28T22:18:08.421968Z",
+   "stdout_tail": "[22:17:59] stage future started (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\nIllustrative origin 2026-09-26; 2 regions excluded for missing context.\n[22:18:08] stage future finished in 9 s\n",
+   "error": null
+  },
+  {
+   "cell": 22,
+   "status": "ok",
+   "started": "2026-09-28T22:18:08.426031Z",
+   "ended": "2026-09-28T22:19:02.048600Z",
+   "stdout_tail": "[22:18:08] stage reload started (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\nFresh-process baseline, DHW and real-model reload parity passed.\n[22:18:38] stage reload finished in 30 s\n[22:18:38] stage report started (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\nExported /content/reef_capstone_run/reef_evidence.zip. Results are evidence, not release approval.\n[22:19:02] stage report finished in 24 s\n",
+   "error": null
+  },
+  {
+   "cell": 23,
+   "status": "ok",
+   "started": "2026-09-28T22:19:02.052900Z",
+   "ended": "2026-09-28T22:19:02.127843Z",
+   "stdout_tail": "<IPython.core.display.Markdown object><IPython.core.display.Image object><IPython.core.display.Image object><IPython.core.display.Image object>/content/reef_capstone_run/reef_evidence.zipAll mandatory stages completed. Preserve this executed notebook and the evidence bundle.\n",
+   "error": null
+  },
+  {
+   "cell": 26,
+   "status": "ok",
+   "started": "2026-09-28T22:19:02.137171Z",
+   "ended": "2026-09-28T22:19:10.822938Z",
+   "stdout_tail": "BYOD input: /content/reef_capstone_run/byod_example.csv\n[22:19:02] stage byod started (RAM available 29.9/31.3 GB, unwritten 0.0 GB, disk free 1194 GB)\nError in sitecustomize; set PYTHONVERBOSE for traceback:\nModuleNotFoundError: No module named 'wrapt'\n1 BYOD region(s): ['example']\nSaved unscored forecasts and receipt in /content/reef_capstone_run/byod/bae569f03fe0b80f\n[22:19:10] stage byod finished in 9 s\n",
+   "error": null
+  }
+ ],
+ "preserved_outputs": {
+  "reef_capstone_run": {
+   "README.txt": {
+    "bytes": 236,
+    "sha256": "4f05e59d5ababa1d0b7ffe7d31e0649013f8f1c9ef7438483b54d1185d9c62de"
+   },
+   "activity_forecasts.csv": {
+    "bytes": 1019886,
+    "sha256": "1fa5dadad4fb30838cb7d9747e493359c6ce05ef0ade72bc886cde04d9719f37"
+   },
+   "activity_forecasts.partial.csv": {
+    "bytes": 1019886,
+    "sha256": "1fa5dadad4fb30838cb7d9747e493359c6ce05ef0ade72bc886cde04d9719f37"
+   },
+   "activity_parity.json": {
+    "bytes": 4492,
+    "sha256": "a4d0ccf593bbc9bf64b39837a42fd3cd8e91cf9547e88540b8af3c3a647f90a0"
+   },
+   "activity_summary.json": {
+    "bytes": 228,
+    "sha256": "5dc19095730a6cf4c49521e90abcfd342b7ba3b4a21aadee971461d0ba9bb707"
+   },
+   "baselines_forecasts.csv": {
+    "bytes": 1891449,
+    "sha256": "e1a0415c257df43ca0db448f816c5c1cf45b18660cddd1295ef5d8e46d610ffa"
+   },
+   "baselines_forecasts.partial.csv": {
+    "bytes": 1891449,
+    "sha256": "e1a0415c257df43ca0db448f816c5c1cf45b18660cddd1295ef5d8e46d610ffa"
+   },
+   "baselines_summary.json": {
+    "bytes": 114,
+    "sha256": "95659d83eddc8ac8399aafd7804b14f8dda03b815eaa500446503025222c565a"
+   },
+   "budget_check.json": {
+    "bytes": 307,
+    "sha256": "a15a63204feb41b2ee253df4901744de7031417f105466de4c75b5f258a8fcf2"
+   },
+   "byod_example.csv": {
+    "bytes": 9430,
+    "sha256": "bae569f03fe0b80f84d1911d358df267aa89bc5d8973f02c9300433ab0530c7e"
+   },
+   "checksums.json": {
+    "bytes": 3422,
+    "sha256": "900c58510ac6ccaf78f755411145f39f3becd4ef2bae66f32b2093172ecb708c"
+   },
+   "conclusion.md": {
+    "bytes": 709,
+    "sha256": "e1c9a6336061c23c571567fe766859fa4d750233981862631367e2e2bf447f11"
+   },
+   "dataset_audit.json": {
+    "bytes": 967,
+    "sha256": "984bd2be0374c19ee6f61960be713738f8831a07d0e4450bd82b8cdc23441bf6"
+   },
+   "dataset_manifest.json": {
+    "bytes": 5437,
+    "sha256": "eb7bec66da666f5794e118c0e31264f9b746145106a4c1b875be4e4ed28948b0"
+   },
+   "dhw_components.png": {
+    "bytes": 46310,
+    "sha256": "da254540cd8a18288d95d98b29794dc17c3afd825feb75032442bf0f1185f22d"
+   },
+   "environment.json": {
+    "bytes": 233,
+    "sha256": "df536963bd6c2fc7ee6af45a91e20fd95dbc73eda5e39532ef30b2e642f4c781"
+   },
+   "experiment_config.json": {
+    "bytes": 572,
+    "sha256": "6897dd485597a2919f373cc7280fc02d619ab625acaa29a590a9da44a81cf0e2"
+   },
+   "experiment_lock.json": {
+    "bytes": 962,
+    "sha256": "b15299dc83c6a958e0d1b00bd8ebc8f3a903e61ed83d8528f912a6eb2b7d5659"
+   },
+   "failure_examples.csv": {
+    "bytes": 225,
+    "sha256": "067637f2ed55f2ce48fba9aa2411d8fdf67b0045bcd81584d42972375040e027"
+   },
+   "failure_examples.png": {
+    "bytes": 293603,
+    "sha256": "79bcf8dce58137b96ab0a8e833a7c91223785fcccbc6722ab62535c44bb9e15e"
+   },
+   "forecasts.csv": {
+    "bytes": 5536811,
+    "sha256": "5b67deae528b4e3dbc7ad660042d634d9c069ed66c9bd22c2d8749d318364432"
+   },
+   "metrics.csv": {
+    "bytes": 1916816,
+    "sha256": "b928f0d85d5d87a46a54a513e84890be1ac9014548f3eb60598271830ab3e8f8"
+   },
+   "metrics.json": {
+    "bytes": 4609599,
+    "sha256": "51f6a470476c4ca7eb1c04ebe1a43b4d8e06e6da1a7b0261f3c56f3885eaf024"
+   },
+   "model_manifest.json": {
+    "bytes": 522,
+    "sha256": "a57910f63e917ced6ffad757866ff19f037cb9a51961f08293f77c7e9459d67b"
+   },
+   "noaa_crw_philippines_2026-09-28.zip": {
+    "bytes": 1040559,
+    "sha256": "320a04998ff0f0ce4a66264fc83b585c0fafd653844d533468d98a84d6d07b43"
+   },
+   "origin_manifest.csv": {
+    "bytes": 23605,
+    "sha256": "e0460ef857e64c8b926e0483faea482021c0dc692dcb6e562f3d7cb360b7715d"
+   },
+   "outlook.csv": {
+    "bytes": 46813,
+    "sha256": "23c52f0e507d5577273d8bca43f97f73636b23cbcfd1f2031582f0b02e5b8bf7"
+   },
+   "outlook.png": {
+    "bytes": 143157,
+    "sha256": "c402604096e2290a415dfde713a49f8773faba8ea9d136fc222bb73da558f654"
+   },
+   "outlook_exclusions.json": {
+    "bytes": 198,
+    "sha256": "89d3f4dd584c4cc599c47330aaf0e73a55eb5bf1cab342885d3d58044f29aabb"
+   },
+   "reef_evidence.zip": {
+    "bytes": 2457411,
+    "sha256": "06e593e41d4caa9f581066d532e8fcd0b3a4886d5a1950dff673f50e110fee5e"
+   },
+   "reef_runner.py": {
+    "bytes": 77650,
+    "sha256": "96ea75056ec43217b1c6e74ef121bd0b43bc10cbff1de53a2c526d2070689b8b"
+   },
+   "reload_verification.json": {
+    "bytes": 183,
+    "sha256": "cfa0df97cf6cbbfd40d5dea33d6669088e77e5ae72776992ac538d5fa112fe97"
+   },
+   "requirements.lock": {
+    "bytes": 106964,
+    "sha256": "83c201033d0f71b7a94dad88852b6edbacba0b37b1d67895e5c32ec92d3b90e5"
+   },
+   "results_tables.txt": {
+    "bytes": 9942,
+    "sha256": "dc71914b1cad0480aa49bd769c77575c8c785d484498d05bc48243c0fb1d9dd5"
+   },
+   "run_summary.json": {
+    "bytes": 3315,
+    "sha256": "4d408891ac27c128715353cfc40b9f681b0b00e5600399ac342baa14119fc41f"
+   },
+   "seasonal_reference.csv": {
+    "bytes": 47397,
+    "sha256": "4ba23ba63d933dcdd0b3d97d9e8b9614b8c315c4b4665236aabeb3742999ea8b"
+   },
+   "setup_summary.json": {
+    "bytes": 212,
+    "sha256": "51fe7efe05e70b09a655cf990fde926f185fadfc750fc896e17491d23cbc381f"
+   },
+   "source_identity.json": {
+    "bytes": 643,
+    "sha256": "6fcba400f8a49ad96a6d12a96cfc84875ddbec5ed1d2ecd383d7902195ad0998"
+   },
+   "test_forecasts.csv": {
+    "bytes": 1591429,
+    "sha256": "7bccd79c04677d18b3c903b8260d0f8b4f99f0cf756acab4a3820075573a798f"
+   },
+   "test_forecasts.partial.csv": {
+    "bytes": 1591429,
+    "sha256": "7bccd79c04677d18b3c903b8260d0f8b4f99f0cf756acab4a3820075573a798f"
+   },
+   "test_parity.json": {
+    "bytes": 6261,
+    "sha256": "fc89e98849ad2a73a1ac617ecdefd751d7163869cb400c472b1c57cfcee42121"
+   },
+   "test_summary.json": {
+    "bytes": 204,
+    "sha256": "f72993eb6651c327e563c49c2a6431b6770b952381480e07edddd110e4837a58"
+   },
+   "validation_forecasts.csv": {
+    "bytes": 1005483,
+    "sha256": "e946416f0d79f574c55ea6e1ee877e9212429c4f497674b10f043ac43d3b0ef4"
+   },
+   "validation_forecasts.partial.csv": {
+    "bytes": 1005483,
+    "sha256": "e946416f0d79f574c55ea6e1ee877e9212429c4f497674b10f043ac43d3b0ef4"
+   },
+   "validation_parity.json": {
+    "bytes": 6234,
+    "sha256": "93ecb2cec34874a5368f84046c46afa863583f7268ef8e120bf62d8667c67769"
+   },
+   "validation_summary.json": {
+    "bytes": 210,
+    "sha256": "7ed7bb386dd9492d5083b8261db2eba5b3d3b7d65200eb58475a3d5cc939442e"
+   },
+   "validation_tables.txt": {
+    "bytes": 2162,
+    "sha256": "8f3c30b01e530c0071d2f27d6053296d2b5bed57f1f99af1fe09f3540beae014"
+   },
+   "model_cache/95a9710e2596287d08352589f42634fa5abdf0a7/config.json": {
+    "bytes": 1067,
+    "sha256": "ef1143bfdc9c0376d9a056eefca46cb4b1ec3d0ffacd541ff56feb40fb708031"
+   },
+   "model_cache/95a9710e2596287d08352589f42634fa5abdf0a7/model.safetensors": {
+    "bytes": 477930472,
+    "sha256": "ddcda3c7508bf2528087723e98a20707cc04b7f370ae275a9fd88078ddba4f42"
+   },
+   "logs/setup_python.log": {
+    "bytes": 183,
+    "sha256": "a3600e0101e492ac4c42c6402d060a92aaae530f9cf122c0dea1a9ea22ce7f3f"
+   },
+   "logs/setup_sync.log": {
+    "bytes": 3123,
+    "sha256": "10964be0621807645cdde946c04f37d0cd79eeebc5a1df5b8431d60ae938b9c8"
+   },
+   "logs/setup_uv.log": {
+    "bytes": 437,
+    "sha256": "f47faa92012e1137289183bd3d2e31f9574596a9d1e93be421d878cda616461e"
+   },
+   "logs/stage_activity.log": {
+    "bytes": 413,
+    "sha256": "eece2421207438197e78d06632edffca965f907cec6e76812895ba6b8406cc8a"
+   },
+   "logs/stage_baselines.log": {
+    "bytes": 498,
+    "sha256": "179bb5b5144a05c7cd696299a8cb081750081d203cfb4be80a2f4488776bc4f2"
+   },
+   "logs/stage_byod.log": {
+    "bytes": 221,
+    "sha256": "7caf1a70d1c6346d751829b57e58fa3447cbe826af3b4670a73d5f6b7a8ffada"
+   },
+   "logs/stage_compare.log": {
+    "bytes": 2265,
+    "sha256": "2c4e28ee5d30fdd50afe350b310bec7d49e22b7deb34bea5c34f05abe10713b8"
+   },
+   "logs/stage_future.log": {
+    "bytes": 174,
+    "sha256": "41b37fd42c1450eeaaa18fbced58b9b06912bc28c631d34f02e2774920cd6b84"
+   },
+   "logs/stage_lock.log": {
+    "bytes": 150,
+    "sha256": "77018c1103618a935ef71ecf470cc12a517682e2856bb02f22eb53626b07bd80"
+   },
+   "logs/stage_prepare.log": {
+    "bytes": 376,
+    "sha256": "aa17aadb9cd911db71dc1baf2d45b0e0671a69410d1d4c5c15688691dd452f59"
+   },
+   "logs/stage_reload.log": {
+    "bytes": 167,
+    "sha256": "2fca3c7f602827faba1705e6d9d50a600858751fd8ce7a80c8b33a45cea88b0e"
+   },
+   "logs/stage_report.log": {
+    "bytes": 201,
+    "sha256": "84ece4d185fdd6dd96e9f2d818dd4551bd108fa7bb572e5affbc069c3fac6581"
+   },
+   "logs/stage_score.log": {
+    "bytes": 10105,
+    "sha256": "450ba38c7281549a4e11ed5d73a5d59af8f257ce534359af0dc581fe948c86ec"
+   },
+   "logs/stage_test.log": {
+    "bytes": 439,
+    "sha256": "bb54a7b89c8079f36940e5380b1e390e3cbda671099f82b6bf7184e33e8d7296"
+   },
+   "logs/stage_validation.log": {
+    "bytes": 403,
+    "sha256": "d447c322bdbaa685a96d76c27260222d13f2a2f2aec5cbbb964448f498969eca"
+   },
+   "byod/bae569f03fe0b80f/forecasts.csv": {
+    "bytes": 8604,
+    "sha256": "d6000f8b3bdca70077d1451ea611c99a12c877e6980bc7d000f3e456240152ac"
+   },
+   "byod/bae569f03fe0b80f/receipt.json": {
+    "bytes": 799,
+    "sha256": "f7d60e350e010630b6df70c4916995daad885f6fabe4e1495c8276d37e2e66a8"
+   }
+  }
+ },
+ "staged_weights": [],
+ "executor_torch_after_run": {
+  "torch": "2.10.0+cu128",
+  "cuda": "12.8",
+  "device": "Tesla T4"
+ },
+ "finished": "2026-09-28T22:19:19Z"
+}
