@@ -317,3 +317,312 @@ This satisfies the fresh `STANDARD` synthetic item for revision 0.2.0. The follo
 - the optional activity.
 
 **Status: Candidate.**
+
+## Philippine reef heat-stress capstone: maintainer-supplied Colab execution — 2026-09-28
+
+Notebook identity is the Git blob of `tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb`.
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `f3c4a1e` / `61fae866df91` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all | not recorded | **INCOMPLETE** — the runtime disconnected during the first stage. The notebook reports no error. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_f3c4a1e.ipynb)
+  is preserved byte for byte. SHA-256 `e15148da3bdcc54a92ea62caa34e28690d6e720d43109454ff2202cb7a9d9a3d`.
+- **Source match.** The source equals revision `f3c4a1e` except for:
+  - the maintainer's title edit, which removes "7" from "DIMER Capstone 7";
+  - empty `# @title` lines that Colab inserted in seven collapsed cells. These are not substantive.
+- **Executed cells.** Cells `reef-003` to `reef-009` ran, with execution counts 1–5.
+  - Setup printed `Isolated Python 3.12.13 dependencies ready (kernel Python 3.13.15)`. This is
+    hosted evidence that the R1 interpreter fix works on a Python 3.13 Colab kernel.
+  - The embedded NOAA archive verified.
+  - `reef-010` (runner assembly and the `prepare` stage) has no execution count or output. No later
+    cell ran.
+- **Cause.** Not determined from the notebook: a disconnect leaves no traceback in the saved file.
+  The same cells ran offline without error from a non-3.12 kernel, with the full hash-locked
+  environment on managed Python 3.12.13:
+  - setup took 71 s and produced a 6.8 GB environment;
+  - `prepare` took 3 s;
+  - baselines took 29 s over 299 origins.
+
+  They were also run with Colab's `PYTHONPATH` and inline `MPLBACKEND` set. Colab's runtime log
+  would be needed to identify the cause.
+- **Follow-up in the next revision.** Every child process now:
+  - runs with `PYTHONPATH`, `PYTHONHOME` and `PYTHONSTARTUP` removed and `MPLBACKEND=Agg`;
+  - writes a log under `reef_capstone_run/logs/`;
+  - echoes progress into the cell, with a heartbeat every 30 s during silent steps.
+
+  A failure shows the log tail. Setup no longer prints a stray `116`.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated. No
+  model stage ran, so this run is not model or forecast evidence.
+
+**Status: Candidate.** A complete fresh-T4 Run all is still required.
+
+### Maintainer-supplied Colab execution of `2de49e1` — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `2de49e1` / `9a4d35edf291` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all with `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED` ticked, path empty | about 3 min to the failure | **FAILED** — the 180-day context activity stopped with `ValueError: Crossing quantiles`. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_2de49e1_byod.ipynb)
+  is preserved byte for byte. SHA-256 `dcad18fcca01df7a014af9aa782e6527d4021b8e9e90f3a1140d2b792ea6a88d`.
+- **Source match.** The source equals `2de49e1` except for:
+  - the two BYOD `# @param` toggles;
+  - empty `# @title` lines that Colab inserted in collapsed cells. These are not substantive.
+- **Executed cells.** Execution counts run 1–9 in order, with no disconnect.
+
+  | Step | Result |
+  |---|---|
+  | Setup | 80 s for the locked sync |
+  | `prepare` | 6 s; the origin table matches the plan |
+  | Baselines | 43 s, 299 origins |
+  | Validation, real Chronos-2 | 40 s, 115 origins, peak GPU 513,587,712 bytes |
+  | `activity` | Failed after origin 25 |
+
+  The stage log and the error were shown in the cell, as the previous revision intended.
+- **Cause.** Chronos-2 2.3.1 returns the trained quantile slices without enforcing their order, so a
+  small crossing is a model property. The adapter treated it as corrupt output. A CPU probe with the
+  pinned weights (`95a9710e…`) over all 115 validation origins found exactly one crossing day:
+  - context: 180 days;
+  - region: eastern;
+  - origin: 2023-05-01;
+  - q10 exceeds q50 by 0.000023 °C, with both about −0.0038 °C.
+
+  No 365-day forecast crossed. The CPU probe is not hosted evidence; GPU values can differ slightly.
+- **Fixed in the next revision.** Chronos quantiles are sorted before use (monotone rearrangement).
+  The point forecast is the rearranged median. The model's unsorted values (`model_q10`–`model_q90`)
+  and the crossing size (`quantile_crossing_c`) are kept in every forecast file and checked at reload.
+  Stage summaries and `run_summary.json` count crossing days.
+- **Not assessed in this run.** Lock, test, scoring tables, outlook, reload, report, BYOD.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
+
+**Status: Candidate.** A complete fresh-T4 Run all is still required.
+
+### Maintainer-supplied Colab execution of `6ad2ac4` — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `6ad2ac4` / `2675506667d0` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all, notebook unmodified | about 2 min to the disconnect | **INCOMPLETE** — the runtime disconnected at the start of `prepare`. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_6ad2ac4.ipynb)
+  is preserved byte for byte. SHA-256 `06008642482e0a196493c28c3c5e8da0c482626cd726f9ceb697096127d0c6f4`.
+- **Source match.** The source is identical to `6ad2ac4`. The BYOD toggles were not ticked.
+- **Executed cells.** Setup completed: the locked sync took 93 s, and uv no longer warned about
+  `--system`. Cells up to `reef-009` ran, with execution counts 1–5. `reef-010` printed
+  `[16:17:13] stage prepare started` and nothing after it, not even the first 30 s heartbeat.
+- **Pattern.** This matches the `f3c4a1e` run: both disconnected seconds after a fresh 6.8 GB install,
+  when the first stage started. The `2de49e1` run passed the same point in 6 s.
+- **Offline measurement.** Local, not Colab. A fresh hash-locked install peaked at:
+  - 0.14 GB uv resident memory;
+  - 0.73 GB total memory in use;
+  - 1.5 GB of dirty and writeback page cache.
+
+  `os.sync()` then took 2 s. Neither memory nor the install explains a disconnect on a 12.7 GB
+  runtime. A disk-writeback stall on Colab's slower disk is possible but unconfirmed. The cause needs
+  Colab's runtime log.
+- **Changes in the next revision.**
+  - Setup calls `os.sync()` after installing, so the environment is on disk before any stage reads it.
+  - Every stage start, every heartbeat and `setup_summary.json` print available RAM, unwritten page
+    cache and free disk. A further disconnect will leave the last machine state in the saved notebook.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
+
+**Status: Candidate.** A complete fresh-T4 Run all is still required.
+
+### Maintainer-supplied Colab execution of `77a116d` — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `77a116d` / `85835a14445b` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all, notebook unmodified | about 2 min to the disconnect | **INCOMPLETE** — the runtime disconnected at the start of `prepare`. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_77a116d.ipynb)
+  is preserved byte for byte. SHA-256 `03d7222959a2033340b14aeb6f5d668d4b552cddb781ce55e0c424434e811658`.
+- **Source match.** Identical to `77a116d`. The BYOD toggles were not ticked.
+- **Executed cells.** Execution counts 1–5 (`reef-003` to `reef-009`). Setup: locked sync 94 s, flush
+  1 s, 11.4/12.7 GB RAM available, 195 GB disk free. `reef-010` holds one line and no execution count:
+  `[22:03:49] stage prepare started (RAM available 11.6/12.7 GB, unwritten 0.0 GB, disk free 195 GB)`.
+- **Reading.** A child that exits non-zero raises `RuntimeError` with its log tail, and a healthy
+  `prepare` prints its origin table within 3–6 s. Neither appeared, and neither did the 30 s heartbeat.
+  So the kernel's output stopped within about 30 s of launching the child, which points at the Colab
+  session rather than the stage. This is an inference: the child's own log did not survive the session.
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated.
+
+### Kaggle T4 execution of `77a116d` with BYOD — 2026-09-28
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-28 | `77a116d` / `85835a14445b` | Kaggle, Tesla T4 (`kurtvalcorza/dimer-nb2-philippine-reef-heat-stress-capstone` v1), fresh nbclient kernel on Python 3.12.13 | Run all with `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED` ticked, path empty | 339.4 s | **PASSED** — 14/14 code cells executed in order, no errors. |
+
+- **Files.** Both are preserved byte for byte:
+  - the [executed notebook](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_77a116d_kaggle_byod.ipynb),
+    SHA-256 `5bba7e4c914fec48350b3e8a6e47133a7dd439bbe9138c74ca371fe770032c6c`;
+  - the executor's [run summary](execution-evidence/2026-09-28/DIMER_Philippine_Reef_Heat_Stress_Capstone_77a116d_kaggle_run_summary.json),
+    SHA-256 `2bba78f4800efb7f5271d10125bb14f841e847dafa63ff9f9456ccd1565be2d4`.
+- **Source match.** The executor fetched the notebook from `raw.githubusercontent.com` at the full
+  commit SHA and verified blob `85835a14445bfad8efc0a7df17affe1b21567f36` before running. It then
+  changed only the two `# @param` toggle lines (input blob `b50e783e8fd5`). `inspect_run.py` confirms
+  that is the only source difference and that cell ids and order are unchanged.
+- **Runtime.**
+  - Kaggle GPU image `sha256:37c64f7dd9c5…`; Tesla T4, driver 580.159.04; 31.3 GB RAM.
+  - The isolated environment reports Python 3.12.13, torch 2.9.1, chronos-forecasting 2.3.1,
+    NumPy 2.3.5, pandas 2.3.3 and transformers 4.57.6.
+  - The Hugging Face cache was empty at start.
+- **Stages.**
+
+  | Stage | Time | Result |
+  |---|---|---|
+  | Setup | 79 s sync, 8 s flush | Passed |
+  | `prepare` | 3 s | Passed. Test/validation origins: 46/23 for central, eastern and northern; 23/23 for southern and western |
+  | Baselines | 49 s | Passed; 299 origins |
+  | Validation | 34 s model time | Passed; 115 origins, 0 crossing days, peak GPU 0.51 GB |
+  | 180-day activity | 24 s model time | Passed; 1 crossing day of 0.000023 °C, rearranged |
+  | compare / lock | — | Passed; 365-day context retained |
+  | test / score | 39 s / 15 s | Passed; 184 origins, tables A–F printed |
+  | future | 9 s | Passed; origin 2026-09-26, 2 regions excluded for missing context |
+  | reload / report | 30 s / 24 s | Passed. Fresh-process baseline, DHW and real-model parity held; `reef_evidence.zip` exported (SHA-256 `06e593e41d4c…`) |
+  | BYOD | 9 s | Passed. `byod/bae569f03fe0b80f/` holds `forecasts.csv` and `receipt.json` (400 rows, 1 region, unscored) |
+
+- **Headline test result (14-day HotSpot MAE, °C).**
+
+  | Period | Chronos | Persistence | Seasonal |
+  |---|---|---|---|
+  | Full test | 0.153 | 0.152 | 0.213 |
+  | Common 2024 | 0.157 | 0.153 | 0.237 |
+  | 2025 (3 regions) | 0.137 | 0.139 | 0.150 |
+- **Kaggle-specific observations.**
+  - uv reported `Using CPython 3.12.13 interpreter at: /usr/bin/python3`. On this image the kernel's
+    Python is already 3.12.13, so the environment was built on it rather than on a downloaded Python.
+    The R1 path from a non-3.12 kernel is covered by the Colab runs above, not by this one.
+  - Every stage printed `Error in sitecustomize; ... No module named 'wrapt'`. The image's
+    `sitecustomize` is visible to an environment built on the image's Python. The message is not a
+    notebook error and did not affect any result.
+- **Journeys.**
+
+  | Journey | Verdict |
+  |---|---|
+  | Default Run all, all mandatory stages | **Passed** |
+  | Real Chronos-2 validation, activity and test | **Passed** |
+  | Fresh-process reload parity | **Passed** |
+  | BYOD with the generated example | **Passed** |
+  | Entry from a non-3.12 kernel | Not assessed in this run |
+  | Repeated Run all in a warm runtime | Not assessed in this run |
+
+- **Evidence boundary.** The Kaggle executor ran the committed bytes; the outputs, run summary and run
+  files were inspected. Kaggle is not Colab, so this run does not explain the Colab disconnects.
+
+### Agent-driven Colab T4 execution of `77a116d` (not preserved) — 2026-09-29
+
+Two further Colab T4 attempts were driven cell by cell through the Colab MCP bridge. Each fetched the
+committed bytes at the full SHA, verified the blob and ran the cells in the notebook kernel with
+`get_ipython().run_cell`.
+
+| Attempt | Setup | `prepare` | Model stages | test / score / future / reload / report |
+|---|---|---|---|---|
+| First | 87 s | 4 s | Completed | Not observed |
+| Second | 82 s | 4 s | Completed | Completed; reload parity held |
+
+Metrics equal the Kaggle run to the printed precision.
+
+In both attempts the bridge went silent at the cell that displays the three figures (`reef-023`), and
+the reconnected runtime was a new VM. No executed notebook or run files survived, so these attempts are
+recorded as observations, not evidence. They do show `prepare` completing twice on a Colab T4 runtime.
+
+**Status: Candidate.** The `77a116d` Kaggle run is complete hosted evidence for every mandatory stage
+and for BYOD. A saved Colab Run all is still needed if the release gate requires Colab.
+
+### Kaggle T4 execution of `d55d51c` with BYOD — 2026-09-29
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-29 | `d55d51c` / `238285bda22a` | Kaggle, Tesla T4 (`kurtvalcorza/dimer-nb2-philippine-reef-heat-stress-capstone` v2), fresh nbclient kernel on Python 3.12.13 | Run all with `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED` ticked, path empty | 363.8 s | **PASSED** — 14/14 code cells executed in order, no errors. |
+
+- **Files.** Both are preserved byte for byte:
+  - the [executed notebook](execution-evidence/2026-09-29/DIMER_Philippine_Reef_Heat_Stress_Capstone_d55d51c_kaggle_byod.ipynb),
+    SHA-256 `11c1341f306fb5b32ee5bde6819b0e8f4962ec45bcae6e59617830d56e641946`;
+  - the executor's [run summary](execution-evidence/2026-09-29/DIMER_Philippine_Reef_Heat_Stress_Capstone_d55d51c_kaggle_run_summary.json),
+    SHA-256 `1c773bdff499f999af8ce135c9c30fa5ba9375ab16622891490c3799b1964a19`.
+- **Source match.** The executor fetched the notebook at the full commit SHA and verified blob
+  `238285bda22a83a12238b2a0001f96396ea47144`. It then changed only the two `# @param` toggle lines
+  (input blob `8fe90c98f4ce`). `inspect_run.py` confirms that is the only source difference and that
+  execution counts run 1–14 in order.
+- **Runtime.** Same Kaggle GPU image as the `77a116d` run (`sha256:37c64f7dd9c5…`); Tesla T4, driver
+  580.159.04. The Hugging Face cache was empty at start.
+- **Diagnostics from `d55d51c`, observed working.**
+  - `prepare` printed `child pid 149 launched`, `[runner pid 149] imports loaded; stage prepare` and
+    `Loaded 76220 regional daily records from the verified archive.`
+  - Every stage log opens with `=== attempt started … ===` and closes with `=== exit 0 after … s ===`.
+- **Parity with the `77a116d` run.** All model and data outputs are byte-identical to the `77a116d`
+  Kaggle run: the baseline, validation, activity and test forecasts, `forecasts.csv`, `metrics.json`,
+  `metrics.csv`, `outlook.csv`, the origin manifest, the seasonal reference, `failure_examples.csv`
+  and the BYOD forecasts. The files that differ hold only:
+  - stage timings;
+  - the runner and `reef_runtime.py` digests, which the logging change was expected to alter;
+  - checksums and bundle entries derived from those.
+- **Journeys.**
+
+  | Journey | Verdict |
+  |---|---|
+  | Default Run all, all mandatory stages | **Passed** |
+  | Real Chronos-2 validation, activity and test | **Passed** (1 activity crossing day of 0.000023 °C, rearranged) |
+  | Fresh-process reload parity | **Passed** |
+  | BYOD with the generated example | **Passed** (`byod/bae569f03fe0b80f/`) |
+  | Stage diagnostics (PID, checkpoints, per-attempt logs) | **Passed** |
+  | Entry from a non-3.12 kernel | Not assessed in this run |
+  | Repeated Run all in a warm runtime | Not assessed in this run |
+
+- **Evidence boundary.** The Kaggle executor ran the committed bytes; the outputs, run summary and run
+  files were inspected and compared with the `77a116d` run. Kaggle is not Colab.
+
+**Status: Candidate.** This is complete hosted evidence for the current head on Kaggle T4. A saved
+Colab Run all is still needed if the release gate requires Colab.
+
+### Maintainer-supplied Colab execution of `d55d51c` — 2026-09-29
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-29 | `d55d51c` / `238285bda22a` | Google Colab, Tesla T4, Python 3.13.15 kernel (isolated environment on uv-managed Python 3.12.13) | Default Run all; BYOD toggles not ticked | 84 s locked sync, then 229 s of stages (05:42:39–05:46:28) | **PASSED** — 14/14 code cells executed in order, no errors. |
+
+- **File.** The [executed notebook](execution-evidence/2026-09-29/DIMER_Philippine_Reef_Heat_Stress_Capstone_d55d51c.ipynb)
+  is preserved byte for byte. SHA-256 `38155442baac3b3eb42cf8bfd93de8423afeae62e2ed9c974d7238aa9f5e9106`.
+- **Source match.** The source equals `d55d51c` except for empty `# @title` lines that Colab inserted at
+  the top of seven collapsed cells (`reef-003` to `reef-010`, `reef-016`). They are not substantive. Cell
+  ids and order are unchanged, and execution counts run 1–14.
+- **Runtime.** Colab `gpuType` T4; 12.7 GB RAM; 195 GB disk free after setup. Setup printed
+  `Isolated Python 3.12.13 dependencies ready (kernel Python 3.13.15)`: hosted evidence of the R1
+  entry path from a non-3.12 kernel on a complete run.
+- **Stages.** Every stage printed its child PID and the runner's `imports loaded` checkpoint.
+
+  | Stage | Time | Result |
+  |---|---|---|
+  | `prepare` | 7 s | Passed; 76,220 records; origin table as planned |
+  | Baselines | 41 s | Passed; 299 origins |
+  | Validation | 45 s | Passed; 115 origins, 0 crossing days, peak GPU 0.51 GB |
+  | 180-day activity | 21 s | Passed; 1 crossing day of 0.000023 °C, rearranged |
+  | compare / lock | — | Passed; 365-day context retained |
+  | test / score | 36 s / 14 s | Passed; 184 origins, tables A–F printed |
+  | future | 9 s | Passed; origin 2026-09-26, southern and western excluded |
+  | reload / report | 28 s / 23 s | Passed; fresh-process baseline, DHW and real-model parity; `reef_evidence.zip` exported |
+  | Summary (`reef-023`) | — | Passed; the 14-day table and three figures displayed |
+
+- **Results.** The printed validation and test tables and the primary 14-day summary equal the Kaggle
+  runs of `77a116d` and `d55d51c` to the printed precision. The full-test 14-day HotSpot MAE is 0.153
+  for Chronos, 0.152 for persistence and 0.213 for seasonal.
+- **Figures.** All three figures were inspected: the outlook, the DHW components and the failure
+  examples. The outlook title names the frozen origin and the excluded regions. In the Eastern and
+  Northern panels the Chronos DHW line lies under the seasonal line, because its forecast HotSpot stays
+  near zero; this is model behaviour, not a plotting defect.
+- **Journeys.**
+
+  | Journey | Verdict |
+  |---|---|
+  | Entry from a non-3.12 kernel (R1) | **Passed** |
+  | Default Run all, all mandatory stages | **Passed** |
+  | Real Chronos-2 validation, activity and test | **Passed** |
+  | Fresh-process reload parity | **Passed** |
+  | Stage diagnostics (PID and checkpoint lines) | **Passed** |
+  | BYOD | Not assessed in this run (toggles not ticked); passed on Kaggle T4 at this head |
+  | Export re-run, repeated Run all | Not assessed in this run |
+
+- **Evidence boundary.** Saved outputs were inspected; the hosted execution was not repeated. The
+  evidence bundle itself was not supplied, so its contents were not inspected for this run.
+
+**Status: Candidate.** Hosted evidence at `d55d51c` now covers every mandatory stage on both Colab T4 and
+Kaggle T4, the R1 entry path on Colab, and BYOD on Kaggle. Promotion is the maintainer's decision.

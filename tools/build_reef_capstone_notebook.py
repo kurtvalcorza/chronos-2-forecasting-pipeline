@@ -32,7 +32,7 @@ def build() -> dict:
     def code(text: str, hidden: bool = False) -> None:
         add("code", text, hidden)
 
-    md("""# DIMER Capstone 7: Philippine Reef Heat-Stress Outlook
+    md("""# DIMER Capstone: Philippine Reef Heat-Stress Outlook
 
 **Profile:** TASK-INFERENCE · **Mode:** GUIDED · **Standard:** NOTEBOOK_SPEC 2.2
 **Status:** Candidate pending fresh Colab T4 qualification.
@@ -42,8 +42,10 @@ You will forecast daily HotSpot at 7, 14 and 28 days, calculate accumulated Degr
 compare errors, and export evidence. A baseline winning is a valid scientific result.
 
 **Prerequisites:** basic Python and Colab familiarity; no prior ML experience.
-Select **Runtime → Change runtime type → T4 GPU**, then **Run all**. No tokens, uploads, repository clone,
-manual restart or configuration edits are required. Setup and model downloads need internet access.
+Select **Runtime → Change runtime type → T4 GPU**, then **Run all**. Any current Colab Python version works:
+setup downloads a pinned, managed Python 3.12.13 into an isolated environment, so you do not need to choose an
+older runtime version. No tokens, uploads, repository clone, manual restart or configuration edits are required.
+Setup and model downloads need internet access.
 The target budget is 30 minutes and 12 GiB GPU memory; these limits are unverified until hosted qualification.
 The five NOAA text files are embedded as a verified 1 MB data archive; approximately 0.48 GB of model weights
 and a larger Python environment are downloaded. Leave several GB of runtime disk free.
@@ -89,26 +91,126 @@ Source: [NOAA regional methodology](https://coralreefwatch.noaa.gov/product/vs/m
 """)
     lock = (ROOT / "tools/reef-requirements.lock").read_text(encoding="utf-8")
     code(
-        """# Infrastructure: isolated pinned environment avoids changing the notebook kernel.
-import sys, subprocess, pathlib, json, hashlib, base64, os, time
+        """# Infrastructure: isolated pinned environment on a managed Python 3.12; the kernel is unchanged.
+import sys, subprocess, pathlib, json, hashlib, base64, os, time, platform, shutil
 SETUP_STARTED = time.perf_counter()
-if sys.version_info[:2] != (3, 12):
-    raise RuntimeError("This candidate targets Colab Python 3.12; use a supported runtime.")
+TARGET_PYTHON = "3.12.13"  # uv-managed interpreter, independent of the Colab kernel's Python
 RUN_ROOT = pathlib.Path.cwd() / "reef_capstone_run"
 RUN_ROOT.mkdir(exist_ok=True)
 ENV_ROOT = RUN_ROOT / "environment"
-subprocess.run([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "uv==0.10.12"], check=True)
-if not (ENV_ROOT / "bin/python").exists():
-    subprocess.run([sys.executable, "-m", "uv", "venv", "--python", sys.executable, str(ENV_ROOT)], check=True)
 PYTHON = ENV_ROOT / "bin/python"
+LOG_DIR = RUN_ROOT / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+def child_environment():
+    # Children never inherit the kernel's Python path, startup file, inline plotting backend or
+    # Colab's UV_SYSTEM_PYTHON (which makes uv warn that --system has no effect on uv venv).
+    dropped = {"PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP", "UV_SYSTEM_PYTHON"}
+    env = {k: v for k, v in os.environ.items() if k not in dropped}
+    env.update(MPLBACKEND="Agg", PYTHONUNBUFFERED="1")
+    return env
+def resource_note():
+    # One-line machine state, printed at each stage start and heartbeat so that a runtime
+    # disconnect leaves the last known memory and disk state in the saved notebook.
+    try:
+        info = {}
+        with open("/proc/meminfo") as meminfo:
+            for line in meminfo:
+                key, value = line.split(":", 1)
+                info[key] = int(value.split()[0]) / 1048576
+        memory = (f"RAM available {info['MemAvailable']:.1f}/{info['MemTotal']:.1f} GB, "
+                  f"unwritten {info['Dirty'] + info['Writeback']:.1f} GB")
+    except (OSError, KeyError, ValueError):
+        memory = "RAM state unavailable"
+    return f"{memory}, disk free {shutil.disk_usage(RUN_ROOT).free / 1e9:.0f} GB"
+def run_logged(command, log_name, echo=True):
+    # Run a child with its output appended to logs/<name>.log under a per-attempt header, so a
+    # retry keeps the earlier attempt's log. Poll it, echo new lines, and print a heartbeat every
+    # 30 s so a long silent step is visibly alive; on failure show the log tail. An interrupted
+    # cell stops its child instead of leaving it running, and a signal is reported by name.
+    import signal
+    started = last_beat = time.perf_counter()
+    log_path, shown, returncode = LOG_DIR / f"{log_name}.log", 0, None
+    with log_path.open("a", encoding="utf-8") as log:
+        log.write(f"=== attempt started {time.strftime('%Y-%m-%d %H:%M:%S')} ===\\n")
+        log.flush()
+        offset = log_path.stat().st_size
+        def attempt_text():
+            return log_path.read_bytes()[offset:].decode("utf-8", errors="replace")
+        process = subprocess.Popen([str(part) for part in command], stdout=log,
+                                   stderr=subprocess.STDOUT, env=child_environment())
+        if echo:
+            print(f"  child pid {process.pid} launched", flush=True)
+        try:
+            while returncode is None:
+                try:
+                    returncode = process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+                text = attempt_text()
+                lines = text.splitlines()
+                complete = lines if text.endswith("\\n") or returncode is not None else lines[:-1]
+                if echo:
+                    for line in complete[shown:]:
+                        print(line, flush=True)
+                shown = max(shown, len(complete))
+                if returncode is None and time.perf_counter() - last_beat >= 30:
+                    print(f"  ... {log_name} still working, {time.perf_counter() - started:.0f} s"
+                          f" ({resource_note()})", flush=True)
+                    last_beat = time.perf_counter()
+        finally:
+            if returncode is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                print(f"  {log_name} interrupted; child pid {process.pid} stopped", flush=True)
+        log.write(f"=== exit {returncode} after {time.perf_counter() - started:.0f} s ===\\n")
+    if returncode:
+        tail = "\\n".join(attempt_text().splitlines()[-30:])
+        reason = f"exit code {returncode}"
+        if returncode < 0:
+            try:
+                reason = f"signal {signal.Signals(-returncode).name} ({reason})"
+            except ValueError:
+                pass
+        raise RuntimeError(f"{log_name} failed with {reason}; log: {log_path}\\n{tail}")
+    return time.perf_counter() - started
+run_logged([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "uv==0.10.12"],
+           "setup_uv", echo=False)
+def environment_python():
+    if not PYTHON.exists():
+        return None
+    probe = [str(PYTHON), "-c", "import platform; print(platform.python_version())"]
+    return subprocess.run(probe, capture_output=True, text=True).stdout.strip() or None
+ENV_REUSED = environment_python() == TARGET_PYTHON
+if not ENV_REUSED:
+    run_logged([sys.executable, "-m", "uv", "venv", "--clear", "--managed-python",
+                "--python", TARGET_PYTHON, ENV_ROOT], "setup_python")
+if environment_python() != TARGET_PYTHON:
+    raise RuntimeError(f"Isolated environment is not Python {TARGET_PYTHON}; preserve this log.")
 """
         + f"REQUIREMENTS = {lock!r}\n"
         + """
 (RUN_ROOT / "requirements.lock").write_text(REQUIREMENTS, encoding="utf-8")
-subprocess.run([sys.executable, "-m", "uv", "pip", "sync", "--python", str(PYTHON),
-                "--require-hashes", str(RUN_ROOT / "requirements.lock")], check=True)
-print("Isolated dependencies ready; the notebook kernel does not need a restart.")
-(RUN_ROOT / "setup_summary.json").write_text(json.dumps({"seconds": time.perf_counter() - SETUP_STARTED}))
+print("Installing the hash-locked environment (a few minutes on a fresh runtime)...", flush=True)
+seconds = run_logged([sys.executable, "-m", "uv", "pip", "sync", "--python", PYTHON,
+                      "--require-hashes", RUN_ROOT / "requirements.lock"], "setup_sync", echo=False)
+print(f"Locked packages installed in {seconds:.0f} s (log: {LOG_DIR / 'setup_sync.log'}).")
+# Finish writing the ~7 GB environment to disk before any stage starts reading from it.
+flush_started = time.perf_counter()
+os.sync()
+print(f"Installed files flushed to disk in {time.perf_counter() - flush_started:.0f} s ({resource_note()}).")
+print(f"Isolated Python {TARGET_PYTHON} dependencies ready (kernel Python {platform.python_version()});"
+      " the notebook kernel does not need a restart.")
+_ = (RUN_ROOT / "setup_summary.json").write_text(json.dumps({
+    "seconds": time.perf_counter() - SETUP_STARTED,
+    "kernel_python": platform.python_version(),
+    "environment_python": TARGET_PYTHON,
+    "environment_reused": ENV_REUSED,
+    "resources_after_setup": resource_note(),
+}))
 """,
         True,
     )
@@ -181,8 +283,13 @@ compile(RUNNER_SOURCE, "reef_runner.py", "exec")
         + """
 SOURCE_IDENTITY["runner_sha256"] = hashlib.sha256(RUNNER_SOURCE.encode()).hexdigest()
 (RUN_ROOT / "source_identity.json").write_text(json.dumps(SOURCE_IDENTITY, indent=2))
-def run_stage(name):
-    subprocess.run([str(PYTHON), str(RUN_ROOT / "reef_runner.py"), name, "--root", str(RUN_ROOT)], check=True)
+def run_stage(name, *extra):
+    print(f"[{time.strftime('%H:%M:%S')}] stage {name} started ({resource_note()})", flush=True)
+    # -u and faulthandler: a crash inside the child leaves its Python traceback in the log.
+    command = [PYTHON, "-u", "-X", "faulthandler", RUN_ROOT / "reef_runner.py", name,
+               "--root", RUN_ROOT, *extra]
+    seconds = run_logged(command, f"stage_{name}")
+    print(f"[{time.strftime('%H:%M:%S')}] stage {name} finished in {seconds:.0f} s", flush=True)
 run_stage("prepare")
 """,
         True,
@@ -223,25 +330,34 @@ Run validation first. Model downloads are pinned by immutable revision and verif
     md("""## 6. Change one thing: how much history?
 
 Predict whether shortening context from 365 to 180 days helps. The next cell changes only context length on the
-same validation origins; model, dates, horizon and scoring remain fixed. Compare the `chronos_180` and `chronos`
-validation rows in the final results. The 365-day test default remains frozen regardless of this activity.
+same validation origins; model, dates, horizon and scoring remain fixed. It then prints a validation-only table:
+compare the `chronos_180` and `chronos` rows at 7, 14 and 28 days, check the support columns (regions, origins,
+days), and read the traced valid and rejected contexts. The 365-day test default remains frozen regardless of
+this activity.
 
 <details><summary>How to interpret the comparison</summary>A shorter context may respond to recent conditions,
 but can lose seasonal information. Use measured errors; a plausible explanation alone is not evidence.</details>
 """)
-    code('run_stage("activity")\nrun_stage("lock")')
+    code('run_stage("activity")\nrun_stage("compare")\nrun_stage("lock")')
     md("""## 7. Locked test and accumulated stress
 
 Now evaluate once on the held-out origins. For each arm, future DHW combines known past heat with that arm's
 predicted HotSpots. The separate DHW-persistence reference simply carries DHW at the origin forward.
 Good DHW scores may reflect already accumulated heat; check HotSpot skill and the known/predicted contribution.
 The DHW of median HotSpots is not necessarily the median DHW forecast. No DHW probability bands are claimed.
+
+Scoring prints six compact tables, labelled A–F: (A) the full, common-2024 and three-region-2025 comparisons with
+region/origin/day support; (B) regional 14-day errors; (C) interval coverage, width and pinball loss;
+(D) high-stress-day errors; (E) 4 and 8 °C-week threshold events, including new exceedances; (F) paired
+Chronos-minus-baseline differences. Section 10 asks questions you can answer from these tables.
 """)
     code('run_stage("test")\nrun_stage("score")')
     md("""## 8. Illustrative regional outlook
 
 Forecast from the frozen snapshot end, 2026-09-26. These dates are explicit: this is not a live warning.
 Regions without a complete recent context are listed as excluded; no gap filling is hidden in the chart.
+Western and Southern Philippines are expected to be excluded here: their last 365 days contain missing dates.
+The outlook file keeps raw and constrained HotSpot, Chronos quantiles and the known/new DHW contributions.
 Numerical DHW indicators at 4 and 8 °C-weeks summarize thermal exposure, not field-observed bleaching.
 """)
     code('run_stage("future")')
@@ -257,11 +373,15 @@ not automatic release approval.
 reports = json.loads((RUN_ROOT / "metrics.json").read_text())
 from IPython.display import display, Markdown, Image, FileLink
 rows = reports["all"]["macro"]
-table = "| Split | Period | Arm | Horizon | HotSpot MAE | DHW endpoint MAE |\\n|---|---|---|---:|---:|---:|\\n"
+keys = ["split", "period", "arm", "hotspot_mae", "dhw_endpoint_mae", "regions", "origins", "days"]
+table = ("Primary 14-day summary with support. Tables A–F printed by the scoring cell hold the detail.\\n\\n"
+         "| Split | Period | Arm | HotSpot MAE | DHW endpoint MAE | Regions | Origins | Days |\\n"
+         "|---|---|---|---:|---:|---:|---:|---:|\\n")
+def cell(value):
+    return "n/a" if value is None else f"{value:.3f}" if isinstance(value, float) else str(value)
 for row in rows:
     if row["horizon"] == 14:
-        table += "| " + " | ".join(str(row.get(key)) for key in
-            ["split", "period", "arm", "horizon", "hotspot_mae", "dhw_endpoint_mae"]) + " |\\n"
+        table += "| " + " | ".join(cell(row.get(key)) for key in keys) + " |\\n"
 display(Markdown(table))
 display(Image(filename=str(RUN_ROOT / "outlook.png")))
 display(Image(filename=str(RUN_ROOT / "dhw_components.png")))
@@ -271,11 +391,15 @@ print("All mandatory stages completed. Preserve this executed notebook and the e
 """)
     md("""## 10. Interpret the evidence
 
-- Which arm has the lowest 14-day HotSpot MAE? How large is its paired difference from persistence and seasonality?
-- Does the common-2024 comparison support the same conclusion as the unbalanced full panel?
-- Is good DHW performance mainly inherited from known history? Does the model anticipate new exceedances?
-- Inspect q10–q90 coverage and width, and high-stress-day errors. An 80% nominal band need not cover 80% here.
-- Report event support. Undefined precision/recall stays unavailable with a reason; it never becomes perfect performance.
+- Which arm has the lowest 14-day HotSpot MAE (table A)? How large is its paired difference from persistence
+  and seasonality (table F)? Check the regions/origins columns so both scores cover the same cases.
+- Does the common-2024 comparison support the same conclusion as the unbalanced full panel (table A)?
+- Is good DHW performance mainly inherited from known history (compare `dhw_persistence` in table A and the
+  component chart)? Does the model anticipate new exceedances (table E, `new_exceedance`)?
+- Inspect q10–q90 coverage and width (table C) and high-stress-day errors (table D). An 80% nominal band need not
+  cover 80% here.
+- Report event support (table E). "No observations", "no observed positives" and a poor score are different
+  findings; undefined precision/recall stays n/a with a reason and never becomes perfect performance.
 
 <details><summary>Conclusion template</summary>For [regions and dates], [arm] had [MAE] at 14 days versus
 [baseline errors]. The common-period comparison [agreed/differed]. A failure case was [example]. These findings
@@ -287,39 +411,22 @@ Your completion record is a personal learning aid, **not a required submission**
     md("""## 11. Optional: bring your own daily HotSpot data
 
 Disabled by default. Supply `region_id,date,hotspot_c` with ISO dates, °C units, and the same threshold-relative
-HotSpot meaning. Raw SST is insufficient. The optional path validates the CSV, then forecasts each region from
-its last 365 observed days; it does not pretend unlabelled future dates provide evaluation evidence.
-`byod_example.csv` is generated automatically for practicing the interface. A historical backtest requires
-separate future outcomes and a newly declared evaluation design.
+HotSpot meaning. Raw SST is insufficient. Region IDs are read as literal text, so `001` stays `001`.
+The optional path validates the CSV, then forecasts each region from its last 365 observed days; it does not
+pretend unlabelled future dates provide evaluation evidence. Leave the path empty to practise on the generated
+`byod_example.csv`. Each distinct input file gets its own folder with forecasts (raw, constrained, quantiles,
+DHW components) and a receipt recording the input digest, units, semantics and model revision.
+A historical backtest requires separate future outcomes and a newly declared evaluation design.
 """)
     code("""USE_BYOD = False # @param {type:"boolean"}
 BYOD_CSV_PATH = "" # @param {type:"string"}
 HOTSPOT_SEMANTICS_CONFIRMED = False # @param {type:"boolean"}
 if USE_BYOD:
-    if not HOTSPOT_SEMANTICS_CONFIRMED or not BYOD_CSV_PATH:
-        raise ValueError("Supply a CSV path and confirm NOAA-compatible HotSpot semantics in °C.")
-    byod_program = "from __future__ import annotations\\n" + CORE_SOURCE + MODEL_SOURCE + r\"\"\"
-import json, sys
-from pathlib import Path
-root, source = Path(sys.argv[1]), Path(sys.argv[2])
-frame = validate_byod(pd.read_csv(source), units='degC', semantics_confirmed=True)
-panel = daily_panel([frame])
-model = reef_load_model(json.loads((root/'model_manifest.json').read_text()), root/'model_cache')
-rows=[]
-for region in panel.index.get_level_values(0).unique():
-    origin=panel.xs(region).index.max()
-    history=context_at(panel,region,origin)
-    q=reef_predict(model,history)
-    point=np.maximum(q[:,1],0)
-    dhw=compose_dhw(history,point)
-    for i,date in enumerate(pd.date_range(origin+pd.Timedelta(days=1),periods=28)):
-        rows.append(dict(region_id=region,origin=str(origin.date()),date=str(date.date()),
-                         hotspot_c=point[i],dhw_c_weeks=dhw['dhw'][i]))
-pd.DataFrame(rows).to_csv(root/'byod_forecasts.csv',index=False)
-print('Saved unscored BYOD forecasts; future outcomes are not available for evaluation.')
-\"\"\"
-    (RUN_ROOT/"byod_runner.py").write_text(byod_program)
-    subprocess.run([str(PYTHON),str(RUN_ROOT/"byod_runner.py"),str(RUN_ROOT),BYOD_CSV_PATH],check=True)
+    if not HOTSPOT_SEMANTICS_CONFIRMED:
+        raise ValueError("Confirm NOAA-compatible threshold-relative HotSpot semantics in °C.")
+    source = pathlib.Path(BYOD_CSV_PATH) if BYOD_CSV_PATH else RUN_ROOT / "byod_example.csv"
+    print("BYOD input:", source)
+    run_stage("byod", "--csv", str(source.resolve()))
 else:
     print("BYOD disabled. The complete default experiment is unchanged.")
 """)
@@ -327,7 +434,8 @@ else:
 
 - **GPU unavailable:** select a Colab T4 before Run all. CPU engineering checks do not qualify model execution.
 - **Download/integrity failure:** retain the error and retry the same pinned inputs in a fresh runtime; never bypass a digest.
-- **Dependency/runtime mismatch:** this candidate targets Python 3.12 in an isolated environment. Preserve logs for review.
+- **Dependency/runtime mismatch:** setup builds an isolated uv-managed Python 3.12.13 whatever the kernel version.
+  If that download fails, retry in a fresh runtime and preserve the log; do not edit the pinned requirements.
 - **Out of memory or excessive runtime:** preserve the failure; do not quietly omit regions, change precision or replace predictions.
 - **Missing context:** inspect origin_manifest.csv; missing data is not zero stress.
 - **BYOD refusal:** check date uniqueness/continuity, finite nonnegative values, units and target semantics.
