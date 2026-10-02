@@ -636,4 +636,12 @@ pieces back into identical text, so the carried text is unchanged: `REQUIREMENTS
 `MODEL_MANIFEST` and `ARCHIVE_B64` equal the previous notebook's values byte for byte, and the
 archive SHA-256 check is the same. Only cells `reef-003` and `reef-005` changed. The notebook blob
 changes from `238285bda22a` to `90dfa21f20e2`. Every hosted run recorded above was of blob
-`238285bda22a` or earlier; a hosted re-run of the new blob is pending. Status is unchanged.
+`238285bda22a` or earlier; the new blob was re-run on 2026-10-03 (below). Status is unchanged.
+
+### Colab CLI execution of `08b2343` (blob `90dfa21f`) — 2026-10-03
+
+- **File:** [`execution-evidence/2026-10-03/DIMER_Philippine_Reef_Heat_Stress_Capstone_08b2343_colab-cli-t4.ipynb`](execution-evidence/2026-10-03/DIMER_Philippine_Reef_Heat_Stress_Capstone_08b2343_colab-cli-t4.ipynb), SHA-256 `e73ae12586750d3bcafb902bcd1f1232be1e4b2481e95107f6535f2562ad731a`, a byte-for-byte copy of the CLI's output notebook.
+- **Executor:** Google Colab CLI 0.7.4 on a fresh Colab Tesla T4 session via the workspace `colab-cli-serial-test-suite` (`colab new --gpu T4`, `colab exec -f`, `colab stop`). Code cells ran in order in one kernel; this is not a browser Run all, and the CLI records no execution counts, so order is evidenced by its `Executing cell k/N` log. The notebook was downloaded from GitHub at `08b2343` and its git blob checked before the session was created.
+- **Result:** **PASSED**: 14/14 code cells, no error output, 331.4 s wall. Default path; no toggles changed.
+- **Equivalence:** compared line by line with the 2026-09-29 Colab run of `d55d51c` (blob `238285bda22a`) after removing clock times, RAM and disk readings and durations: 233 lines each; the only differences are the install flush time (1 s vs 0 s) and the order of two interleaved `validation` progress lines. Origins, rows, metrics and stage results are identical, so the carrier split changed no runtime behaviour.
+- **Boundary:** saved outputs were inspected; BYOD and the optional semantics toggle were not exercised. Status remains Candidate.

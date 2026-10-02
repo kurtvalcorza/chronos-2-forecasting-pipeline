@@ -218,5 +218,13 @@ carried text is unchanged: every carried file equals the previous notebook's byt
 that `source.json` records the generator's own SHA-256 (`generator_sha256`), which changes with any
 generator edit. The per-file hashes in `source.json` and the runtime integrity check are the same.
 Only cell `dengue-03` changed. The notebook blob changes from `a8a4348b` to `de007324`. The hosted
-run recorded above was of blob `a8a4348b`; a hosted re-run of the new blob is pending. Status is
+run recorded above was of blob `a8a4348b`; the new blob was re-run on 2026-10-03 (below). Status is
 unchanged.
+
+### Colab CLI execution of `08b2343` (blob `de007324`) — 2026-10-03
+
+- **File:** [`execution-evidence/2026-10-03/DIMER_Philippine_Dengue_Forecasting_Capstone_08b2343_colab-cli-t4.ipynb`](execution-evidence/2026-10-03/DIMER_Philippine_Dengue_Forecasting_Capstone_08b2343_colab-cli-t4.ipynb), SHA-256 `4357fba57a290c097ccfe6a264bbfc78412f62705c916f0f7633293428af3b28`, a byte-for-byte copy of the CLI's output notebook.
+- **Executor:** Google Colab CLI 0.7.4 on a fresh Colab Tesla T4 session via the workspace `colab-cli-serial-test-suite` (`colab new --gpu T4`, `colab exec -f`, `colab stop`). Code cells ran in order in one kernel; this is not a browser Run all, and the CLI records no execution counts, so order is evidenced by its `Executing cell k/N` log. The notebook was downloaded from GitHub at `08b2343` and its git blob checked before the session was created.
+- **Result:** **PASSED**: 9/9 code cells, no error output, 444.9 s wall. Default path.
+- **Equivalence:** compared with the 2026-09-28 Colab run of revision 0.2.0 (blob `a8a4348b`). Of the 38 output files whose SHA-256 the notebook prints, 35 are byte-identical, including `future_predictions.json`/`.csv`, the metrics, selections and figures. Two differ as expected: `experiment_lock.json` and `artifact_manifest.json` store the run `identity`, which hashes the carried `source.json`, whose `generator_sha256` changed with the generator; the derived `identity` and `previous` chain hashes differ for the same reason. The third, `artifact_future_chronos.json` (the Chronos state saved by the future stage), differs for a reason not determined here: its sibling `artifact_test_chronos.json` is identical and the forecasts it produced are byte-identical. This is recorded as an open observation, not a regression.
+- **Boundary:** saved outputs were inspected; BYOD was not exercised. Status remains Candidate.
