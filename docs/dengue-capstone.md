@@ -208,3 +208,15 @@ legend is correct.
 - an end-to-end wall-clock and disk measurement against the 60-minute and 20-GiB targets.
 
 Status stays **Candidate**.
+
+## Notebook source layout change (2026-10-02)
+
+The generator now writes each carried file in the `FILES` cell as a parenthesised run of short
+string pieces (`tools/notebook_carrier.py`) instead of one `repr(files)` line; the longest source
+line fell from 242,899 to 754 characters. Python joins the pieces back into identical text, so the
+carried text is unchanged: every carried file equals the previous notebook's byte for byte, except
+that `source.json` records the generator's own SHA-256 (`generator_sha256`), which changes with any
+generator edit. The per-file hashes in `source.json` and the runtime integrity check are the same.
+Only cell `dengue-03` changed. The notebook blob changes from `a8a4348b` to `de007324`. The hosted
+run recorded above was of blob `a8a4348b`; a hosted re-run of the new blob is pending. Status is
+unchanged.

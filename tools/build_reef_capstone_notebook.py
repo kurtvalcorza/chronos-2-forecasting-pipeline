@@ -5,11 +5,25 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NAME = "DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb"
+
+
+def _load_carrier():
+    """Load tools/notebook_carrier.py by path; tests and validators load generators by path."""
+    spec = importlib.util.spec_from_file_location(
+        "notebook_carrier", Path(__file__).with_name("notebook_carrier.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+carrier = _load_carrier()
 
 
 def build() -> dict:
@@ -191,7 +205,7 @@ if not ENV_REUSED:
 if environment_python() != TARGET_PYTHON:
     raise RuntimeError(f"Isolated environment is not Python {TARGET_PYTHON}; preserve this log.")
 """
-        + f"REQUIREMENTS = {lock!r}\n"
+        + f"REQUIREMENTS = {carrier.carried_literal(lock)}\n"
         + """
 (RUN_ROOT / "requirements.lock").write_text(REQUIREMENTS, encoding="utf-8")
 print("Installing the hash-locked environment (a few minutes on a fresh runtime)...", flush=True)
@@ -233,9 +247,9 @@ The legacy BAA categories are retained for provenance, not treated as the newer 
     model = json.loads((ROOT / "tools/reef_model_manifest.json").read_text())
     code(
         "# Infrastructure: immutable public NOAA sample, carried inside this notebook.\n"
-        + f"DATA_MANIFEST = json.loads({json.dumps(manifest)!r})\n"
-        + f"MODEL_MANIFEST = json.loads({json.dumps(model)!r})\n"
-        + f"ARCHIVE_B64 = {base64.b64encode(archive).decode()!r}\n"
+        + f"DATA_MANIFEST = json.loads({carrier.carried_literal(json.dumps(manifest))})\n"
+        + f"MODEL_MANIFEST = json.loads({carrier.carried_literal(json.dumps(model))})\n"
+        + f"ARCHIVE_B64 = {carrier.carried_literal(base64.b64encode(archive).decode())}\n"
         + """payload = base64.b64decode(ARCHIVE_B64, validate=True)
 if hashlib.sha256(payload).hexdigest() != DATA_MANIFEST["archive"]["sha256"]:
     raise ValueError("Embedded sample integrity failure")

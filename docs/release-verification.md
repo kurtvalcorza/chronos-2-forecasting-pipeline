@@ -626,3 +626,14 @@ Colab Run all is still needed if the release gate requires Colab.
 
 **Status: Candidate.** Hosted evidence at `d55d51c` now covers every mandatory stage on both Colab T4 and
 Kaggle T4, the R1 entry path on Colab, and BYOD on Kaggle. Promotion is the maintainer's decision.
+
+### Notebook source layout change (2026-10-02)
+
+The generator now writes the carried requirements lock, the two manifests and the base64 NOAA archive
+as parenthesised runs of short string pieces (`tools/notebook_carrier.py`) instead of single
+`repr` lines; the longest source line fell from 1,387,428 to 1,006 characters. Python joins the
+pieces back into identical text, so the carried text is unchanged: `REQUIREMENTS`, `DATA_MANIFEST`,
+`MODEL_MANIFEST` and `ARCHIVE_B64` equal the previous notebook's values byte for byte, and the
+archive SHA-256 check is the same. Only cells `reef-003` and `reef-005` changed. The notebook blob
+changes from `238285bda22a` to `90dfa21f20e2`. Every hosted run recorded above was of blob
+`238285bda22a` or earlier; a hosted re-run of the new blob is pending. Status is unchanged.

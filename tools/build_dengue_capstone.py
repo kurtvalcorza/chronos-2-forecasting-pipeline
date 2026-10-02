@@ -6,11 +6,25 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "tutorials/DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb"
+
+
+def _load_carrier():
+    """Load tools/notebook_carrier.py by path; tests and validators load generators by path."""
+    spec = importlib.util.spec_from_file_location(
+        "notebook_carrier", Path(__file__).with_name("notebook_carrier.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+carrier = _load_carrier()
 
 
 def carried_files():
@@ -205,7 +219,7 @@ Optional BYOD is disabled above. It accepts only aggregate `year,block,cases,rai
     code(
         "# @title Embedded source, integrity check and isolated environment (collapsed; expand to read)\n"
         + "FILES = "
-        + repr(files)
+        + carrier.carried_dict(files)
         + """
 for name, text in FILES.items():
     (ROOT/name).write_bytes(text.encode('utf-8'))
