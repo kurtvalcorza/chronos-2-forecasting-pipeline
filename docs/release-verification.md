@@ -113,6 +113,7 @@ they are measurements for the stated runtime, not general estimates.
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
 | 2026-09-14 | `8485f55` / `e06fea3dcb8d` | Kaggle CPU (`kurtvalcorza/dimer-nb2-chronos-2-forecasting` v1) | Default sample path | 236.0 s (181.8 s + 54.0 s, both attempts) | **Completed only after a manual restart — not a one-pass `Run all`.** Attempt 1 stopped in the install cell with the restart `RuntimeError` (`numpy: loaded=2.0.2, installed=2.5.3`); attempt 2, after the restart, ran 17/17 code cells and wrote 9 files (8 data files and the SVG), 478 MB staged (`restarted_after_install_cell: true`). Not promotion evidence |
+| 2026-10-03 | `33a2f53` / `607ba0e5818d` | Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4 (not a browser `Run all`) | Default sample path, no toggles changed | 235.7 s | **One pass, no restart, 0 errors** — 21/21 code cells; Chronos-2 on `cuda:0` from the verified snapshot; MAE 0.33015 / RMSE 0.34603 (last-value 5.91665 / 6.69292, seasonal-naive 6.0 / 6.0, coverage 1.0); 9 output files. Details in "Colab CLI execution of `33a2f53`" below |
 
 ### Multi-model forecasting workshop
 
@@ -202,8 +203,10 @@ an integrator promotes it; promotion is not performed by the builder. Three fact
 weigh for the primary tutorial `chronos_2_forecasting_colab.ipynb`: the 2026-09-14 Kaggle CPU row above executed the
 standalone carrier (the seven carried module cells, the real `hf_hub_download` fetch of all three manifest entries and
 `load_pinned_model` on the verified snapshot) for blob `e06fea3dcb8d`, but only after a manual restart, so it is not a
-one-pass `Run all`; the 2026-10-03 revision below replaces the in-kernel install with the isolated runtime, and no hosted
-run of that revision is recorded yet. The earlier repository-installing notebook ran in CI against the real weights at
+one-pass `Run all`; the 2026-10-03 revision below replaces the in-kernel install with the isolated runtime, and its blob
+`607ba0e5818d` (commit `33a2f53`) ran the default path in one pass with no restart and no error on a fresh Colab T4
+through the Colab CLI (sequential execution, not a browser `Run all`). The primary tutorial stays **Candidate**: the
+BYOD positive and negative runs and the Next experiments (Mode D, Section 13) are not yet exercised on a hosted runtime. The earlier repository-installing notebook ran in CI against the real weights at
 `95a9710e2596287d08352589f42634fa5abdf0a7`; that evidence predates the standalone carrier and does not transfer to it.
 
 
@@ -683,3 +686,39 @@ with a stand-in model.
 **Before release:** a hosted Colab (T4 or CPU) `Run all` of the regenerated blob in **one pass** from a fresh runtime
 with an empty cache, recorded in the table above with its blob id; then the BYOD positive and negative runs and each Next
 experiment as written.
+
+The first hosted attempt, at `f9e605e`, stopped in the model-loading cell (`ValueError: google.colab.__spec__ is None`
+from the isolated worker's `google.colab` stubs); `33a2f53` gives those stubs a module spec (CHR-M1 follow-up). The
+notebook blob changed from that attempt's to `607ba0e5818d`; `src/` and the carried modules are unchanged.
+
+### Colab CLI execution of `33a2f53` (blob `607ba0e5`) — 2026-10-03
+
+- **Files** (byte-for-byte copies of the CLI's output, in `execution-evidence/2026-10-03/`):
+  - [`chronos_2_forecasting_colab_33a2f53_colab-cli-t4.ipynb`](execution-evidence/2026-10-03/chronos_2_forecasting_colab_33a2f53_colab-cli-t4.ipynb), SHA-256 `4febd967d8df031f7ba1dd724019239247cdf81caa5dbb093b85fefc541039e2` (executed notebook)
+  - [`chronos_2_forecasting_colab_33a2f53_colab-cli-t4_exec.log`](execution-evidence/2026-10-03/chronos_2_forecasting_colab_33a2f53_colab-cli-t4_exec.log), SHA-256 `0ea22d29804eb29887bf79b2f8678107ecdb305ea8f45fdd99890aba9b92c960`
+  - [`chronos_2_forecasting_colab_33a2f53_colab-cli-t4_run_summary.json`](execution-evidence/2026-10-03/chronos_2_forecasting_colab_33a2f53_colab-cli-t4_run_summary.json), SHA-256 `44069ef1d9af635affe4b9225c8e6dd08ea7203f4a98b774bfe06a62c956d49d`
+- **Executor:** Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4, through the workspace
+  `colab-cli-serial-test-suite` (`colab new --gpu T4`, `colab exec -f`, `colab stop`). The notebook was downloaded
+  from GitHub at `33a2f53c695589969fc028f093569943a80200e2` and its git blob `607ba0e5818d62bcc7d60e62305a53647c7f7e5e`
+  checked before the session was created. Code cells ran in order in one kernel; this is not a browser `Run all`, the CLI
+  records no execution counts, and order is evidenced by the `Executing cell k/21` lines in `exec.log`. The executed
+  notebook's 21 code-cell sources equal the commit's.
+- **Path:** default settings only (`USE_BYOD = False`, `PREDICTION_LENGTH = 12`, `HORIZONS = "12, 24, 48"`,
+  `FIXED_CONTEXT = 48`, `RUN_COVARIATE_DEMO = False`, `FORECAST_FUTURE = False`); clean runtime, empty model cache.
+- **Outcome:** **one pass, no restart, 0 errors** — 21/21 code cells, 235.7 s wall (session start to stop). The seven
+  carried module cells print nothing by design; every other cell produced output.
+- **Runtime:** kernel Python 3.13.15; isolated environment Python 3.12.12 with 54 locked packages (built in 53 s), torch
+  2.14.0+cu130, transformers 4.57.6, chronos-forecasting 2.3.1, numpy 2.5.3, pandas 3.0.5; CUDA available.
+- **Observed stages:** `NOTEBOOK_SOURCE.repository_revision` `f9e605e` equals `metadata.dimer.generated_from.revision`
+  (module SHA-256 `39e18d89…`); `amazon/chronos-2` at `95a9710e2596287d08352589f42634fa5abdf0a7` fetched (README.md,
+  config.json, model.safetensors; 477,931,570 bytes), 3 files verified, loaded on `cuda:0` from the local snapshot;
+  synthetic sample SHA-256 `eff96b1a…c7f7` (96 rows), 84 history rows, holdout 12; `effective_context_length` 84,
+  `effective_prediction_length` 12, q0.1/q0.5/q0.9 present.
+- **Metrics printed:** Chronos-2 MAE 0.33015 / RMSE 0.34603 / interval coverage 1.0; last-value MAE 5.91665 / RMSE
+  6.69292; seasonal-naive 6.0 / 6.0; pinball q0.1 0.13765, q0.5 0.16508, q0.9 0.03652. Mode C: targets `target` and
+  `target_aux`, largest |aux − (0.5 × target + 10)| 0.0. Section 11 at fixed context 48: MAE 0.269 / 0.569 / 2.694 at
+  12 / 24 / 48 steps (last-value 6.569 / 4.668 / 7.153). These equal the local CPU verification above.
+- **Outputs written:** 9 files in `outputs/` — the input manifest, the evaluation report, the SVG and the six exports
+  named in procedure step 5.
+- **Not exercised:** BYOD (positive and negative), Mode D (`RUN_COVARIATE_DEMO`), Section 13 (`FORECAST_FUTURE`), the
+  form and upload widgets (the CLI renders no forms). Status remains **Candidate**.
