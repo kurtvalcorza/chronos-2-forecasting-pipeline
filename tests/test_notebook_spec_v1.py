@@ -36,8 +36,8 @@ def test_notebook_declares_task_inference_profile_and_spec() -> None:
     notebook, text = notebook_text()
     dimer = notebook["metadata"]["dimer"]
     assert dimer["notebook_profile"] == "TASK-INFERENCE"
-    assert dimer["notebook_spec"] == "2.0"
-    # NOTEBOOK_SPEC 2.0 §4 standalone carrier; parity lives in test_notebook_parity.py
+    assert dimer["notebook_spec"] == "2.2"
+    # NOTEBOOK_SPEC 2.2 §4 standalone carrier; parity lives in test_notebook_parity.py
     assert dimer["standalone"] is True
     assert dimer["generated_from"]["repository"] == "chronos-2-forecasting-pipeline"
     assert "DIMER `TASK-INFERENCE`" in text
@@ -125,7 +125,9 @@ def test_primary_multitarget_mode_is_executed_and_checked() -> None:
     _, text = notebook_text()
     code = code_text()
     assert "Primary Mode C" in text
-    assert 'target=["target", "target_aux"]' in code
+    # CHR-m2: the derived target never overwrites a user column; for the sample it is `target_aux`
+    assert 'aux_target = f"{config.target}_aux"' in code
+    assert "target=[config.target, aux_target]" in code
     assert "mode_c_result = forecast(" in code
     assert 'mode_c_result.forecast["target_name"]' in code
     assert "chronos_multitarget_forecast.csv" in code
@@ -136,7 +138,8 @@ def test_visualization_is_executable_and_machine_outputs_remain_authoritative() 
     code = code_text()
     assert "Visualize the held-out forecast" in text
     assert "chronos_forecast.svg" in code
-    assert "from IPython.display import SVG, display" in code
+    # Shown through display() in the kernel and in the isolated worker (no IPython import there).
+    assert "display(InlineSVG(" in code and "def _repr_html_(self):" in code
     assert "machine-readable exports remain authoritative" in text
 
 

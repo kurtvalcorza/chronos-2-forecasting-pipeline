@@ -46,7 +46,7 @@ jobs:
       - name: Validate tutorial and model-card source
         run: uv run python tools/validate_release_assets.py
 
-      - name: Standalone notebook parity (NOTEBOOK_SPEC 1.1 PAR3)
+      - name: Standalone notebook parity (NOTEBOOK_SPEC 2.2 PAR3)
         run: uv run python tools/build_notebook.py --check
 
       - name: Dengue capstone generation parity

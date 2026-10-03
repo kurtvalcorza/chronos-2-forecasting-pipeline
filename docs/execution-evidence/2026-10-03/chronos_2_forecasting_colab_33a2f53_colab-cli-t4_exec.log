@@ -1,0 +1,230 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-33a2f53-e5c0fa/chronos_2_forecasting_colab_33a2f53_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/21 - Infrastructure: install the locked runtime into an isolated environment...
+{'isolated_environment': '/content/dimer_isolated_env', 'isolated_python': '3.12.12', 'kernel_python': '3.13.15', 'locked_packages': 54, 'setup_seconds': 53}
+[colab] Executing cell 2/21 - Infrastructure: route the remaining cells to the isolated environment...
+Every later code cell now runs in /content/dimer_isolated_env/bin/python (pid 7712).
+[colab] Executing cell 3/21 - Infrastructure: record the runtime...
+{'notebook_source': {'repository': 'chronos-2-forecasting-pipeline', 'repository_revision': 'f9e605e9bc56beb1a73a24c31a924b51db330041', 'embedded_module': 'src/chronos2_pipeline/model.py', 'embedded_modules': ['src/chronos2_pipeline/errors.py', 'src/chronos2_pipeline/provenance.py', 'src/chronos2_pipeline/config.py', 'src/chronos2_pipeline/model.py', 'src/chronos2_pipeline/validation.py', 'src/chronos2_pipeline/inference.py', 'src/chronos2_pipeline/evaluation.py'], 'module_sha256': '39e18d89ef4eca69627a2565d8b60e6645b2e51577005a0b6432ed249fc8afd4', 'generator': 'build_notebook.py/2.1', 'notebook_spec': '2.2'}, 'python': '3.12.12', 'torch': '2.14.0+cu130', 'transformers': '4.57.6', 'pandas': '3.0.5', 'numpy': '2.5.3', 'cuda': True}
+[colab] Executing cell 4/21 - Infrastructure: carried module `src/chronos2_pipeline/errors.py` (you may run it without reading it)...
+[colab] Executing cell 5/21 - Infrastructure: carried module `src/chronos2_pipeline/provenance.py` (you may run it without reading it)...
+[colab] Executing cell 6/21 - Infrastructure: carried module `src/chronos2_pipeline/config.py` (you may run it without reading it)...
+[colab] Executing cell 7/21 - Infrastructure: carried module `src/chronos2_pipeline/model.py` (you may run it without reading it)...
+[colab] Executing cell 8/21 - Infrastructure: carried module `src/chronos2_pipeline/validation.py` (you may run it without reading it)...
+[colab] Executing cell 9/21 - Infrastructure: carried module `src/chronos2_pipeline/inference.py` (you may run it without reading it)...
+[colab] Executing cell 10/21 - Infrastructure: carried module `src/chronos2_pipeline/evaluation.py` (you may run it without reading it)...
+[colab] Executing cell 11/21 - chronos_2_forecasting-23...
+{'model_id': 'amazon/chronos-2', 'revision': '95a9710e2596287d08352589f42634fa5abdf0a7', 'license': 'apache-2.0', 'files': 3, 'total_bytes': 477931570}
+{'weights_dir': '/content/weights/chronos-2', 'fetched': ['README.md', 'config.json', 'model.safetensors']}
+{'verified_files': 3, 'revision': '95a9710e2596287d08352589f42634fa5abdf0a7'}
+{'device': 'cuda:0', 'source': 'local-snapshot'}
+[colab] Executing cell 12/21 - chronos_2_forecasting-26...
+{'sample_kind': 'synthetic', 'input_source': 'synthetic sample generated in code (== examples/sample-data/chronos_univariate.csv)', 'input_sha256': 'eff96b1a9bec5a81aa4021b4d308c29e18fc89be0cf8eb54e755c2efe535c7f7', 'rows': 96, 'columns': ['series_id', 'timestamp', 'target']}
+  series_id            timestamp    target
+0         A  2026-01-01T00:00:00  101.5000
+1         A  2026-01-01T01:00:00  103.3608
+2         A  2026-01-01T02:00:00  104.7500
+3         A  2026-01-01T03:00:00  105.6997
+4         A  2026-01-01T04:00:00  106.3122
+[colab] Executing cell 13/21 - chronos_2_forecasting-28...
+{'holdout_and_horizon_steps': 12, 'history_rows_per_series': {'A': 84}}
+{'runtime_versions': {'python': '3.12.12', 'chronos-forecasting': '2.3.1', 'torch': '2.14.0', 'transformers': '4.57.6', 'huggingface-hub': '0.36.2', 'numpy': '2.5.3', 'pandas': '3.0.5', 'accelerate': '1.15.0', 'einops': '0.8.2', 'safetensors': '0.8.0'}}
+DIMER request limits: ResourceLimits(max_ids=1000, max_targets=64, max_covariates=64, max_rows=5000000, max_context_length=8192, max_prediction_length=4096, min_observations=3)
+Pinned-model context limit: 8192
+Pinned-model native prediction length: 1024
+{'ceilings': {'min_observations_per_series': 3, 'max_ids': 1000, 'max_targets': 64, 'max_covariates': 64, 'max_rows': 5000000, 'max_context_length': 8192, 'max_prediction_length': 4096, 'model_context_length': 8192, 'model_prediction_length': 1024}}
+{
+  "schema": {
+    "input": "long-format pandas DataFrame: config.id_column, config.timestamp_column, one column per target name, and any further numeric column as a covariate",
+    "timestamps": "parseable, strictly regular and contiguous per series at one fixed-width frequency; monthly/quarterly/yearly/business-day and gappy calendars are refused",
+    "targets": "finite numeric values; duplicate (id, timestamp) observations are refused",
+    "min_observations_per_series": 3,
+    "max_ids": 1000,
+    "max_targets": 64,
+    "max_covariates": 64,
+    "max_rows": 5000000,
+    "max_context_length": 8192,
+    "max_prediction_length": 4096,
+    "quantile_levels": "must be members of the grid the pinned model was trained on, exactly",
+    "future_df": "known-future covariates only: id and timestamp columns plus covariates also present in the history; target columns are refused as leakage"
+  },
+  "inputs": [
+    {
+      "id": "A",
+      "series_id": "A",
+      "n_observations": 84,
+      "first_timestamp": "2026-01-01 00:00:00",
+      "last_timestamp": "2026-01-04 11:00:00",
+      "targets": [
+        "target"
+      ]
+    }
+  ],
+  "n_rows": 84,
+  "prediction_length": 12,
+  "requested_quantile_levels": [
+    0.1,
+    0.5,
+    0.9
+  ],
+  "observed_frequency": "0 days 01:00:00",
+  "confirmed_frequency": null,
+  "longest_series_length": 84,
+  "shortest_series_length": 84,
+  "past_covariate_names": [],
+  "known_future_covariate_names": [],
+  "verdict": "accepted",
+  "findings": [
+    {
+      "input": "non-finite-target-probe",
+      "verdict": "rejected",
+      "code": "TARGET_MISSING_VALUES",
+      "message": "[TARGET_MISSING_VALUES] target column 'target' contains 1 missing value(s). v1 rejects gaps and nulls rather than interpolating them."
+    }
+  ],
+  "model_id": "amazon/chronos-2",
+  "model_revision": "95a9710e2596287d08352589f42634fa5abdf0a7"
+}
+[colab] Executing cell 14/21 - chronos_2_forecasting-30...
+  series_id           timestamp target_name  ...        q0.1        q0.5        q0.9
+0         A 2026-01-04 12:00:00      target  ...  121.101624  122.068642  122.633644
+1         A 2026-01-04 13:00:00      target  ...  119.472153  120.305290  120.845268
+2         A 2026-01-04 14:00:00      target  ...  117.549675  118.395477  119.163666
+3         A 2026-01-04 15:00:00      target  ...  115.621796  116.411003  117.084297
+4         A 2026-01-04 16:00:00      target  ...  114.163223  114.958405  115.623131
+
+[5 rows x 7 columns]
+effective_context_length: 84
+effective_prediction_length: 12
+{'n_forecast_rows': 12, 'quantile_columns': ['q0.1', 'q0.5', 'q0.9'], 'latency_seconds': 3.677043838999907}
+[colab] Executing cell 15/21 - chronos_2_forecasting-33...
+Chronos-2: {'n': 12, 'mae': 0.3301503153483054, 'rmse': 0.3460319431029174, 'interval_lower_quantile': 0.1, 'interval_upper_quantile': 0.9, 'interval_coverage': 1.0}
+Last-value: {'n': 12, 'mae': 5.91665, 'rmse': 6.69291900033162}
+Seasonal-naive: {'n': 12, 'mae': 6.0, 'rmse': 6.0}
+Quantile metrics:
+   quantile   n  pinball_loss
+0       0.1  12      0.137652
+1       0.5  12      0.165075
+2       0.9  12      0.036519
+Per-series metrics:
+  series_id target_name   n      mae      rmse
+0         A      target  12  0.33015  0.346032
+{
+  "task": "zero-shot probabilistic time-series forecasting",
+  "score_semantics": "prediction is the median (q0.5) of the model's quantile forecast; the requested quantiles summarise the predictive distribution and are not calibrated intervals",
+  "sample_kind": "synthetic",
+  "horizon": 12,
+  "effective_context_length": 84,
+  "n_forecast_rows": 12,
+  "n_series": 1,
+  "targets": [
+    "target"
+  ],
+  "model_id": "amazon/chronos-2",
+  "model_revision": "95a9710e2596287d08352589f42634fa5abdf0a7",
+  "metrics": [
+    {
+      "id": "evaluate_forecast",
+      "metric": "mae",
+      "value": 0.3301503153483054,
+      "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+    },
+    {
+      "id": "evaluate_forecast",
+      "metric": "rmse",
+      "value": 0.3460319431029174,
+      "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+    },
+    {
+      "id": "evaluate_forecast",
+      "metric": "interval_coverage",
+      "value": 1.0,
+      "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+    },
+    {
+      "id": "evaluate_forecast",
+      "metric": "pinball_loss",
+      "quantile": 0.1,
+      "value": 0.13765243184407536,
+      "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+    },
+    {
+      "id": "evaluate_forecast",
+      "metric": "pinball_loss",
+      "quantile": 0.5,
+      "value": 0.1650751576741527,
+      "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+    },
+    {
+      "id": "evaluate_forecast",
+      "metric": "pinball_loss",
+      "quantile": 0.9,
+      "value": 0.03651869801839211,
+      "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+    }
+  ],
+  "baselines": [
+    {
+      "id": "last_value_baseline",
+      "metrics": [
+        {
+          "id": "evaluate_forecast",
+          "metric": "mae",
+          "value": 5.91665,
+          "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+        },
+        {
+          "id": "evaluate_forecast",
+          "metric": "rmse",
+          "value": 6.69291900033162,
+          "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+        }
+      ]
+    },
+    {
+      "id": "seasonal_naive_baseline",
+      "season_length": 24,
+      "metrics": [
+        {
+          "id": "evaluate_forecast",
+          "metric": "mae",
+          "value": 6.0,
+          "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+        },
+        {
+          "id": "evaluate_forecast",
+          "metric": "rmse",
+          "value": 6.0,
+          "estimation": "single chronological tail holdout of one sample; no dispersion estimate"
+        }
+      ]
+    }
+  ],
+  "verdict": "sample-sanity",
+  "reason": "12 held-out (series, timestamp, target) rows from one chronological tail split of the tutorial sample; not a benchmark",
+  "needs": "rolling-origin backtests over several forecast windows of the deployment domain's own history, compared against the naive baselines, for any generalisable accuracy claim"
+}
+[colab] Executing cell 16/21 - chronos_2_forecasting-36...
+A / target: held-out future q0.1 median q0.9 truth                              
+[colab] Executing cell 17/21 - chronos_2_forecasting-38...
+Mode C target names: ['target', 'target_aux'] | rows: 24
+target_name                        target  target_aux  0.5 x target + 10
+series_id timestamp                                                     
+A         2026-01-04 12:00:00  122.068642   71.034325          71.034317
+          2026-01-04 13:00:00  120.305290   70.152641          70.152649
+          2026-01-04 14:00:00  118.395477   69.197739          69.197739
+          2026-01-04 15:00:00  116.411003   68.205498          68.205505
+          2026-01-04 16:00:00  114.958405   67.479202          67.479202
+largest |aux median - (0.5 x target median + 10)|: 0.0
+[colab] Executing cell 18/21 - chronos_2_forecasting-41...
+['chronos_2_forecasting_evaluation_report.json', 'chronos_2_forecasting_input_manifest.json', 'chronos_2_forecasting_result.json', 'chronos_evaluation.json', 'chronos_evaluation_per_series.csv', 'chronos_forecast.csv', 'chronos_forecast.svg', 'chronos_multitarget_forecast.csv', 'chronos_provenance.json']
+[colab] Executing cell 19/21 - chronos_2_forecasting-43...
+{'cut_off': '2026-01-02 23:00:00', 'fixed_context': 48}
+ horizon  effective_context_length  chronos2_mae  last_value_mae  chronos2_coverage
+      12                        48         0.269           6.569                1.0
+      24                        48         0.569           4.668                1.0
+      48                        48         2.694           7.153                1.0
+[colab] Executing cell 20/21 - chronos_2_forecasting-46...
+Mode D demo skipped.
+[colab] Executing cell 21/21 - chronos_2_forecasting-49...
+Future forecast skipped.
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-33a2f53-e5c0fa/chronos_2_forecasting_colab_33a2f53_colab-cli-t4_output.ipynb'...
