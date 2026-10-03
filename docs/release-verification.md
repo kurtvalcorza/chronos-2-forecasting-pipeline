@@ -318,6 +318,19 @@ This satisfies the fresh `STANDARD` synthetic item for revision 0.2.0. The follo
 
 **Status: Candidate.**
 
+### 2026-10-03 uv isolated environment
+
+The workshop's model environments move to the uv isolated environment. Notebook blob `9b13733993da` becomes `ff0389bccd42`.
+
+- Cell 6.1 no longer installs uv into the notebook kernel with pip. It downloads the pinned uv 0.12.15 wheel and checks its size and SHA-256 (the same wheel the dengue capstone uses). It builds each model environment with `uv venv --managed-python --python 3.12.12`, then installs with `uv pip install --require-hashes --only-binary :all:` from a hash-locked lock carried in the cell (`tools/forecasting-workshop-{tirex,chronos,toto}-requirements.lock`). Nothing is installed into the kernel, so Run all needs no restart.
+- Direct model pins are unchanged. The locks add exact versions and hashes for every dependency. The model Python moves from "3.12" to the managed CPython 3.12.12.
+- The runners' environment drops `PYTHONPATH`, `PYTHONHOME` and `PYTHONSTARTUP` and keeps `MPLBACKEND=Agg`. The freeze and the manifest also record the uv version and each lock's SHA-256.
+- User-visible change: the model environments use Linux x86-64 wheels, so the notebook runs on Colab, Kaggle or a Linux x86-64 Jupyter runtime only. Section 1.2 warns, and Section 6.1 stops before any download, on other platforms.
+- Local checks only (not clean-runtime evidence): the contract tests, including `tests/test_forecasting_workshop_uv_env.py`, and a `uv pip install --dry-run` of each lock for x86_64-manylinux_2_28 with Python 3.12.
+- The comparison reference is the 2026-09-28 Colab T4 run of blob `9b13733993da` above. A hosted T4 re-run of `ff0389bccd42` is pending.
+
+**Status: Candidate.**
+
 ## Philippine reef heat-stress capstone: maintainer-supplied Colab execution — 2026-09-28
 
 Notebook identity is the Git blob of `tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb`.

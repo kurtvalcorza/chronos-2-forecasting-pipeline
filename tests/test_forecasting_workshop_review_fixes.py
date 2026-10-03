@@ -29,9 +29,11 @@ NOTEBOOK_TEXT = "\n".join(
     "".join(cell["source"]) for cell in json.loads(NOTEBOOK.read_text(encoding="utf-8"))["cells"]
 )
 
-# The last lines of cell 6.1, which install real environments; tests replace them.
+# The last lines of cell 6.1, which check the platform, fetch the pinned uv and build the real
+# hash-locked environments; tests replace them.
 ENVIRONMENT_BUILD = (
-    "ensure_uv()\nMODEL_PYTHONS = {name: ensure_environment(name) for name in SELECTED_MODELS}"
+    "require_linux_x86_64()\nUV = ensure_uv()\n"
+    "MODEL_PYTHONS = {name: ensure_environment(name) for name in SELECTED_MODELS}"
 )
 
 FAKE_RUNNER = r"""

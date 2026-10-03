@@ -1,0 +1,8 @@
+toto-2==2.0.0
+torch==2.7.0
+torchaudio==2.7.0
+torchvision==0.22.0
+huggingface-hub==0.36.2
+transformers==4.57.6
+numpy==1.26.4
+pandas==2.2.3
