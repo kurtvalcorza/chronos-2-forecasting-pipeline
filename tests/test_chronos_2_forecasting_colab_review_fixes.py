@@ -117,6 +117,40 @@ def test_router_needs_no_ipython_when_an_executor_runs_every_cell(nb: dict, monk
     assert "Routing disabled" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize("real_google", [False, True])
+def test_worker_colab_stubs_have_specs(nb: dict, monkeypatch: pytest.MonkeyPatch, real_google: bool) -> None:
+    """Colab T4 run of f9e605e: accelerate's find_spec("google.colab") raised on the worker's spec-less stub."""
+    import importlib.util
+    import sys
+
+    namespace: dict[str, Any] = {"SKIP_INSTALL": True, "__name__": "__main__"}
+    exec(compile(_src(_code_cells(nb)[1]), "router", "exec"), namespace)
+    worker = namespace["_WORKER_SOURCE"]
+    start = worker.index('if os.environ.get("DIMER_KERNEL_IS_COLAB") == "1":')
+    shim = worker[start:worker.index('_main = types.ModuleType("__main__")', start)]
+    names = ("google", "google.colab", "google.colab.files")
+    saved = {name: sys.modules[name] for name in names if name in sys.modules}
+    fake_google = types.ModuleType("google")
+    fake_google.__path__ = []
+    try:
+        for name in names:
+            sys.modules.pop(name, None)
+        # Exercise both branches: no importable `google` (stub created) and an existing namespace package.
+        sys.modules["google"] = fake_google if real_google else None
+        monkeypatch.setenv("DIMER_KERNEL_IS_COLAB", "1")
+        exec(compile(shim, "worker-colab-shim", "exec"), {"os": __import__("os"), "sys": sys, "types": types, "_send": None, "_recv": None})
+        for name in ("google.colab", "google.colab.files"):
+            spec = importlib.util.find_spec(name)  # raised ValueError before the fix
+            assert spec is not None and spec.name == name
+        assert sys.modules["google.colab"].__path__ == [] and callable(sys.modules["google.colab.files"].upload)
+        if not real_google:
+            assert importlib.util.find_spec("google") is not None
+    finally:
+        for name in names:
+            sys.modules.pop(name, None)
+        sys.modules.update(saved)
+
+
 def test_release_records_no_longer_call_a_restart_dependent_run_a_clean_pass() -> None:
     text = (ROOT / "docs" / "release-verification.md").read_text(encoding="utf-8")
     assert "restarted_after_install_cell: true" in text
