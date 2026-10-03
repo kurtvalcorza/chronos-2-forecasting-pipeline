@@ -1,6 +1,6 @@
 """Static release-asset validation for the Chronos-2 zero-shot forecasting DIMER pipeline.
 
-Checks the STANDALONE tutorial notebook (DIMER Notebook Specification 2.0 §4), the tutorial
+Checks the STANDALONE tutorial notebook (DIMER Notebook Specification 2.2 §4), the tutorial
 registry, model card, README, STATUS.md and weight documentation for source conformance and
 cross-document identity consistency, and runs the generator parity checks (PAR1–PAR3).
 
@@ -67,7 +67,19 @@ CODE_MARKERS = (
     "duplicates = sorted(name for name, count in Counter(header).items() if count > 1)",
     "result.inference[\"effective_context_length\"]",
     "result.inference[\"effective_prediction_length\"]",
-    "assert observed_targets == {\"target\", \"target_aux\"}",
+    "assert observed_targets == {config.target, aux_target}",
+    # Review fixes (docs: row 11 review, CHR-M2, CHR-m2..m4)
+    "config = ForecastConfig(id_column=ID_COLUMN, timestamp_column=TIMESTAMP_COLUMN, target=TARGET_COLUMN, prediction_length=PREDICTION_LENGTH, quantile_levels=[0.1, 0.5, 0.9])",
+    "except UnicodeDecodeError as exc:",
+    "while aux_target in frame.columns:",
+    "activity_split = chronological_holdout(frame, activity_config, horizon=horizons[-1])",
+    "context_length=FIXED_CONTEXT)",
+    "plain_result = forecast(cov_history[[\"series_id\", \"timestamp\", \"demand\"]], cov_config, pipe)",
+    "\"outputs/chronos_covariate_provenance.json\"",
+    "removed = remove_outputs(MODE_D_FILES)",
+    "future_result = forecast(frame, config, pipe)",
+    "future_report = evaluation_report(future_result, None, config=config, sample_kind=sample_kind)",
+    "removed = remove_outputs(FUTURE_FILES)",
     "\"model_revision\": MODEL_REVISION",
     "\"model_license\": MODEL_LICENSE",
     "transformers.__version__",
@@ -95,6 +107,37 @@ MARKDOWN_MARKERS = (
     "**not an independent benchmark variable**",
     "does not request model-repository remote code",
     "classification, anomaly detection, imputation, embeddings, training/fine-tuning, calibrated prediction intervals",
+    # Review fixes: guided layer (CHR-M3), experiments (CHR-M2), sample note (CHR-m1), runtime (CHR-M1)
+    "### Who this is for",
+    "### How to use this notebook",
+    "### Roadmap",
+    "### Input → Model → Output",
+    "## Before Section 4: glossary",
+    "**Predict first.**",
+    "#### What to notice (Section 6)",
+    "#### What to notice (Section 7)",
+    "#### What to notice (Section 9)",
+    "<details><summary>Sample answer",
+    "**`PREDICTION_LENGTH` sets two things at once.**",
+    "## 11. Activity: change the horizon, keep the context",
+    "**Predict:**",
+    "**Change one thing:**",
+    "**Observe:**",
+    "**Explain:**",
+    "**The seasonal-naive error is exactly 6.0, and that is the trend.**",
+    "**Coverage of 1.0 here says nothing about calibration.**",
+    "## Troubleshooting",
+    "## Conclusion template",
+    "**Linux x86_64 runtimes only**",
+)
+# Learner-facing text the review fixes removed; it must not come back (CHR-M1 restart guidance, CHR-M2 infeasible
+# experiments, CHR-M3 duplicated sentence).
+STALE_MARKDOWN = (
+    "installed directly — there is no repository clone",
+    "the cell stops with a restart instruction",
+    "toward the native 1,024-step horizon",
+    "compare the Mode D forecast with and without the future covariate table",
+    "Successful execution proves that",
 )
 # Direct-library use that must stay inside the carried module cells (G2: the notebook calls the
 # pipeline API, it does not reimplement it). Checked on every code cell except the embedded ones
@@ -119,10 +162,10 @@ INSTALL_CELL_MARKER = "subprocess.run([sys.executable, '-m', 'pip', 'install', '
 # ---------------------------------------------------------------------------
 # Shared checks. Everything below is source/structure validation only. Passing
 # these checks is NOT clean-runtime execution evidence under DIMER Notebook
-# Specification 2.0; see docs/release-verification.md for the release gate.
+# Specification 2.2; see docs/release-verification.md for the release gate.
 # ---------------------------------------------------------------------------
 
-NOTEBOOK_SPEC = "2.0"
+NOTEBOOK_SPEC = "2.2"
 ALLOWED_PROFILES = {"E2E", "ARTIFACT-INFERENCE", "TASK-INFERENCE", "MULTI-CAPABILITY", "SMOKE"}
 STATUS_TOKENS = ("Candidate", "Release-grade")
 PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b|Insert text here|Tooltip:", re.I)
@@ -191,7 +234,7 @@ COMMON_MARKDOWN_MARKERS = (
     "## 2. Pipeline code (carried verbatim from",
     "## 3. Pin, stage and verify the model",
     "## Interpretation and limits",
-    "Successful execution proves that the recorded repository revision",
+    "A successful default run **proves** that the recorded repository revision",
     "without the repository being",
     "It does **not** establish benchmark superiority",
     "## References",
@@ -540,8 +583,13 @@ def _validate_embedded_modules(path: Path, notebook: dict, build) -> list[int]:
             cell["metadata"]["dimer"].get("module_sha256") == context["per_module_sha256"][rel],
             f"{path.name}: cell {index} module_sha256 tag does not match {rel}",
         )
+        # CHR-M3: a carried cell is the module text after the rewrites plus the generator's one Infrastructure title line.
         _check(
-            _cell_source(cell).rstrip("\n") + "\n" == context["embedded"][module],
+            _cell_source(cell).startswith(f"{build.CARRIED_TITLE_PREFIX}`{rel}`") and cell.get("metadata", {}).get("cellView") == "form",
+            f"{path.name}: carried module cell {index} must start with the generator's Infrastructure title and be collapsed (cellView: form)",
+        )
+        _check(
+            build.strip_carried_title(_cell_source(cell)).rstrip("\n") + "\n" == context["embedded"][module],
             f"{path.name}: embedded module cell {index} differs from {rel} (PAR1); regenerate the notebook",
         )
     return [index for index, _ in tagged]
@@ -608,8 +656,20 @@ def _validate_notebook_content(
     _check(not missing, f"{path.name}: missing required source markers: {missing}")
     present = [label for label, pattern in FORBIDDEN_PATTERNS if pattern.search(code)]
     _check(not present, f"{path.name}: forbidden/insecure source: {present}")
+    # CHR-M1: the two `# dimer: kernel cell` cells (isolated install + router) and the runtime-record cell are
+    # generator-owned infrastructure; the install cell is the one place `subprocess.run([` belongs.
+    kernel = {index for index, source, _tree in code_cells if "# dimer: kernel cell" in source}
+    _check(len(kernel) == 2, f"{path.name}: expected exactly two kernel cells (isolated install, router), found {sorted(kernel)}")
+    install = next((source for index, source, _tree in code_cells if index in kernel and "LOCK_TEXT = r" in source), "")
+    for needed in ('"--managed-python"', '"--require-hashes"', '"--only-binary"', '":all:"', "UV_SHA256", "LOCK_SHA256", 'platform.machine() != "x86_64"'):
+        _check(needed in install, f"{path.name}: the isolated install cell must use {needed} (CHR-M1)")
+    for index, source, _tree in code_cells:
+        if index in kernel or INSTALL_CELL_MARKER in source:
+            _check(source.startswith("# @title Infrastructure:"), f"{path.name}: install/runtime cell {index} must be titled `Infrastructure:` (CHR-M3)")
+    stale = [marker for marker in STALE_MARKDOWN if marker in markdown]
+    _check(not stale, f"{path.name}: stale learner-facing text: {stale}")
     outside_stage_cells = "\n".join(
-        text for index, text in stripped.items() if index not in embedded and INSTALL_CELL_MARKER not in text
+        text for index, text in stripped.items() if index not in embedded and index not in kernel and INSTALL_CELL_MARKER not in text
     )
     leaked = [marker for marker in FORBIDDEN_OUTSIDE_MODULE if marker in outside_stage_cells]
     _check(not leaked, f"{path.name}: direct library use outside the carried module cell (G2): {leaked}")
