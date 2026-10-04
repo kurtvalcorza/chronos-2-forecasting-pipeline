@@ -130,6 +130,7 @@ This notebook is verified separately from the primary tutorial above.
 | 2026-09-26 | `eb426b9` / `40b307491592` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `FULL` tier, `SAMPLE_DATASET = "OPEN_METEO_PH"` | not recorded | **FAILED** — all three environments built and TiRex-2 and Chronos-2 forecast the validation period, but the Toto runner exited while importing `toto2`: Colab's `MPLBACKEND=module://matplotlib_inline.backend_inline` was inherited by the subprocess, and `matplotlib` (loaded through `gluonts` → `lightning` → `torchmetrics`) rejected it. Fixed in the next revision by setting `MPLBACKEND=Agg` for every runner |
 | 2026-09-26 | `4199536` / `2213095d1e58` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `FULL` tier (TiRex-2 on CPU; Chronos-2 and Toto 2.0 2.5B on CUDA), `SAMPLE_DATASET = "OPEN_METEO_PH"` (only those two controls changed) | not recorded | **PASSED** — 18/18 code cells executed without error; sample digest `74163ee609cd…` verified; Toto loaded its 9,362 MiB checkpoint in 124 s and forecast in 1.4 s; test macro MAE TiRex-2 0.463, Chronos-2 0.450, Toto 2.0 0.494, seasonal-naive 0.496 (TiRex-2 and Chronos-2 identical to the `STANDARD` runs); report bundle SHA-256 `850bda69a927…` |
 | 2026-09-26 | `00abb68` / `2213095d1e58` | Google Colab, Tesla T4, Python 3.13.15 kernel (model environments on Python 3.12) | `STANDARD` tier, `SAMPLE_DATASET = "SYNTHETIC"` (default path, notebook unmodified) | not recorded | **PASSED** — 18/18 code cells executed without error; test macro MAE TiRex-2 1.147, Chronos-2 0.175 (identical to every earlier synthetic run); report bundle SHA-256 `c0eb16a1e7ba…` |
+| 2026-10-04 | `8cda8d5` / `ff0389bccd42` | Google Colab (browser, maintainer-run), Tesla T4, Python 3.13.15 kernel (model environments on uv-managed CPython 3.12.12) | `STANDARD` tier, `SAMPLE_DATASET = "SYNTHETIC"` (default path, notebook unmodified) | not recorded | **PASSED** — 19/19 code cells executed in order without error; uv isolated environment built for TiRex-2 and Chronos-2 with no restart; test macro MAE TiRex-2 1.164, Chronos-2 0.175 (identical to the 2026-09-28 run of `9b13733993da`); report bundle SHA-256 `aff7efb03c47…` |
 
 Notebook blob `13e92f12ef0b` (from `129142b`) is unchanged at `e7d9cd8`. Both default and optional sample paths of the `STANDARD` tier passed at that blob.
 
@@ -322,6 +323,34 @@ This satisfies the fresh `STANDARD` synthetic item for revision 0.2.0. The follo
 - the rejection paths;
 - a sample or tier switch within one session;
 - the optional activity.
+
+**Status: Candidate.**
+
+### 2026-10-03 uv isolated environment
+
+The workshop's model environments move to the uv isolated environment. Notebook blob `9b13733993da` becomes `ff0389bccd42`.
+
+- Cell 6.1 no longer installs uv into the notebook kernel with pip. It downloads the pinned uv 0.12.15 wheel and checks its size and SHA-256 (the same wheel the dengue capstone uses). It builds each model environment with `uv venv --managed-python --python 3.12.12`, then installs with `uv pip install --require-hashes --only-binary :all:` from a hash-locked lock carried in the cell (`tools/forecasting-workshop-{tirex,chronos,toto}-requirements.lock`). Nothing is installed into the kernel, so Run all needs no restart.
+- Direct model pins are unchanged. The locks add exact versions and hashes for every dependency. The model Python moves from "3.12" to the managed CPython 3.12.12.
+- The runners' environment drops `PYTHONPATH`, `PYTHONHOME` and `PYTHONSTARTUP` and keeps `MPLBACKEND=Agg`. The freeze and the manifest also record the uv version and each lock's SHA-256.
+- User-visible change: the model environments use Linux x86-64 wheels, so the notebook runs on Colab, Kaggle or a Linux x86-64 Jupyter runtime only. Section 1.2 warns, and Section 6.1 stops before any download, on other platforms.
+- Local checks only (not clean-runtime evidence): the contract tests, including `tests/test_forecasting_workshop_uv_env.py`, and a `uv pip install --dry-run` of each lock for x86_64-manylinux_2_28 with Python 3.12.
+- The comparison reference is the 2026-09-28 Colab T4 run of blob `9b13733993da` above. A hosted T4 re-run of `ff0389bccd42` is pending.
+
+**Status: Candidate.**
+
+### Maintainer-supplied Colab execution of `8cda8d5` — 2026-10-04
+
+The maintainer ran the uv isolated-environment revision in a browser Colab T4 session and supplied the executed copy. It is preserved byte-for-byte as [evidence](execution-evidence/2026-10-04/DIMER_MultiModel_TimeSeries_Forecasting_Workshop_8cda8d5_colab-browser-t4.ipynb).
+
+- **Source:** branch `fix/tsw-uv-2026-10-03` at `8cda8d5`, notebook blob `ff0389bccd42`. All 50 cell IDs, their order and every cell source match the blob exactly; no `# @param` or `# @title` line differs.
+- **Executed-file SHA-256:** `a2b349aa4a7452d7348076c1777ddd1c07b2767b77f0a26643aafb8609f0fd30`.
+- **Executor:** Google Colab (browser, maintainer-run), Tesla T4. Host Python 3.13.15; NumPy 2.1.3, pandas 2.2.3, matplotlib 3.10.0, packaging 26.3. Free disk 207.5 GB. torch/CUDA versions are not printed by the notebook.
+- **Path:** `STANDARD` tier, `SYNTHETIC` sample, default controls; the optional activity was skipped.
+- **Execution:** 19 of 19 code cells ran in order (execution counts 1..19), with no error outputs. Section 6.1 printed "uv 0.12.15: downloaded and checked" and built the TiRex-2 and Chronos-2 environments on Python 3.12.12 from the hash-locked wheels; no kernel install and no restart. Experiment `20261003T234232Z-053317`; the report bundle holds 36 files, SHA-256 `aff7efb03c47ff4d540b1be09f291b33d028fcfcfaf9f5a3f0647f04010eee32`.
+- **Wall:** not recorded (the saved copy carries no per-cell timing). Runner times printed: validation 59 s / 34 s, test 21 s / 12 s, forecast beyond the data 20 s / 12 s (TiRex-2 / Chronos-2).
+- **Results:** every printed metric table (early baselines, validation and test metrics per model and per series, coverage, interval width, pinball losses, and the forecast beyond the data) is identical to the 2026-09-28 Colab T4 run of `9b13733993da`, compared line by line after whitespace normalisation. Test macro MAE: TiRex-2 1.164, Chronos-2 0.175; validation: 2.438 and 0.267. The only differences are the experiment ID and paths, timings, free disk, the bundle digest (which covers the new experiment ID and timings) and the new uv build lines in 6.1.
+- **Evidence boundary:** default path only. The saved outputs were inspected; the execution was not repeated independently. The open items listed for revision 0.2.0 above (Open-Meteo sample, `FULL` on GPU, BYOD, rejection paths, sample or tier switch, optional activity) were not exercised by this run.
 
 **Status: Candidate.**
 

@@ -12,6 +12,44 @@ from pathlib import Path
 from multimodel_forecasting_workshop_source import CELLS
 
 NOTEBOOK_NAME = "DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb"
+TOOLS = Path(__file__).resolve().parent
+LOCK_MODELS = ("tirex", "chronos", "toto")
+LOCK_PLACEHOLDER = "ENV_LOCKS = {}  # @carried-locks"
+MAX_PIECE = 1000
+
+def lock_file(name):
+    return TOOLS / f"forecasting-workshop-{name}-requirements.lock"
+
+def carried_lock(name):
+    """The lock as the notebook carries it: requirement and hash lines only, no comments."""
+    lines = [
+        line.rstrip()
+        for line in lock_file(name).read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    return "\n".join(lines) + "\n"
+
+def render_locks():
+    """ENV_LOCKS as parenthesised runs of string pieces, one lock line per piece."""
+    out = ["ENV_LOCKS = {"]
+    for name in LOCK_MODELS:
+        out.append(f"    {json.dumps(name)}: (")
+        for line in carried_lock(name).splitlines(keepends=True):
+            piece = json.dumps(line, ensure_ascii=True)
+            if len(piece) > MAX_PIECE:
+                raise ValueError(f"lock piece over {MAX_PIECE} characters in {name}")
+            out.append(f"        {piece}")
+        out.append("    ),")
+    out.append("}")
+    return "\n".join(out)
+
+def cell_source(cell):
+    source = cell["source"]
+    if LOCK_PLACEHOLDER in source:
+        if source.count(LOCK_PLACEHOLDER) != 1:
+            raise ValueError("the lock placeholder must appear once")
+        source = source.replace(LOCK_PLACEHOLDER, render_locks())
+    return source
 
 def build_notebook():
     rendered = []
@@ -21,7 +59,7 @@ def build_notebook():
                 "cell_type": "markdown",
                 "id": f"dimer-ts-workshop-{index:02d}",
                 "metadata": cell.get("metadata", {}),
-                "source": cell["source"].splitlines(keepends=True),
+                "source": cell_source(cell).splitlines(keepends=True),
             })
         elif cell["kind"] == "code":
             rendered.append({
@@ -30,7 +68,7 @@ def build_notebook():
                 "id": f"dimer-ts-workshop-{index:02d}",
                 "metadata": cell.get("metadata", {}),
                 "outputs": [],
-                "source": cell["source"].splitlines(keepends=True),
+                "source": cell_source(cell).splitlines(keepends=True),
             })
         else:
             raise ValueError(f"Unknown cell kind: {cell['kind']}")
@@ -53,6 +91,16 @@ def build_notebook():
                 "credentials_required": False,
                 "clean_runtime_evidence": "pending",
                 "release_status": "candidate",
+                "revision_log": [
+                    {
+                        "date": "2026-10-03",
+                        "change": "uv isolated environment: pinned uv 0.12.15 wheel (SHA-256 checked), "
+                        "managed CPython 3.12.12 per model, hash-locked wheels-only installs "
+                        "(--require-hashes --only-binary :all:), no kernel install and no restart; "
+                        "Linux x86-64 only. Direct model pins unchanged.",
+                        "locks": [f"tools/forecasting-workshop-{name}-requirements.lock" for name in LOCK_MODELS],
+                    }
+                ],
                 "generated_from": {
                     "repository": "kurtvalcorza/chronos-2-forecasting-pipeline",
                     "source": "tools/multimodel_forecasting_workshop_source.py",
@@ -83,7 +131,7 @@ def main():
             raise SystemExit(f"STALE: {out}; run python tools/build_multimodel_forecasting_workshop.py")
         print(f"OK: {out}")
         return 0
-    out.write_text(content, encoding="utf-8")
+    out.write_text(content, encoding="utf-8", newline="\n")
     print(out)
     return 0
 
