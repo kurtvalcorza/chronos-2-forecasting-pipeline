@@ -3,7 +3,7 @@
 `tutorials/chronos_2_forecasting_colab.ipynb` (`TASK-INFERENCE`) is a **release candidate** until
 the exact notebook revision has executed top-to-bottom in a clean supported runtime. Unit tests,
 JSON validation, code-cell compilation, and `tools/validate_release_assets.py` are necessary
-checks but are **not** runtime evidence under DIMER Notebook Specification 1.1. This file is
+checks but are **not** runtime evidence under DIMER Notebook Specification 2.2. This file is
 the durable release-gate record for the notebook.
 
 ## Automatic coverage (static, every pull request)
@@ -14,14 +14,17 @@ CI runs `tools/validate_release_assets.py`, which checks:
   persisted outputs or execution counts; no unresolved placeholder markers; every code cell
   is preceded by an explanatory markdown cell;
 - exactly one tutorial notebook, named in `tutorials/README.md` with its `TASK-INFERENCE`
-  profile, the notebook-spec version and the standalone carrier; `metadata.dimer` declares that profile, spec `1.1`, `standalone: true` and `generated_from` (repository, module commit, the seven carried modules, their combined SHA-256, generator);
+  profile, the notebook-spec version and the standalone carrier; `metadata.dimer` declares that profile, spec `2.2`, mode `GUIDED`, `standalone: true` and `generated_from` (repository, module commit, the seven carried modules, their combined SHA-256, generator);
 - the standalone carrier (ST1–ST6, PAR1–PAR3): no clone, repository install or repository import on the
   primary path; one cell tagged `embedded_module` per module of `src/chronos2_pipeline/` (seven, in dependency order:
   `errors`, `provenance`, `config`, `model`, `validation`, `inference`, `evaluation`), each equal to its module after the
   generator's documented rewrites (the `DEFAULT_WEIGHTS_DIR` rule plus the removal of package-relative imports); the inline
   `MANIFEST` equal to the committed `weights/chronos-2/dimer-base-manifest.json`; the inline `PINS` equal to the
-  `pyproject.toml` runtime pins; the notebook byte-identical to `tools/build_notebook.py` output; the pinned-install cell
-  with its restart-on-stale-import guard; `NOTEBOOK_SOURCE` recorded in exports;
+  `pyproject.toml` runtime pins; the notebook byte-identical to `tools/build_notebook.py` output; the isolated-runtime
+  install cell (pinned `uv` wheel checked by size and SHA-256, managed CPython 3.12.12, the carried hash-locked
+  `tutorials/requirements-colab.lock.txt` installed with `--require-hashes --only-binary :all:`, Linux x86_64 only) and the
+  router that sends every later cell to one worker in that environment, both titled `Infrastructure:` and collapsed like the
+  carried module cells; `NOTEBOOK_SOURCE` recorded in exports;
 - `MODEL_ID`/`MODEL_REVISION` are bound only in the carried module cells (and repeated in the inline manifest,
   which the notebook asserts against the module before fetching), the revision is a 40-hex immutable commit, and the same
   identity string appears in `README.md` and `MODEL_CARD.md` with no stray revisions;
@@ -34,7 +37,7 @@ CI runs `tools/validate_release_assets.py`, which checks:
   patterns (credential-in-URL, any `git clone` / `github.com` / repository import on the primary path, a mutable
   `revision='main'`, direct `chronos` / `BaseChronosPipeline` / `predict_df` / `snapshot_download` /
   `from huggingface_hub import` / `from transformers import` use **outside the carried module cells**, any `worker.run(` /
-  `worker_cli(` / `subprocess.run([` outside the generator-owned install cell, `trust_remote_code=True`, `pickle.load`,
+  `worker_cli(` / `subprocess.run([` outside the generator-owned install and runtime cells, `trust_remote_code=True`, `pickle.load`,
   `torch.load(`, `extractall(`);
 - `STATUS.md`, `README.md` and `tutorials/README.md` agree on one release-status token and no
   document makes an unsupported release-grade, production-readiness or benchmark claim;
@@ -61,11 +64,14 @@ Before changing the registry status from `Candidate` to `Release-grade`:
 2. open that exact notebook revision in a new CPU (or CUDA) runtime (Colab, or the Kaggle
    executor above) with **no repository checkout** and a clean model cache;
 3. run the notebook top-to-bottom without editing implementation cells (form parameters at their
-   defaults for the sample path: `USE_BYOD = False`, `PREDICTION_LENGTH = 12`, `RUN_COVARIATE_DEMO = False`);
+   defaults for the sample path: `USE_BYOD = False`, `BYOD_PATH = ""`, `PREDICTION_LENGTH = 12`, `HORIZONS = "12, 24, 48"`,
+   `FIXED_CONTEXT = 48`, `RUN_COVARIATE_DEMO = False`, `FORECAST_FUTURE = False`) and **in one pass** — a run that needs a
+   manual restart is not a one-pass `Run all` and is recorded as such;
 4. verify that Section 1 reports `NOTEBOOK_SOURCE.repository_revision` equal to the module commit recorded in
    `metadata.dimer.generated_from` and that the installed core package versions equal the inline `PINS` (= `pyproject.toml`);
 5. verify every default-path stage completes:
-   - pinned runtime installed from the inline `PINS` with no GitHub access;
+   - the isolated environment built from the carried lock with no GitHub access and no change to the kernel's packages
+     (Section 1 prints the isolated Python 3.12.12 and the locked package count), and every later cell routed to it;
    - the seven carried module cells execute (define `load_pinned_model`, `forecast`, `validate_inputs`, `evaluation_report`
      and the rest) with no import of the repository package;
    - pinned `amazon/chronos-2` acquisition at the immutable revision through the package:
@@ -106,7 +112,8 @@ they are measurements for the stated runtime, not general estimates.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
-| 2026-09-14 | `8485f55` / `e06fea3dcb8d` | Kaggle CPU (`kurtvalcorza/dimer-nb2-chronos-2-forecasting` v1) | Default sample path | 236.0 s | **PASSED** — 17/17 ok code cells executed cleanly, 8 files, 478 MB staged |
+| 2026-09-14 | `8485f55` / `e06fea3dcb8d` | Kaggle CPU (`kurtvalcorza/dimer-nb2-chronos-2-forecasting` v1) | Default sample path | 236.0 s (181.8 s + 54.0 s, both attempts) | **Completed only after a manual restart — not a one-pass `Run all`.** Attempt 1 stopped in the install cell with the restart `RuntimeError` (`numpy: loaded=2.0.2, installed=2.5.3`); attempt 2, after the restart, ran 17/17 code cells and wrote 9 files (8 data files and the SVG), 478 MB staged (`restarted_after_install_cell: true`). Not promotion evidence |
+| 2026-10-03 | `33a2f53` / `607ba0e5818d` | Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4 (not a browser `Run all`) | Default sample path, no toggles changed | 235.7 s | **One pass, no restart, 0 errors** — 21/21 code cells; Chronos-2 on `cuda:0` from the verified snapshot; MAE 0.33015 / RMSE 0.34603 (last-value 5.91665 / 6.69292, seasonal-naive 6.0 / 6.0, coverage 1.0); 9 output files. Details in "Colab CLI execution of `33a2f53`" below |
 
 ### Multi-model forecasting workshop
 
@@ -194,14 +201,14 @@ was stale. The revised multi-model notebook's hosted rerun and full BYOD gate
 are **pending** as described above. The registry status remains **Candidate**
 until a reviewer confirms a recorded run against the notebook blob under review and
 an integrator promotes it; promotion is not performed by the builder. Three facts a reviewer should
-weigh: `stage_missing_files` was exercised only with an injected downloader in the unit suite (the
-real `hf_hub_download` fetch of all three manifest entries into a fresh `weights/chronos-2/` has not been
-executed); `load_pinned_model(weights_dir=...)` was exercised only with a stand-in `chronos` module (the real
-`BaseChronosPipeline.from_pretrained` on the manifest-described directory has not been executed); and the standalone
-carrier itself — executing the seven carried module cells in a runtime that has no repository checkout — has been
-validated statically only (parity PASS, carrier probe up to the fetch), never run. The earlier repository-installing
-notebook did run in CI against the real weights at `95a9710e2596287d08352589f42634fa5abdf0a7`; that evidence predates the standalone carrier and the
-fleet snapshot scheme and does not transfer to it.
+weigh for the primary tutorial `chronos_2_forecasting_colab.ipynb`: the 2026-09-14 Kaggle CPU row above executed the
+standalone carrier (the seven carried module cells, the real `hf_hub_download` fetch of all three manifest entries and
+`load_pinned_model` on the verified snapshot) for blob `e06fea3dcb8d`, but only after a manual restart, so it is not a
+one-pass `Run all`; the 2026-10-03 revision below replaces the in-kernel install with the isolated runtime, and its blob
+`607ba0e5818d` (commit `33a2f53`) ran the default path in one pass with no restart and no error on a fresh Colab T4
+through the Colab CLI (sequential execution, not a browser `Run all`). The primary tutorial stays **Candidate**: the
+BYOD positive and negative runs and the Next experiments (Mode D, Section 13) are not yet exercised on a hosted runtime. The earlier repository-installing notebook ran in CI against the real weights at
+`95a9710e2596287d08352589f42634fa5abdf0a7`; that evidence predates the standalone carrier and does not transfer to it.
 
 
 ## Maintainer-supplied Colab execution — 2026-09-26
@@ -674,3 +681,73 @@ changes from `238285bda22a` to `90dfa21f20e2`. Every hosted run recorded above w
 - **Result:** **PASSED**: 14/14 code cells, no error output, 331.4 s wall. Default path; no toggles changed.
 - **Equivalence:** compared line by line with the 2026-09-29 Colab run of `d55d51c` (blob `238285bda22a`) after removing clock times, RAM and disk readings and durations: 233 lines each; the only differences are the install flush time (1 s vs 0 s) and the order of two interleaved `validation` progress lines. Origins, rows, metrics and stage results are identical, so the carrier split changed no runtime behaviour.
 - **Boundary:** saved outputs were inspected; BYOD and the optional semantics toggle were not exercised. Status remains Candidate.
+
+
+## Primary tutorial: Notebook Review Framework v1 findings — row 11 fixes (2026-10-03)
+
+The review of `chronos_2_forecasting_colab.ipynb` at `d661102` (blob `e06fea3d`, PR #24) concluded **Needs revision**
+with three major and five minor findings (CHR-M1..M3, CHR-m1..m5). The fixes are in the generator
+(`tools/build_notebook.py` /2.1, `tools/notebook_template.py`); the notebook is regenerated, never hand-edited, and
+`src/` is unchanged. Status remains **Candidate**.
+
+| Finding | Correction |
+|---|---|
+| CHR-M1 (major): `Run all` needed a manual restart after the in-kernel install; the record called it a clean pass | The fleet uv isolated runtime (pinned `uv` 0.12.15 wheel, managed CPython 3.12.12, hash-locked `tutorials/requirements-colab.lock.txt`, `--require-hashes --only-binary :all:`), every later cell routed to one worker there; Linux x86_64 runtimes only. The 2026-09-14 row now records the restart |
+| CHR-M2 (major): changing `PREDICTION_LENGTH` also shrank the context; "toward 1,024" was infeasible; no Mode D comparison | Section 5 states the coupling and the feasible range (1–93, seasonal comparator up to 72); the Section 11 activity forecasts several horizons from one cut-off with `context_length=FIXED_CONTEXT`; Mode D scores runs with and without covariates against the formula's true future |
+| CHR-M3 (major): `GUIDED` without a guided layer | Audience, how to use, roadmap, Input → Model → Output, glossary, predictions, What to notice, sample answers, troubleshooting, conclusion template; Infrastructure titles and collapsed setup and carried cells; duplicated sentence removed |
+| CHR-m1 (minor): degenerate baselines unexplained | Section 7 explains the exact 6.0 (24 × 0.25 trend) and why coverage 1.0 on 12 noiseless points says nothing about calibration |
+| CHR-m2 (minor): BYOD friction | `BYOD_PATH`, `ID_COLUMN`, `TIMESTAMP_COLUMN`, `TARGET_COLUMN` fields; a UTF-8 message; a missing-column message naming the fields; Mode C never overwrites a user column |
+| CHR-m3 (minor): no real-future path | Optional Section 13 forecasts from the full history (verdict `not-measurable`) |
+| CHR-m4 (minor): partial, stale Mode D exports | `outputs/chronos_covariate_provenance.json`, referenced from the result JSON's `learner_runs`; optional sections remove their files when off |
+| CHR-m5 (minor): spec versions and status text disagreed | This file, `STATUS.md`, `README.md` and `tutorials/README.md` name Specification 2.2 for this notebook; the current-status paragraph cites the recorded run |
+
+**Local verification (not clean-runtime evidence).** Windows, CPU, repository `.venv` (torch 2.11.0+cpu, not the locked
+2.14.0), the pinned `model.safetensors` hard-linked into a scratch directory and the two small files fetched by the
+notebook from the Hub; every code cell executed verbatim from the regenerated notebook with
+`DIMER_NOTEBOOK_CI_PREINSTALLED=1` (the Linux-only isolated install and the routing are skipped, as in the CI executor).
+Default path 21/21 code cells; metrics equal the earlier record (Chronos-2 MAE 0.33015 / RMSE 0.34603, last-value
+5.91665 / 6.69292, seasonal-naive 6.0 / 6.0, coverage 1.0). Section 11 at a fixed context of 48: MAE 0.269 / 0.569 / 2.694
+at 12 / 24 / 48 steps. Mode D: MAE 2.458 with covariates, 9.600 without. Section 13: first forecast one hour after the
+last input, verdict `not-measurable`. BYOD with its own column names, a UTF-16 file, an existing `target_aux` column and a
+missing path behave as described above. `tests/test_chronos_2_forecasting_colab_review_fixes.py` covers these journeys
+with a stand-in model.
+
+**Before release:** a hosted Colab (T4 or CPU) `Run all` of the regenerated blob in **one pass** from a fresh runtime
+with an empty cache, recorded in the table above with its blob id; then the BYOD positive and negative runs and each Next
+experiment as written.
+
+The first hosted attempt, at `f9e605e`, stopped in the model-loading cell (`ValueError: google.colab.__spec__ is None`
+from the isolated worker's `google.colab` stubs); `33a2f53` gives those stubs a module spec (CHR-M1 follow-up). The
+notebook blob changed from that attempt's to `607ba0e5818d`; `src/` and the carried modules are unchanged.
+
+### Colab CLI execution of `33a2f53` (blob `607ba0e5`) — 2026-10-03
+
+- **Files** (byte-for-byte copies of the CLI's output, in `execution-evidence/2026-10-03/`):
+  - [`chronos_2_forecasting_colab_33a2f53_colab-cli-t4.ipynb`](execution-evidence/2026-10-03/chronos_2_forecasting_colab_33a2f53_colab-cli-t4.ipynb), SHA-256 `4febd967d8df031f7ba1dd724019239247cdf81caa5dbb093b85fefc541039e2` (executed notebook)
+  - [`chronos_2_forecasting_colab_33a2f53_colab-cli-t4_exec.log`](execution-evidence/2026-10-03/chronos_2_forecasting_colab_33a2f53_colab-cli-t4_exec.log), SHA-256 `0ea22d29804eb29887bf79b2f8678107ecdb305ea8f45fdd99890aba9b92c960`
+  - [`chronos_2_forecasting_colab_33a2f53_colab-cli-t4_run_summary.json`](execution-evidence/2026-10-03/chronos_2_forecasting_colab_33a2f53_colab-cli-t4_run_summary.json), SHA-256 `44069ef1d9af635affe4b9225c8e6dd08ea7203f4a98b774bfe06a62c956d49d`
+- **Executor:** Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4, through the workspace
+  `colab-cli-serial-test-suite` (`colab new --gpu T4`, `colab exec -f`, `colab stop`). The notebook was downloaded
+  from GitHub at `33a2f53c695589969fc028f093569943a80200e2` and its git blob `607ba0e5818d62bcc7d60e62305a53647c7f7e5e`
+  checked before the session was created. Code cells ran in order in one kernel; this is not a browser `Run all`, the CLI
+  records no execution counts, and order is evidenced by the `Executing cell k/21` lines in `exec.log`. The executed
+  notebook's 21 code-cell sources equal the commit's.
+- **Path:** default settings only (`USE_BYOD = False`, `PREDICTION_LENGTH = 12`, `HORIZONS = "12, 24, 48"`,
+  `FIXED_CONTEXT = 48`, `RUN_COVARIATE_DEMO = False`, `FORECAST_FUTURE = False`); clean runtime, empty model cache.
+- **Outcome:** **one pass, no restart, 0 errors** — 21/21 code cells, 235.7 s wall (session start to stop). The seven
+  carried module cells print nothing by design; every other cell produced output.
+- **Runtime:** kernel Python 3.13.15; isolated environment Python 3.12.12 with 54 locked packages (built in 53 s), torch
+  2.14.0+cu130, transformers 4.57.6, chronos-forecasting 2.3.1, numpy 2.5.3, pandas 3.0.5; CUDA available.
+- **Observed stages:** `NOTEBOOK_SOURCE.repository_revision` `f9e605e` equals `metadata.dimer.generated_from.revision`
+  (module SHA-256 `39e18d89…`); `amazon/chronos-2` at `95a9710e2596287d08352589f42634fa5abdf0a7` fetched (README.md,
+  config.json, model.safetensors; 477,931,570 bytes), 3 files verified, loaded on `cuda:0` from the local snapshot;
+  synthetic sample SHA-256 `eff96b1a…c7f7` (96 rows), 84 history rows, holdout 12; `effective_context_length` 84,
+  `effective_prediction_length` 12, q0.1/q0.5/q0.9 present.
+- **Metrics printed:** Chronos-2 MAE 0.33015 / RMSE 0.34603 / interval coverage 1.0; last-value MAE 5.91665 / RMSE
+  6.69292; seasonal-naive 6.0 / 6.0; pinball q0.1 0.13765, q0.5 0.16508, q0.9 0.03652. Mode C: targets `target` and
+  `target_aux`, largest |aux − (0.5 × target + 10)| 0.0. Section 11 at fixed context 48: MAE 0.269 / 0.569 / 2.694 at
+  12 / 24 / 48 steps (last-value 6.569 / 4.668 / 7.153). These equal the local CPU verification above.
+- **Outputs written:** 9 files in `outputs/` — the input manifest, the evaluation report, the SVG and the six exports
+  named in procedure step 5.
+- **Not exercised:** BYOD (positive and negative), Mode D (`RUN_COVARIATE_DEMO`), Section 13 (`FORECAST_FUTURE`), the
+  form and upload widgets (the CLI renders no forms). Status remains **Candidate**.

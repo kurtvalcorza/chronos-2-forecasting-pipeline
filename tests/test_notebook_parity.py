@@ -62,7 +62,10 @@ def test_par1_embedded_modules_equal_repository_modules(notebook: dict) -> None:
         rel = f"{ctx['pkg_rel']}/{module}"
         assert cell["metadata"]["dimer"]["module_sha256"] == ctx["per_module_sha256"][rel]
         drifted = f"embedded module cell for {rel} drifted from the package; regenerate the notebook"
-        assert _source(cell).rstrip("\n") + "\n" == ctx["embedded"][module], drifted
+        # The generator's one-line `# @title Infrastructure: ...` (CHR-M3) is the only addition to the module text.
+        expected = build.carried_cell_source(rel, ctx["embedded"][module], bool(TEMPLATE.get("infrastructure_labels")))
+        assert _source(cell).rstrip("\n") + "\n" == expected, drifted
+        assert build.strip_carried_title(_source(cell)).rstrip("\n") + "\n" == ctx["embedded"][module], drifted
 
 
 REWRITES = TEMPLATE.get("rewrites", build.REWRITES)  # a template may declare its own rules (generator /2)
