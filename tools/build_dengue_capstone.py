@@ -121,7 +121,16 @@ subprocess.run([str(UV),'pip','install','--python',str(PYTHON),'--require-hashes
 subprocess.run([str(PYTHON),'-c','import torch; assert torch.cuda.is_available(); print(torch.__version__)'],check=True,env=ENV)
 (ROOT/'bootstrap.json').write_text(json.dumps({'seconds':time.perf_counter()-started,'gpu':GPU}),encoding='utf-8')
 
+REFUSED_EXIT = 3  # dengue_runtime.py's exit code for an input it refused with a message; not a crash
+REFUSED = None  # the stage that refused the input, if any; every later stage is skipped
+
 def run(stage):
+    # Returns True when the stage passed. A refused input prints one message, returns False and makes
+    # every later stage skip, so Run all ends without a traceback. Any other failure still stops with an error.
+    global REFUSED
+    if REFUSED:
+        print(f'Skipped {stage}: the input was refused in {REFUSED} (message above); nothing else runs.')
+        return False
     log = ROOT/(stage+'.log')
     print('Running',stage,'— log:',log,flush=True)
     with log.open('w',encoding='utf-8') as handle:
@@ -131,12 +140,22 @@ def run(stage):
             handle.write(line); handle.flush()
             if len(line)<2000: print(line.rstrip(),flush=True)
         process.wait()
+    if process.returncode == REFUSED_EXIT:
+        REFUSED = stage
+        print('Nothing was modelled or exported. Fix the file or setting named above, upload it again if needed, '
+              'then choose Runtime > Run all (rerunning only this cell would reuse the old settings).')
+        return False
     if process.returncode:
         raise RuntimeError(f'{stage} failed. Inspect {log}; do not skip this stage.')
+    return True
 
-def record(name):
+def record(name, limit=14000):
+    # Long files are shown as a labelled excerpt; the linked file is always complete.
     path=ROOT/'results'/name
-    print(json.dumps(json.loads(path.read_text()),indent=2)[:14000])
+    text=json.dumps(json.loads(path.read_text()),indent=2)
+    if len(text)>limit:
+        text=text[:limit]+f'\\n... [truncated excerpt: first {limit:,} of {len(text):,} characters; the full file is linked below]'
+    print(text)
     display(FileLink(str(path)))
 
 def figure(name):
@@ -196,7 +215,7 @@ def build():
 
     md("""# Philippine Dengue Forecasting: Do Weather Signals Improve Predictions?
 
-**Exploratory published-source-block benchmark · Revision 0.2.0 · Candidate · E2E / GUIDED · NOTEBOOK_SPEC 2.2**
+**Exploratory published-source-block benchmark · Revision 0.2.0 · Candidate · CAPSTONE · E2E / GUIDED · NOTEBOOK_SPEC 2.2**
 
 Can past rainfall and temperature improve forecasts of Quezon City's reported dengue counts one to four reporting blocks ahead? You will compare six systems, change one availability assumption, and conclude using measured evidence.
 
@@ -204,7 +223,13 @@ Can past rainfall and temperature improve forecasts of Quezon City's reported de
 
 **Important scope:** the publisher gives conflicting week definitions. We preserve its year/block order without inventing calendar dates. Case–weather alignment and real reporting availability are unverified. Results describe this published alignment, not verified weekly forecasting, clinical diagnosis or an operational warning system.
 
-**How to use:** basic Python/Colab familiarity; choose a fresh **T4 GPU**, keep defaults and **Run all**. No token or manual restart is required. Initial targets are 60 minutes, 20 GiB free disk and 12 GiB peak GPU allocation; hosted measurements are pending. Infrastructure cells handle reproducibility; the numbered sections contain the learning activity.
+## Problem statement
+
+Dengue programme staff and analysts in Quezon City see reported cases rise and fall with the rainy season, and weather data are easy to obtain. The question this notebook supports is a modelling decision, not an operational one: on the published source blocks, does adding past rainfall and temperature to a forecasting model reduce its error compared with the same model without weather, and does either beat a naive baseline? Answering it honestly needs leakage-free time splits, a naive floor and a paired comparison, which is what you build here.
+
+**How to use:** basic Python/Colab familiarity; choose a fresh **T4 GPU**, keep defaults and **Run all**. No token or manual restart is required. The run downloads about 780 MB of model weights (Chronos-2 478 MB, Mitra 303 MB) plus a pinned Python environment. A recorded fresh Colab T4 run (Colab CLI, 2026-10-03, revision `08b2343`) took 445 seconds end to end, with 0.48 GiB peak GPU allocation; the 60-minute, 20 GiB disk and 12 GiB GPU figures are planning targets. Infrastructure cells handle reproducibility; the numbered sections contain the learning activity.
+
+**Use notice:** this notebook is for research, training and evaluation. It is not validated for production, clinical or safety-critical use, including outbreak warning. Running it downloads third-party model weights and a dataset under their own licences (see the model cards and `DATA_LICENSE.md`), and it uses compute on your own Colab account. Its results are tutorial evidence on one published series, not a benchmark. Everything is supplied "as is", without warranty of any kind, and liability is limited to the extent the licences allow. Optional BYOD data stays in this Colab runtime; you are responsible for having the right to use it.
 
 By the end, identify a forecast origin and horizon, explain time leakage, compare weather against the same model without weather, interpret an interval's empirical coverage, and support a conclusion with errors and limitations.
 
@@ -214,7 +239,16 @@ By the end, identify a forecast origin and horizon, explain time leakage, compar
 
 The next cell is collapsed: it carries the embedded source (about 230,000 characters), checks each file against its SHA-256, and builds an isolated Python environment pinned for both models. Expand it to read the code; you do not need to. It does not fetch DIMER scripts or call workers. All stages run locally in this Colab runtime in separate processes.
 
-Optional BYOD is disabled above. It accepts only aggregate `year,block,cases,rain,temp` data with six complete 52-block years: at least two history years plus two validation and two test years. Cases must be nonnegative integer counts, rainfall nonnegative mm per block and temperature in Celsius (−30 to 60). Every row needs all five values; the notebook names the file, line and column of any refusal. Name the area and cite the source in `BYOD_AREA` and `BYOD_SOURCE_CITATION`: they label captions and provenance and are never predictors. Before any model is downloaded, every Mitra context the experiment will need is checked; a constant-count stretch stops the run there, with the affected contexts listed. No individual health records are accepted.""")
+Optional BYOD is disabled above. It accepts only aggregate `year,block,cases,rain,temp` data with six complete 52-block years: at least two history years plus two validation and two test years. Cases must be nonnegative integer counts, rainfall nonnegative mm per block and temperature in Celsius (−30 to 60). Every row needs all five values; the notebook names the file, line and column of any refusal. Name the area and cite the source in `BYOD_AREA` and `BYOD_SOURCE_CITATION`: they label captions and provenance and are never predictors. Before any model is downloaded, every Mitra context the experiment will need is checked; a constant-count stretch stops the run there, with the affected contexts listed. No individual health records are accepted.
+
+**Your data stays in this runtime.** The BYOD file is read only inside this Colab runtime; nothing is sent to any other service, and the only copy that leaves is what you download yourself. The results bundle keeps aggregate numeric contexts of your series (`artifact_manifest.json` lists them). Do not use confidential, restricted, personal or regulated data, including any health data under a data-sharing agreement, unless you are authorised to process it in Google Colab.
+
+**How to run BYOD (after or instead of the default run):**
+1. Upload the CSV with the **Files** pane (folder icon, left sidebar) and copy its path.
+2. In the first code cell set `USE_BYOD`, `BYOD_CSV`, `BYOD_SOURCE_BLOCKS_CONFIRMED`, `BYOD_AREA` and `BYOD_SOURCE_CITATION`.
+3. Choose **Runtime > Run all**. Each Run all starts a new run directory, so it rebuilds the isolated environment and downloads the model weights again (about 780 MB; roughly the 7–8 minutes of the default run). Rerunning only the first cell leaves an empty run directory, and rerunning a numbered section alone keeps using the earlier data, so neither switches to your file.
+
+A refused file prints one `Refused:` message naming the file, line and column (or the rule it failed); every later stage then prints `Skipped` and nothing is modelled or exported. Fix the file, upload it again and Run all.""")
     files = carried_files()
     code(
         "# @title Embedded source, integrity check and isolated environment (collapsed; expand to read)\n"
@@ -241,7 +275,7 @@ The database uses ODC-ODbL 1.0, with source-specific terms retained in `DATA_LIC
 
 **What to notice:** 832 rows and 26 origins per evaluation partition are expected for the default source. The audit must explicitly report the unresolved calendar and availability limitations. The context check reports how many planned model contexts it examined.""")
     code(
-        "run('prepare')\nplan=json.loads((ROOT/'results/plan.json').read_text())\nprint('Area:',plan['area'],'· Source:',plan['source_citation'])\nrecord('plan.json')\nrecord('context_preflight.json')\ntable('origin_manifest.csv',['partition','origin_key','horizon','target_key','cutoff'],limit=8)\nfigure('prepare.png')\ndisplay(FileLink(str(ROOT/'dataset_audit.json')))\ndisplay(FileLink(str(ROOT/'DATA_LICENSE.md')))"
+        "if run('prepare'):\n    plan=json.loads((ROOT/'results/plan.json').read_text())\n    print('Area:',plan['area'],'· Source:',plan['source_citation'])\n    record('plan.json')\n    record('context_preflight.json')\n    table('origin_manifest.csv',['partition','origin_key','horizon','target_key','cutoff'],limit=8)\n    figure('prepare.png')\n    display(FileLink(str(ROOT/'dataset_audit.json')))\n    display(FileLink(str(ROOT/'DATA_LICENSE.md')))"
     )
     md("""## 2. Build a fair chronological comparison
 
@@ -255,7 +289,7 @@ We assume zero reporting delay initially. Event-date truncation cannot reconstru
 
 **Predict:** will persistence or the same block last year work better? Ridge fits a transparent log-count regression using past counts and known target-block seasonality. Negative inverse-transformed estimates are floored at zero and flagged; forecasts are not rounded for scoring.""")
     code(
-        "run('baselines')\ntable('feature_example.csv',['item','value','source_blocks'])\ntable('availability_audit.csv',['partition','origin','horizon','cutoff','max_training_target','max_training_input','future_input_used'],limit=8)\nrecord('baseline_metrics.json')\nfigure('baselines.png')"
+        "if run('baselines'):\n    table('feature_example.csv',['item','value','source_blocks'])\n    table('availability_audit.csv',['partition','origin','horizon','cutoff','max_training_target','max_training_input','future_input_used'],limit=8)\n    record('baseline_metrics.json')\n    figure('baselines.png')"
     )
     md("""<details><summary>Interpretation checkpoint</summary>
 A seasonal baseline can capture recurring patterns but miss changing intensity. Persistence can work over short horizons but miss turning points. Neither guarantees good high-case forecasts. Features and training labels must satisfy their own availability cutoffs, not merely precede the final test year.
@@ -267,13 +301,19 @@ Chronos-2 reads the last 104 case blocks without gradient training. Mitra perfor
 
 **Predict:** will weather help every horizon? The controlled question is **Mitra + weather versus Mitra case-only**. Chronos versus Mitra changes the model family too, so it cannot isolate weather's effect.
 
-**What to notice:** all six systems should have 104 validation forecasts. A worse foundation-model score is legitimate evidence, not a notebook error.""")
+**Tuning parity:** the window is selected on case-only Mitra and reused for weather Mitra; it is not separately tuned for weather, which if anything favours case-only. Chronos (fixed 104-block context) and Ridge use fixed settings and are not tuned on validation. Read the comparisons with that in mind.
+
+**What the point forecast means:** Chronos's point forecast is its 0.5 quantile, the median of its forecast distribution. Mitra and Ridge are fitted on log1p(count) and back-transformed with expm1, so their point estimates behave like a median on the count scale and sit below the mean when counts are skewed. None of the six systems reports a mean forecast; MAE is the matching error for median-type points.
+
+**What to notice:** all six systems should have 104 validation forecasts, and the progress lines name each model's window and delay. A worse foundation-model score is legitimate evidence, not a notebook error.""")
     code(
-        "run('validation')\nrecord('selection.json')\nrecord('validation_metrics.json')\nfigure('validation.png')\nrun('lock')\nrecord('experiment_lock.json')"
+        "if run('validation'):\n    record('selection.json')\n    record('validation_metrics.json')\n    figure('validation.png')\nif run('lock'):\n    record('experiment_lock.json')"
     )
     md("""## 4. Evaluate held-out published blocks
 
 Settings are now locked. **MAE** is the average absolute count error; lower is better. **Bias** is prediction minus reference; a negative value means underprediction. Skill compares MAE with seasonal naïve and is undefined if its denominator is zero.
+
+**Which baseline is the floor?** Skill here is relative to seasonal naïve, the weaker of the two simple baselines, so a model can show positive skill and still lose to persistence (the last observed count). Persistence is the naive floor for this conclusion: before calling any model useful, check whether its MAE is below persistence's.
 
 **Predict:** will validation's ranking persist? Read each horizon separately, then the equal-horizon mean. Inspect high-case blocks defined by the development-history 90th percentile; this is not an official outbreak threshold.
 
@@ -283,10 +323,10 @@ Chronos's nominal 80% model interval is not a guaranteed calibrated interval. In
 
 The largest-misses table shows each miss's published count (`reference`), the forecast, the signed error (forecast minus reference; negative means underprediction) and its size. Pick one and explain it: was it a high-case block, and did every system miss it?""")
     code(
-        "run('test')\nrecord('metrics.json')\nrecord('paired_comparison.json')\nrecord('high_case_metrics.json')\nrecord('interval_metrics.json')\nfigure('test.png')\nfigure('test_forecasts.png')\ntable('largest_misses.csv',['system','target_key','horizon','reference','prediction','error','abs_error'],limit=10)"
+        "if run('test'):\n    record('metrics.json')\n    record('paired_comparison.json')\n    record('high_case_metrics.json')\n    record('interval_metrics.json')\n    figure('test.png')\n    figure('test_forecasts.png')\n    table('largest_misses.csv',['system','target_key','horizon','reference','prediction','error','abs_error'],limit=10)"
     )
     md("""<details><summary>Worked interpretation guidance</summary>
-If adding weather lowers average MAE but worsens the longest horizon or high-case errors, report that trade-off. An interval containing zero does not establish that the models are identical. A consistent gain on these rows still does not validate the source timing, prove causality or establish future operational performance.
+If adding weather lowers average MAE but worsens the longest horizon or high-case errors, report that trade-off. An interval containing zero does not establish that the models are identical, and it does not establish a weather gain either: it is compatible with weather helping, hurting or doing nothing on these rows. Compare both Mitra variants with persistence too: if neither beats the naive floor, the weather difference is between two models that are not yet useful here. A consistent gain on these rows still does not validate the source timing, prove causality or establish future operational performance.
 </details>
 
 ## 5. Change one thing: assume a two-block reporting delay
@@ -295,7 +335,7 @@ If adding weather lowers average MAE but worsens the longest horizon or high-cas
 
 This two-block delay is illustrative, not an estimate of actual reporting delay. Canonical test outputs and the locked experiment remain unchanged. The first table pairs each system's zero-delay and two-block validation MAE on the same 104 targets; `change` is delay-two minus zero-delay, so a positive value means the delay hurt. The second table shows individual paired forecasts.""")
     code(
-        "run('activity')\ntable('delay_summary.csv',['system','pairs','mae_delay_0','mae_delay_2','change'])\ntable('delay_comparison.csv',['system','target_key','horizon','reference','prediction_delay_0','prediction_delay_2','abs_error_change'],limit=12)\nfigure('activity.png')\nrecord('delay_metrics.json')"
+        "if run('activity'):\n    table('delay_summary.csv',['system','pairs','mae_delay_0','mae_delay_2','change'])\n    table('delay_comparison.csv',['system','target_key','horizon','reference','prediction_delay_0','prediction_delay_2','abs_error_change'],limit=12)\n    figure('activity.png')\n    record('delay_metrics.json')"
     )
     md("""## 6. Forecast beyond the final source block
 
@@ -303,7 +343,7 @@ Fit/context information now extends through the last published row. The next fou
 
 **What to notice:** the original source year/block labels continue. The first table places all six systems side by side for the four target blocks. The second lists all 24 forecasts: `prediction` is the value used (never below zero), `raw_prediction` and `clipped` show any flooring, and `q10`/`q50`/`q90` are Chronos's nominal quantiles (blank for systems without intervals). There is no reference column because these blocks have not been observed. These are source-block projections, not reconstructed dates.""")
     code(
-        "run('future')\ntable('future_forecast_view.csv',['target_key','horizon','persistence','seasonal','ridge','chronos','mitra_cases','mitra_weather'])\ntable('future_predictions.csv',['system','target_key','horizon','prediction','raw_prediction','clipped','q10','q50','q90'])"
+        "if run('future'):\n    table('future_forecast_view.csv',['target_key','horizon','persistence','seasonal','ridge','chronos','mitra_cases','mitra_weather'])\n    table('future_predictions.csv',['system','target_key','horizon','prediction','raw_prediction','clipped','q10','q50','q90'])"
     )
     md("""## 7. Export, reconstruct and verify
 
@@ -313,17 +353,47 @@ Results include predictions, metrics, availability audit, source/licence notices
 
 **Reuse the bundle elsewhere.** The last step extracts `results.zip` into a new directory that holds only this notebook's embedded code, then reproduces the same forecasts from the bundle alone. It needs the verified model snapshots, but not the original run directory, its data file or its settings. Elsewhere, run the embedded `dengue_runtime.py --consume results.zip --workdir <new dir> --models <snapshot cache>` next to `source.json` and `model_manifest.json`. Preserve the executed notebook alongside the ZIP for qualification evidence.""")
     code(
-        "run('reload')\nrecord('verification.json')\nrun('report')\nrecord('run_summary.json')\ndisplay(FileLink(str(ROOT/'results/results.zip')))\nconsume()"
+        "if run('reload'):\n    record('verification.json')\nif run('report'):\n    record('run_summary.json')\n    display(FileLink(str(ROOT/'results/results.zip')))\n    consume()"
     )
     md("""## 8. Conclude with evidence
 
-Use your measured results to complete: “Adding historical weather changed MAE from ___ to ___ at horizon ___. The paired difference was ___, with interval ___. On high-case blocks ___. Under the illustrative delay ___. These results support ___ under the published alignment, but cannot establish ___.”
+Decide first which level of claim your numbers reach. The levels are cumulative; stop at the first one that fails.
+
+1. **Signal: does Mitra + weather beat the naive floor?** Its test MAE must be below persistence's. If it is not, the model is not yet useful on these rows, whatever its skill against seasonal naïve.
+2. **Comparator: does weather beat case-only?** Mitra + weather needs a lower MAE than Mitra case-only *and* a paired interval that excludes zero. An interval that includes zero means no weather gain is established.
+3. **Operational: would it help a real warning system?** Out of scope here: block timing, case–weather alignment and reporting availability are unverified.
+
+Use your measured results to complete: “On the test years, persistence (the naive floor) had MAE ___; Mitra + weather ___, Mitra case-only ___ and Chronos ___. Mitra + weather ___ [did / did not] beat persistence. Adding historical weather changed Mitra's MAE from ___ to ___ (at horizon 1: ___ to ___). The paired difference was ___, with interval ___, which ___ [excludes / includes] zero. On high-case blocks ___. Under the illustrative delay ___. These results reach the ___ level, for this weather encoding (rain and temperature lags 0–4 and 4- and 8-block means) with a window tuned for case-only Mitra, under the published alignment. They cannot establish ___.”
 
 Keep the unresolved block definition, case–weather alignment, retrospective availability, possible pretraining overlap and limited evaluation span visible. Your completion record is an optional learning aid, not a required submission.
 
 **Continue on DIMER:** explore the Chronos-2 and Mitra regression pipelines for their complete supported workflows. This capstone demonstrates in-context regression; it does not claim gradient fine-tuning or a deployment-ready health service.
 
-Sources: [pinned dataset](https://zenodo.org/records/21978184), [UPRI-NOAH documentation](https://github.com/UPRI-NOAH/dengue-rainfall-dataset), [author repository](https://github.com/pelitro-rcw/dengue-environmental-dataset), [Chronos-2](https://huggingface.co/amazon/chronos-2), [Mitra regressor](https://huggingface.co/autogluon/mitra-regressor). The two dataset repositories currently distribute the same workbook; they are not independent replication cohorts.""")
+## Troubleshooting
+
+| Symptom | What to do |
+|---|---|
+| `Use a fresh Colab Linux x86-64 T4 runtime` or `Select Runtime > Change runtime type > T4 GPU` | Change the runtime type to T4 GPU, then Runtime > Run all. |
+| `Allow at least 20 GiB free disk` | Start a fresh runtime (Runtime > Disconnect and delete runtime); earlier run directories use disk. |
+| `Bootstrap hash/size mismatch`, a download or `uv pip install` error | A pinned file did not arrive intact. Rerun after a minute; never remove the hash checks. |
+| A model snapshot digest or `Embedded source changed` error | An integrity check failed: start a fresh runtime and Run all; do not edit the carried files. |
+| CUDA out of memory | Unexpected at the measured 0.48 GiB peak; restart the runtime so no other notebook shares the GPU. |
+| `Refused:` in section 1 (BYOD) | Read the message: it names the file, line and column, or the rule. Fix the file, upload it again and Run all; later stages print `Skipped` until then. |
+| `Confirm aggregate source-block definitions` / `Name the BYOD area` | Set the BYOD controls in the first cell, then Run all. |
+
+## References
+
+The two dataset repositories distribute the same workbook; they are not independent replication cohorts.
+
+[1] Amazon, "Chronos-2 (amazon/chronos-2)," Hugging Face model card, revision 95a9710. [Online]. Available: https://huggingface.co/amazon/chronos-2
+
+[2] AutoGluon, "Mitra regressor (autogluon/mitra-regressor)," Hugging Face model card, revision 5f277aa. [Online]. Available: https://huggingface.co/autogluon/mitra-regressor
+
+[3] "Philippine dengue and environmental dataset," v1.1.0, Zenodo, record 21978184, ODC-ODbL 1.0, doi: 10.5281/zenodo.21978184. [Online]. Available: https://zenodo.org/records/21978184
+
+[4] UPRI-NOAH, "dengue-rainfall-dataset," GitHub repository documentation. [Online]. Available: https://github.com/UPRI-NOAH/dengue-rainfall-dataset
+
+[5] pelitro-rcw, "dengue-environmental-dataset," GitHub author repository. [Online]. Available: https://github.com/pelitro-rcw/dengue-environmental-dataset""")
     for i, c in enumerate(cells):
         c["id"] = f"dengue-{i:02d}"
     return {
@@ -333,9 +403,10 @@ Sources: [pinned dataset](https://zenodo.org/records/21978184), [UPRI-NOAH docum
             "language_info": {"name": "python", "version": "3.12"},
             "accelerator": "GPU",
             "dimer": {
-                "spec_version": "2.2",
-                "profile": "E2E",
-                "mode": "GUIDED",
+                "notebook_spec": "2.2",
+                "notebook_profile": "E2E",
+                "notebook_mode": "GUIDED",
+                "notebook_kind": "CAPSTONE",
                 "status": "Candidate",
                 "revision": "0.2.0-candidate",
                 "scope": "exploratory_published_source_blocks",

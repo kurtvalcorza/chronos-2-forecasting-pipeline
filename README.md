@@ -7,8 +7,10 @@ See its [data and evidence notes](docs/reef-capstone.md).
 
 The new [Philippine dengue capstone](tutorials/DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb)
 compares case-only and weather-informed forecasting on Quezon City data. It is an exploratory
-source-block benchmark with unresolved source calendar/alignment limitations, and remains
-**Candidate pending fresh Colab T4 qualification**. See [evidence notes](docs/dengue-capstone.md).
+source-block benchmark with unresolved source calendar/alignment limitations. It is a
+**Candidate**: the default path passed fresh Colab T4 runs on 2026-09-28 and 2026-10-03; the
+2026-10-12 review fixes need a new hosted run, and hosted BYOD and learner observation are
+pending. See [evidence notes](docs/dengue-capstone.md).
 
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/tutorials/chronos_2_forecasting_colab.ipynb)

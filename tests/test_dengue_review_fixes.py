@@ -122,7 +122,7 @@ def helpers(root):
 def run_cell(root, fragment):
     namespace, shown = helpers(root)
     namespace.update(
-        run=lambda stage: None,
+        run=lambda stage: True,
         record=lambda name: None,
         figure=lambda name: None,
         json=json,

@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import platform
+import sys
 import time
 import zipfile
 from pathlib import Path
@@ -40,6 +41,21 @@ RESOURCE_TARGETS = {
     "free_disk_gib": 20,
     "peak_gpu_allocated_gib": 12,
 }
+# Dataset-audit limitations already stated by a run-level item below; the summary lists each once.
+AUDIT_DUPLICATES = frozenset(
+    {
+        "Conflicting calendar descriptions and case/weather alignment remain unresolved",
+        "Zero assumed reporting delay is an experimental assumption",
+        "Foundation-model pretraining overlap is unknown",
+    }
+)
+REFUSED_EXIT = 3  # an input refused with a learner-facing message (argparse uses 2 for usage)
+
+
+class InputRefused(ValueError):
+    """A BYOD input or setting refused with one actionable message; not a crash."""
+
+
 LIMITATIONS = [
     "Published source-block order only: calendar dates and case-weather alignment are unverified",
     "Final data vintages: revised counts and retrospective IMERG/ERA5-Land products do not "
@@ -210,7 +226,7 @@ def context_preflight(root, rows, plan) -> None:
     )
     if problems:
         first = problems[0]
-        raise ValueError(
+        raise InputRefused(
             f"{len(problems)} of {checked} planned Mitra contexts cannot be fitted "
             f"(first: {first['partition']} origin {first['origin_key']}, horizon "
             f"{first['horizon']}, window {first['window']}, delay {first['delay']}: "
@@ -357,9 +373,12 @@ def model_forecasts(root, rows, origins, window, system, delay=0, save=False):
     else:
         model = models.load_mitra(cache, manifest)
     predictions = []
+    # Chronos always reads the last 104 blocks; Mitra reads the stage's window.
+    window_label = f"window {104 if system == 'chronos' else window}, delay {delay}"
     try:
         for number, origin in enumerate(origins):
-            print(f"{system}: origin {number + 1}/{len(origins)} {key(rows, origin)}", flush=True)
+            progress = f"{number + 1}/{len(origins)} {key(rows, origin)}"
+            print(f"{system} ({window_label}): origin {progress}", flush=True)
             if system == "chronos":
                 history = [
                     r["cases"] for r in rows[max(0, origin - delay - 103) : origin - delay + 1]
@@ -551,14 +570,21 @@ def prepare(root):
     if config.get("byod_csv"):
         if not config.get("source_blocks_confirmed"):
             raise ValueError("BYOD requires aggregate schema, units and source-block confirmation")
-        area = text_field(config.get("area"), "BYOD_AREA", 120)
-        citation = text_field(config.get("source_citation"), "BYOD_SOURCE_CITATION")
-        rows = byod_rows(Path(config["byod_csv"]))
-        core.validate_rows(rows)
-        if len(rows) < 6 * 52:
-            raise ValueError(
-                "Need six complete source years: two history, two validation, two test"
-            )
+        csv_path = Path(config["byod_csv"])
+        try:
+            area = text_field(config.get("area"), "BYOD_AREA", 120)
+            citation = text_field(config.get("source_citation"), "BYOD_SOURCE_CITATION")
+            rows = byod_rows(csv_path)
+            core.validate_rows(rows)
+            if len(rows) < 6 * 52:
+                raise ValueError(
+                    "Need six complete source years: two history, two validation, two test"
+                )
+        except ValueError as exc:
+            message = str(exc)
+            if not message.startswith(csv_path.name):
+                message = f"{csv_path.name}: {message}"
+            raise InputRefused(message) from exc
         write(root / "data.json", rows)
         write(
             root / "dataset_audit.json",
@@ -1117,7 +1143,8 @@ def report(root):
             "timing_verified": False,
             "weather_alignment_verified": False,
             "prospective_validation": False,
-            "limitations": LIMITATIONS + list(audit.get("limitations", [])),
+            "limitations": LIMITATIONS
+            + [x for x in audit.get("limitations", []) if x not in AUDIT_DUPLICATES],
             "environment": environment,
             "resource_targets": RESOURCE_TARGETS,
             "resource_measurements": {
@@ -1240,7 +1267,11 @@ def main():
         if not torch.cuda.is_available():
             raise RuntimeError("This stage requires the documented hosted T4 runtime")
         torch.cuda.reset_peak_memory_stats()
-    globals()[args.stage](root)
+    try:
+        globals()[args.stage](root)
+    except InputRefused as exc:  # a refused input is not a crash: one message, no traceback
+        print(f"Refused: {exc}", flush=True)
+        sys.exit(REFUSED_EXIT)
     if args.stage in ("prepare", "baselines", "validation", "test", "activity"):
         figures(root, args.stage)
     produced = {

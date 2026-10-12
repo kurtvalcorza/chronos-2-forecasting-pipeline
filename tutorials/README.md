@@ -20,8 +20,12 @@ benchmark**: weekly timing, case–weather alignment and historical publication 
 are unverified. Revision `0.2.0-candidate` addresses the 2026-09-28 Notebook Review Framework v1
 findings: visible forecast and error tables, shared BYOD value checks with a context preflight, and
 reconstruction from the exported bundle alone. A fresh Colab T4 Run all of that exact revision
-passed on 2026-09-28, including real-model reload and bundle reconstruction. Hosted BYOD
-qualification and learner observation remain pending.
+passed on 2026-09-28, including real-model reload and bundle reconstruction, and a Colab CLI T4
+run of notebook blob `de007324` passed on 2026-10-03 (445 s end to end, 0.48 GiB peak GPU).
+The 2026-10-12 review findings (DNG-M1, DNG-m1 to m9) are fixed in source: the conclusion now
+reads the weather result against the persistence floor at three claim levels, a refused BYOD
+file prints one message, and the BYOD privacy and rerun steps are stated. That changed notebook
+has no hosted run yet. Hosted BYOD qualification and learner observation remain pending.
 
 Generate with `python tools/build_dengue_capstone.py`; verify with `--check`.
 It carries a separate hashed dependency lock compatible with Mitra 1.5.0, uses in-context

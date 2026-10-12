@@ -1,8 +1,10 @@
 # Philippine dengue capstone — implementation and evidence
 
-Status: **Candidate**, revision `0.2.0-candidate` (see the review section at the end). Fresh Colab
-T4 Run all, actual pretrained-model performance, full-model reload and bundle-reconstruction
-verification remain pending. No GPU or pretrained weights were used locally for this build.
+Status: **Candidate**, revision `0.2.0-candidate` (see the review sections at the end). The
+default path has passed fresh Colab T4 runs (2026-09-28 browser run of blob `a8a4348b`;
+2026-10-03 Colab CLI run of blob `de007324`). The 2026-10-12 review fixes change the notebook and
+need a new hosted run; hosted BYOD and learner observation remain pending. No GPU or pretrained
+weights were used locally for any build.
 
 ## Approved interpretation
 
@@ -228,3 +230,34 @@ unchanged.
 - **Result:** **PASSED**: 9/9 code cells, no error output, 444.9 s wall. Default path.
 - **Equivalence:** compared with the 2026-09-28 Colab run of revision 0.2.0 (blob `a8a4348b`). Of the 38 output files whose SHA-256 the notebook prints, 35 are byte-identical, including `future_predictions.json`/`.csv`, the metrics, selections and figures. Two differ as expected: `experiment_lock.json` and `artifact_manifest.json` store the run `identity`, which hashes the carried `source.json`, whose `generator_sha256` changed with the generator; the derived `identity` and `previous` chain hashes differ for the same reason. The third, `artifact_future_chronos.json` (the Chronos state saved by the future stage), differs for a reason not determined here: its sibling `artifact_test_chronos.json` is identical and the forecasts it produced are byte-identical. This is recorded as an open observation, not a regression.
 - **Boundary:** saved outputs were inspected; BYOD was not exercised. Status remains Candidate.
+
+## Review round 2026-10-12 — DNG-M1 and DNG-m1 to DNG-m9
+
+A Notebook Review Framework v1 review of `81ab292` (notebook blob `de007324`, spec baseline 2.5)
+concluded **Needs revision**: one major and nine minor findings, no owner decisions. All ten are
+fixed in the generator (`tools/build_dengue_capstone.py`) and the carried runtime
+(`tools/dengue_runtime.py`); the notebook is regenerated, never hand-edited. Computed numbers are
+unchanged: no model, metric, split, window or seed changed.
+
+| Finding | Correction |
+|---|---|
+| **DNG-M1** (major): the conclusion never compared weather Mitra with the naive floor or separated claim levels; on the 2026-10-03 run persistence (test MAE 59.05) beats Mitra + weather (64.79) and case-only (71.40) | Section 8 names three cumulative claim levels (signal: beats persistence; comparator: beats case-only with an interval excluding zero; operational: out of scope) and its template has persistence, case-only and Chronos slots. Section 4 says skill is relative to seasonal naïve and that persistence is the floor. The checkpoint after the test cell says an interval including zero does not establish a weather gain. The weather answer is scoped to this feature encoding and a window tuned for case-only Mitra |
+| **DNG-m1**: no data-residency statement or authorisation warning for BYOD (DAT17, DAT18) | Infrastructure text: the file stays in the runtime, nothing is sent elsewhere, the bundle keeps aggregate contexts; no confidential, restricted, personal or regulated data without authorisation to process it in Colab |
+| **DNG-m2**: point-forecast semantics unstated (§21.3) | Section 3: Chronos's point is its 0.5 quantile (median); Mitra and Ridge are expm1 of log1p fits, median-like and below the mean for skewed counts |
+| **DNG-m3**: a refused CSV printed a child traceback and then a `RuntimeError` traceback; the year-count message omitted the file | The runtime raises `InputRefused` for BYOD and context-preflight refusals, prints one `Refused:` line and exits 3; every refusal names the file. The notebook's `run()` returns `False` on exit 3 with a recovery line, and each later stage cell prints `Skipped …`, so Run all ends with no traceback or error output. Other failures still raise |
+| **DNG-m4**: no BYOD procedure after the default run | Numbered steps: upload in the Files pane, set the controls, Runtime > Run all, with its cost (environment rebuild and about 780 MB of weights) and why rerunning one cell does not switch data |
+| **DNG-m5**: tuning parity undisclosed | Section 3: the window is selected on case-only Mitra and reused for weather; Chronos and Ridge are fixed |
+| **DNG-m6**: identical progress blocks for windows 52 and 104 | Progress lines read `mitra_cases (window 52, delay 0): origin …`; Chronos shows its fixed 104-block window |
+| **DNG-m7**: `record()` cut JSON at 14,000 characters silently; repeated limitations | Long output ends with a `[truncated excerpt: first 14,000 of N characters; the full file is linked below]` line; the linked file is complete. Three audit limitations that repeat run-level ones are listed once |
+| **DNG-m8**: non-standard `profile`/`mode`/`spec_version` keys; no kind; no problem statement, use notice, troubleshooting or references | `metadata.dimer` now uses `notebook_spec` (still 2.2), `notebook_profile`, `notebook_mode` and `notebook_kind: CAPSTONE`; the legacy keys are removed. The opening cell adds a Problem statement and a use notice before the first code cell; the last cell adds Troubleshooting and IEEE-style References. The cell count (19) and ids are unchanged |
+| **DNG-m9**: stale "hosted measurements are pending" text | The opening states the download size (about 780 MB of weights) and the recorded 2026-10-03 Colab CLI T4 run (445 s, 0.48 GiB peak GPU); README and `tutorials/README.md` are refreshed |
+
+Regression tests: `tests/test_dengue_capstone_review_2026_10_12.py` (12 tests; the refusal tests
+run the carried runtime in a separate CPU process and the notebook's own `run()` and `record()`).
+`tests/test_dengue_review_fixes.py` now stubs `run()` as returning `True`, matching its new
+contract. Not addressed (suggestions): DNG-S1 to S4.
+
+**Evidence boundary:** offline CPU checks with synthetic model doubles only; no hosted run of the
+changed notebook exists yet. Still required: a fresh hosted run of the new blob (REL14), a hosted
+browser BYOD run with one accepted and one refused CSV (REL12), and learner observation. Status
+stays **Candidate**.
