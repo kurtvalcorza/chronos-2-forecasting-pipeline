@@ -234,8 +234,8 @@ unchanged.
 ## Review round 2026-10-12 — DNG-M1 and DNG-m1 to DNG-m9
 
 A Notebook Review Framework v1 review of `81ab292` (notebook blob `de007324`, spec baseline 2.5)
-concluded **Needs revision**: one major and nine minor findings, no owner decisions. All ten are
-fixed in the generator (`tools/build_dengue_capstone.py`) and the carried runtime
+concluded **Needs revision**: one major and nine minor findings, no owner decisions. Each has a
+wording, display or code change in the generator (`tools/build_dengue_capstone.py`) and the carried runtime
 (`tools/dengue_runtime.py`); the notebook is regenerated, never hand-edited. Computed numbers are
 unchanged: no model, metric, split, window or seed changed.
 
@@ -261,3 +261,24 @@ contract. Not addressed (suggestions): DNG-S1 to S4.
 changed notebook exists yet. Still required: a fresh hosted run of the new blob (REL14), a hosted
 browser BYOD run with one accepted and one refused CSV (REL12), and learner observation. Status
 stays **Candidate**.
+
+### Peer-review follow-up (Codex, 2026-10-12)
+
+A Codex peer review of the PR head disagreed with several of the explanations added above; the
+orchestrator verified its items, and the wording, display and audit below replace them. These
+are corrections to explanations and displays, not new scientific findings; no computed number
+changed (synthetic default-path parity: 28 of 28 result files byte-identical with `main`).
+
+| Item | Change |
+|---|---|
+| CX1 | The cumulative signal/comparator/operational ladder is replaced by three independent questions: does adding weather change Mitra's observed error; how do both Mitra variants compare with each predefined baseline; what uncertainty and source limitations constrain these. No "stop if" gate; operational use stays out of scope |
+| CX2 | Chronos q50 is the model-distribution median; Ridge and Mitra are expm1 of log1p-scale predictions, generally neither the conditional mean nor median; MAE is a common metric and does not make predictions medians |
+| CX3 | No zero-exclusion gate: the paired mean difference and the descriptive bootstrap range are reported separately, with the 7 groups (sizes 4,4,4,4,4,4,2) and the point that 2,000 replicates add no independent evidence |
+| CX4 | BYOD text and the `artifact_manifest.json` `retained_data` description inventory the whole export (references and predictions for validation, test and activity, future forecasts, metrics, diagnostics, feature example, support contexts, provenance) and name the saved notebook as another copy; artifact contents unchanged |
+| CX5 | Rankings of the two baselines are scoped to the run; learners compare each model with both |
+| CX6 | Window reuse answers the ablation at the case-only-selected setting; no claimed direction of advantage |
+| CX7 | Section 5 is a common two-block observation-availability delay: cases and weather are both delayed and training contexts are rebuilt |
+| CX8 | `future_input_used` in `availability_audit.csv` is now derived (`future_input_used()`): source-block indices of both Mitra windows, with and without weather, the delay-2 activity, Ridge's task and Chronos's 104-block history (shared `chronos_history_indices`), labelled a row-index audit under assumed availability. The CSV is byte-identical on the synthetic run (all `False`) |
+| CX9 | A worked example in section 2: one persistence forecast and its absolute error, and the validation window choice, with numbers quoted from the 2026-10-03 hosted run and labelled as not re-run (REL13) |
+| CX10 | New `hard_targets.csv` view: the three targets behind the largest misses with the reference, high-case flag and all six systems' forecasts and errors; persistence added to `test_forecasts.png`. No metric changed |
+| CX11 | Weather Ridge ablation: suggestion, not addressed |

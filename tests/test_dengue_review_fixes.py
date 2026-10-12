@@ -159,7 +159,7 @@ def test_future_section_shows_all_24_forecasts_from_six_systems(root, monkeypatc
 
 def test_largest_misses_and_delay_views_show_the_compared_quantities(root, monkeypatch):
     out = complete_run(root, monkeypatch)
-    [misses] = map(markdown_rows, run_cell(root, "run('test')"))
+    misses, _hard_targets = map(markdown_rows, run_cell(root, "run('test')"))
     assert len(misses) == 10
     for row in misses:
         assert float(row["error"]) == pytest.approx(

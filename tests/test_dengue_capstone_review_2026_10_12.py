@@ -182,24 +182,35 @@ def section(heading):
     return next(text for text in cells if heading in text)
 
 
-def test_conclusion_reads_weather_against_the_naive_floor_and_claim_levels():
+def test_conclusion_asks_independent_questions_without_a_gate():
     conclusion = section("## 8. Conclude with evidence")
     for phrase in (
-        "**Signal: does Mitra + weather beat the naive floor?**",
-        "**Comparator: does weather beat case-only?**",
-        "**Operational: would it help a real warning system?** Out of scope",
-        "persistence (the naive floor) had MAE ___",
-        "with a window tuned for case-only Mitra",
-        "An interval that includes zero means no weather gain is established",
+        "none is a gate for the others",
+        "**Does adding these weather features change Mitra's observed error?**",
+        "**How do both Mitra variants compare with each predefined baseline?**",
+        "**What uncertainty and source limitations constrain these observations?**",
+        "Operational use, such as an outbreak warning system, is out of scope",
+        "Persistence had MAE ___ and seasonal naïve ___",
+        "at the window selected for case-only Mitra",
     ):
         assert phrase in conclusion
-    assert "it does not establish a weather gain either" in markdown()
-    assert "Skill here is relative to seasonal naïve" in markdown()
+    for removed in ("cumulative", "stop at the first", "excludes / includes", "naive floor"):
+        assert removed not in conclusion
+    text = markdown()
+    assert "neither is a pass/fail test" in text
+    assert "sizes 4, 4, 4, 4, 4, 4 and 2" in text and "add no independent evidence" in text
+    assert "report each model's MAE beside both baselines" in text
+    assert "the weaker of the two simple baselines" not in text
+    assert "common two-block observation-availability delay" in text
+    assert "if anything favours case-only" not in text
 
 
 def test_byod_text_states_residency_authorisation_and_rerun_procedure():
     text = section("## Infrastructure")
-    assert "nothing is sent to any other service" in text
+    assert "sends it to no other service" in text
+    assert "save or share the executed notebook" in text
+    assert "observed references for every validation, test and delay-activity forecast" in text
+    assert "the only copy that leaves" not in text
     assert "unless you are authorised to process it in Google Colab" in text
     assert "**Files** pane" in text and "**Runtime > Run all**" in text
     assert "about 780 MB" in text
@@ -207,7 +218,10 @@ def test_byod_text_states_residency_authorisation_and_rerun_procedure():
 
 def test_point_semantics_and_tuning_parity_are_stated():
     text = section("## 3. Compare Chronos")
-    assert "0.5 quantile, the median" in text and "log1p(count)" in text
+    assert "0.5 quantile (q50), the median of the model's own forecast distribution" in text
+    assert "neither the conditional mean nor the conditional median" in text
+    assert "does not turn their predictions into medians" in text
+    assert "behave like a median" not in text
     assert "selected on case-only Mitra and reused for weather Mitra" in text
     assert "Chronos (fixed 104-block context) and Ridge use fixed settings" in text
 
@@ -235,3 +249,52 @@ def test_opening_states_measured_runtime_and_download_size():
     assert "measurements are pending" not in opening
     assert "about 780 MB of model weights" in opening
     assert "took 445 seconds end to end, with 0.48 GiB peak GPU allocation" in opening
+
+
+# Codex peer-review follow-up (CX4, CX8, CX9, CX10).
+
+
+def test_artifact_manifest_describes_the_whole_export(root, monkeypatch):
+    manifest = runtime.read(complete_run(root, monkeypatch) / "artifact_manifest.json")
+    text = manifest["retained_data"]
+    assert "contexts only" not in text and "No individual records" in text
+    assert "observed aggregate counts (references) and predictions" in text
+
+
+def test_future_input_audit_is_derived_from_source_indices(root, monkeypatch):
+    runtime.prepare(root)
+    audit = (root / "results" / "availability_audit.csv").read_text(encoding="utf-8")
+    assert ",True" not in audit and audit.count(",False") == 208
+    real = runtime.core.feature_sources
+
+    def leaky(rows, origin, horizon, delay=0, weather=False):
+        sources = real(rows, origin, horizon, delay, weather)
+        return sources + [("leak", [origin + 1])] if weather else sources
+
+    monkeypatch.setattr(runtime.core, "feature_sources", leaky)
+    plan = runtime.read(root / "results" / "plan.json")
+    rows = runtime.read(root / "data.json")
+    assert runtime.future_input_used(rows, plan, "test", plan["test"][0], 1) is True
+
+
+def test_hard_targets_show_every_system_with_reference_and_high_case_flag(root, monkeypatch):
+    out = complete_run(root, monkeypatch)
+    hard = (out / "hard_targets.csv").read_text(encoding="utf-8").splitlines()
+    assert hard[0] == (
+        "target_key,horizon,origin_key,reference,high_case,system,prediction,error,abs_error"
+    )
+    body = [line.split(",") for line in hard[1:]]
+    assert len(body) == 3 * len(runtime.SYSTEMS)
+    for start in range(0, len(body), len(runtime.SYSTEMS)):
+        block = body[start : start + len(runtime.SYSTEMS)]
+        assert [r[5] for r in block] == list(runtime.SYSTEMS)
+        assert len({(r[0], r[1], r[3], r[4]) for r in block}) == 1
+    source = cell("if run('test')")
+    assert "table('hard_targets.csv'" in source
+
+
+def test_worked_example_numbers_are_labelled_as_quoted():
+    text = section("## 2. Build a fair chronological comparison")
+    assert "recorded 2026-10-03 Colab CLI T4 run of revision `08b2343`" in text
+    assert "quoted, not re-run here" in text
+    assert "|15 − 11| = 4" in text and "20.50 with a 52-block window and 21.01" in text
