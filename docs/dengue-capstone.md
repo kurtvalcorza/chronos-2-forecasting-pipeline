@@ -1,8 +1,10 @@
 # Philippine dengue capstone — implementation and evidence
 
-Status: **Candidate**, revision `0.2.0-candidate` (see the review section at the end). Fresh Colab
-T4 Run all, actual pretrained-model performance, full-model reload and bundle-reconstruction
-verification remain pending. No GPU or pretrained weights were used locally for this build.
+Status: **Candidate**, revision `0.2.0-candidate` (see the review sections at the end). The
+default path has passed fresh Colab T4 runs (2026-09-28 browser run of blob `a8a4348b`;
+2026-10-03 Colab CLI run of blob `de007324`). The 2026-10-12 review fixes change the notebook and
+need a new hosted run; hosted BYOD and learner observation remain pending. No GPU or pretrained
+weights were used locally for any build.
 
 ## Approved interpretation
 
@@ -228,3 +230,64 @@ unchanged.
 - **Result:** **PASSED**: 9/9 code cells, no error output, 444.9 s wall. Default path.
 - **Equivalence:** compared with the 2026-09-28 Colab run of revision 0.2.0 (blob `a8a4348b`). Of the 38 output files whose SHA-256 the notebook prints, 35 are byte-identical, including `future_predictions.json`/`.csv`, the metrics, selections and figures. Two differ as expected: `experiment_lock.json` and `artifact_manifest.json` store the run `identity`, which hashes the carried `source.json`, whose `generator_sha256` changed with the generator; the derived `identity` and `previous` chain hashes differ for the same reason. The third, `artifact_future_chronos.json` (the Chronos state saved by the future stage), differs for a reason not determined here: its sibling `artifact_test_chronos.json` is identical and the forecasts it produced are byte-identical. This is recorded as an open observation, not a regression.
 - **Boundary:** saved outputs were inspected; BYOD was not exercised. Status remains Candidate.
+
+## Review round 2026-10-12 — DNG-M1 and DNG-m1 to DNG-m9
+
+A Notebook Review Framework v1 review of `81ab292` (notebook blob `de007324`, spec baseline 2.5)
+concluded **Needs revision**: one major and nine minor findings, no owner decisions. Each has a
+wording, display or code change in the generator (`tools/build_dengue_capstone.py`) and the carried runtime
+(`tools/dengue_runtime.py`); the notebook is regenerated, never hand-edited. Computed numbers are
+unchanged: no model, metric, split, window or seed changed.
+
+| Finding | Correction |
+|---|---|
+| **DNG-M1** (major): the conclusion never compared weather Mitra with the naive floor or separated claim levels; on the 2026-10-03 run persistence (test MAE 59.05) beats Mitra + weather (64.79) and case-only (71.40) | Section 8 names three cumulative claim levels (signal: beats persistence; comparator: beats case-only with an interval excluding zero; operational: out of scope) and its template has persistence, case-only and Chronos slots. Section 4 says skill is relative to seasonal naïve and that persistence is the floor. The checkpoint after the test cell says an interval including zero does not establish a weather gain. The weather answer is scoped to this feature encoding and a window tuned for case-only Mitra |
+| **DNG-m1**: no data-residency statement or authorisation warning for BYOD (DAT17, DAT18) | Infrastructure text: the file stays in the runtime, nothing is sent elsewhere, the bundle keeps aggregate contexts; no confidential, restricted, personal or regulated data without authorisation to process it in Colab |
+| **DNG-m2**: point-forecast semantics unstated (§21.3) | Section 3: Chronos's point is its 0.5 quantile (median); Mitra and Ridge are expm1 of log1p fits, median-like and below the mean for skewed counts |
+| **DNG-m3**: a refused CSV printed a child traceback and then a `RuntimeError` traceback; the year-count message omitted the file | The runtime raises `InputRefused` for BYOD and context-preflight refusals, prints one `Refused:` line and exits 3; every refusal names the file. The notebook's `run()` returns `False` on exit 3 with a recovery line, and each later stage cell prints `Skipped …`, so Run all ends with no traceback or error output. Other failures still raise |
+| **DNG-m4**: no BYOD procedure after the default run | Numbered steps: upload in the Files pane, set the controls, Runtime > Run all, with its cost (environment rebuild and about 780 MB of weights) and why rerunning one cell does not switch data |
+| **DNG-m5**: tuning parity undisclosed | Section 3: the window is selected on case-only Mitra and reused for weather; Chronos and Ridge are fixed |
+| **DNG-m6**: identical progress blocks for windows 52 and 104 | Progress lines read `mitra_cases (window 52, delay 0): origin …`; Chronos shows its fixed 104-block window |
+| **DNG-m7**: `record()` cut JSON at 14,000 characters silently; repeated limitations | Long output ends with a `[truncated excerpt: first 14,000 of N characters; the full file is linked below]` line; the linked file is complete. Three audit limitations that repeat run-level ones are listed once |
+| **DNG-m8**: non-standard `profile`/`mode`/`spec_version` keys; no kind; no problem statement, use notice, troubleshooting or references | `metadata.dimer` now uses `notebook_spec` (still 2.2), `notebook_profile`, `notebook_mode` and `notebook_kind: CAPSTONE`; the legacy keys are removed. The opening cell adds a Problem statement and a use notice before the first code cell; the last cell adds Troubleshooting and IEEE-style References. The cell count (19) and ids are unchanged |
+| **DNG-m9**: stale "hosted measurements are pending" text | The opening states the download size (about 780 MB of weights) and the recorded 2026-10-03 Colab CLI T4 run (445 s, 0.48 GiB peak GPU); README and `tutorials/README.md` are refreshed |
+
+Regression tests: `tests/test_dengue_capstone_review_2026_10_12.py` (12 tests; the refusal tests
+run the carried runtime in a separate CPU process and the notebook's own `run()` and `record()`).
+`tests/test_dengue_review_fixes.py` now stubs `run()` as returning `True`, matching its new
+contract. Not addressed (suggestions): DNG-S1 to S4.
+
+**Evidence boundary:** offline CPU checks with synthetic model doubles only; no hosted run of the
+changed notebook exists yet. Still required: a fresh hosted run of the new blob (REL14), a hosted
+browser BYOD run with one accepted and one refused CSV (REL12), and learner observation. Status
+stays **Candidate**.
+
+### Peer-review follow-up (Codex, 2026-10-12)
+
+A Codex peer review of the PR head disagreed with several of the explanations added above; the
+orchestrator verified its items, and the wording, display and audit below replace them. These
+are corrections to explanations and displays, not new scientific findings; no computed number
+changed (synthetic default-path parity: 28 of 28 result files byte-identical with `main`).
+
+| Item | Change |
+|---|---|
+| CX1 | The cumulative signal/comparator/operational ladder is replaced by three independent questions: does adding weather change Mitra's observed error; how do both Mitra variants compare with each predefined baseline; what uncertainty and source limitations constrain these. No "stop if" gate; operational use stays out of scope |
+| CX2 | Chronos q50 is the model-distribution median; Ridge and Mitra are expm1 of log1p-scale predictions, generally neither the conditional mean nor median; MAE is a common metric and does not make predictions medians |
+| CX3 | No zero-exclusion gate: the paired mean difference and the descriptive bootstrap range are reported separately, with the 7 groups (sizes 4,4,4,4,4,4,2) and the point that 2,000 replicates add no independent evidence |
+| CX4 | BYOD text and the `artifact_manifest.json` `retained_data` description inventory the whole export (references and predictions for validation, test and activity, future forecasts, metrics, diagnostics, feature example, support contexts, provenance) and name the saved notebook as another copy; artifact contents unchanged |
+| CX5 | Rankings of the two baselines are scoped to the run; learners compare each model with both |
+| CX6 | Window reuse answers the ablation at the case-only-selected setting; no claimed direction of advantage |
+| CX7 | Section 5 is a common two-block observation-availability delay: cases and weather are both delayed and training contexts are rebuilt |
+| CX8 | `future_input_used` in `availability_audit.csv` is now derived (`future_input_used()`): source-block indices of both Mitra windows, with and without weather, the delay-2 activity, Ridge's task and Chronos's 104-block history (shared `chronos_history_indices`), labelled a row-index audit under assumed availability. The CSV is byte-identical on the synthetic run (all `False`) |
+| CX9 | A worked example in section 2: one persistence forecast and its absolute error, and the validation window choice, with numbers quoted from the 2026-10-03 hosted run and labelled as not re-run (REL13) |
+| CX10 | New `hard_targets.csv` view: the three targets behind the largest misses with the reference, high-case flag and all six systems' forecasts and errors; persistence added to `test_forecasts.png`. No metric changed |
+| CX11 | Weather Ridge ablation: suggestion, not addressed |
+
+### Colab CLI execution of `6eb5062` (blob `714070a3`) — 2026-10-12
+
+- **File:** [`execution-evidence/2026-10-12/DIMER_Philippine_Dengue_Forecasting_Capstone_6eb5062_colab-cli-t4.ipynb`](execution-evidence/2026-10-12/DIMER_Philippine_Dengue_Forecasting_Capstone_6eb5062_colab-cli-t4.ipynb), SHA-256 `d3d4eb470cc794aa48f0c269abd712794b7f89fe50ac97424b7b682e70273c09`, a byte-for-byte copy of the CLI's output notebook, with the executor's [cell log](execution-evidence/2026-10-12/DIMER_Philippine_Dengue_Forecasting_Capstone_6eb5062_colab-cli-t4_exec.log) and [run summary](execution-evidence/2026-10-12/DIMER_Philippine_Dengue_Forecasting_Capstone_6eb5062_colab-cli-t4_run_summary.json).
+- **Executor:** Google Colab CLI 0.7.4 on a fresh Colab Tesla T4 session via the workspace `colab-cli-serial-test-suite` (`colab new --gpu T4`, `colab exec -f`, `colab stop`), 2026-10-12 16:14–16:24 UTC. Code cells ran in order in one kernel; this is not a browser Run all, and the CLI records no execution counts, so order is evidenced by its `Executing cell k/N` log. The notebook was downloaded from GitHub at `6eb5062` and its git blob `714070a35c00160a23e4dba0117a848d49bc9f7e` checked before the session was created; the executed copy has the same cell ids and order and no source change.
+- **Result:** **PASSED**: 9/9 code cells, no error output, 574.5 s wall, peak GPU allocation 0.48 GiB. Default path, no toggles changed. Every stage printed `PASS`; the context preflight refused 0 contexts; same-workspace reload checked 32 predictions in a fresh process (maximum difference 0.0); `consume: PASS (32 predictions)` from the exported bundle with `original_workspace_read: false`.
+- **Equivalence with the `08b2343` run (2026-10-03):** every printed forecast, metric, interval and bootstrap number is equal. Test MAE: persistence 59.05, Mitra + weather 64.79, Mitra case-only 71.40; weather minus case-only −6.61, bootstrap range [−21.48, 6.44]. Of the files whose SHA-256 both runs print, all are identical except `experiment_lock.json` (it stores the run `identity`, which hashes the carried source; the derived `identity` and `previous` chain hashes differ for the same reason) and `test_forecasts.png` (persistence is now drawn, CX10). The remaining text differences are the ones this revision makes: progress lines name the window and delay (DNG-m6), the long JSON excerpt ends with a labelled truncation line (DNG-m7), the run summary lists 11 limitations instead of 14 (DNG-m7), a new `hard_targets.csv` view (CX10), and `future_input_used` is derived (CX8; every row shown is `False`). Stage seconds and process ids differ, as expected.
+- **Journeys:** clean default path — pass; active-learning prompts — not assessed (CLI); reuse and recovery (reload and bundle reconstruction) — pass; BYOD — not assessed (CLI); browser Run all and forms — not assessed (CLI); first-time learner — not assessed.
+- **Boundary:** saved outputs were inspected; BYOD, forms and uploads were not exercised. A hosted browser BYOD run (REL12) and learner observation are still required. Status remains **Candidate**.

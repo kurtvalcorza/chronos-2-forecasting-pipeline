@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import platform
+import sys
 import time
 import zipfile
 from pathlib import Path
@@ -40,6 +41,21 @@ RESOURCE_TARGETS = {
     "free_disk_gib": 20,
     "peak_gpu_allocated_gib": 12,
 }
+# Dataset-audit limitations already stated by a run-level item below; the summary lists each once.
+AUDIT_DUPLICATES = frozenset(
+    {
+        "Conflicting calendar descriptions and case/weather alignment remain unresolved",
+        "Zero assumed reporting delay is an experimental assumption",
+        "Foundation-model pretraining overlap is unknown",
+    }
+)
+REFUSED_EXIT = 3  # an input refused with a learner-facing message (argparse uses 2 for usage)
+
+
+class InputRefused(ValueError):
+    """A BYOD input or setting refused with one actionable message; not a crash."""
+
+
 LIMITATIONS = [
     "Published source-block order only: calendar dates and case-weather alignment are unverified",
     "Final data vintages: revised counts and retrospective IMERG/ERA5-Land products do not "
@@ -210,7 +226,7 @@ def context_preflight(root, rows, plan) -> None:
     )
     if problems:
         first = problems[0]
-        raise ValueError(
+        raise InputRefused(
             f"{len(problems)} of {checked} planned Mitra contexts cannot be fitted "
             f"(first: {first['partition']} origin {first['origin_key']}, horizon "
             f"{first['horizon']}, window {first['window']}, delay {first['delay']}: "
@@ -357,13 +373,14 @@ def model_forecasts(root, rows, origins, window, system, delay=0, save=False):
     else:
         model = models.load_mitra(cache, manifest)
     predictions = []
+    # Chronos always reads the last 104 blocks; Mitra reads the stage's window.
+    window_label = f"window {104 if system == 'chronos' else window}, delay {delay}"
     try:
         for number, origin in enumerate(origins):
-            print(f"{system}: origin {number + 1}/{len(origins)} {key(rows, origin)}", flush=True)
+            progress = f"{number + 1}/{len(origins)} {key(rows, origin)}"
+            print(f"{system} ({window_label}): origin {progress}", flush=True)
             if system == "chronos":
-                history = [
-                    r["cases"] for r in rows[max(0, origin - delay - 103) : origin - delay + 1]
-                ]
+                history = [rows[i]["cases"] for i in chronos_history_indices(origin, delay)]
                 quantiles = np.asarray(models.chronos_predict(model, history, 4 + delay))
                 if quantiles.shape != (4 + delay, 3):
                     raise ValueError("Unexpected Chronos forecast shape")
@@ -489,7 +506,7 @@ def figures(root, stage):
     if stage == "test":
         pred = read(out / "test_predictions.json")
         fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-        for system in ("chronos", "mitra_cases", "mitra_weather"):
+        for system in ("persistence", "chronos", "mitra_cases", "mitra_weather"):
             subset = sorted(
                 [p for p in pred if p["system"] == system and p["horizon"] == 4],
                 key=lambda p: p["target_index"],
@@ -523,6 +540,62 @@ def figures(root, stage):
         plt.close(fig)
 
 
+def chronos_history_indices(origin, delay):
+    """The 104 source blocks Chronos reads, ending at the availability cutoff."""
+    return range(max(0, origin - delay - 103), origin - delay + 1)
+
+
+def future_input_used(rows, plan, partition, origin, horizon) -> bool:
+    """Row-index audit under assumed availability: True if any executed configuration reads a block
+    after its cutoff. Covers both Mitra windows, with and without weather, the validation delay
+    activity (delay 2), Ridge's default task and Chronos's 104-block history. It checks source-block
+    indices only; it cannot verify historical publication timing."""
+    delays = (0, 2) if partition == "validation" else (0,)
+    for delay in delays:
+        cutoff = origin - delay
+        if max(chronos_history_indices(origin, delay)) > cutoff:
+            return True
+        for window in sorted({104, *plan["windows"]}):
+            for weather in (False, True):
+                task = core.training_task(rows, origin, horizon, window, delay, weather)
+                if int(max(task["target_indices"])) > cutoff:
+                    return True
+                issued = [int(s) for s in task["issuance_indices"]] + [origin]
+                for s in issued:
+                    sources = core.feature_sources(rows, s, horizon, delay, weather)
+                    if any(i > cutoff for _, blocks in sources for i in blocks):
+                        return True
+    return False
+
+
+def hard_targets(predictions, threshold, count=3) -> list[dict]:
+    """Learner view: the targets behind the largest misses, with every system's forecast."""
+    chosen = []
+    for p in sorted(predictions, key=lambda p: abs(p["prediction"] - p["reference"]), reverse=True):
+        target = (p["target_index"], p["horizon"])
+        if target not in chosen:
+            chosen.append(target)
+        if len(chosen) == count:
+            break
+    rank = {t: i for i, t in enumerate(chosen)}
+    rows = [p for p in predictions if (p["target_index"], p["horizon"]) in rank]
+    rows.sort(key=lambda p: (rank[(p["target_index"], p["horizon"])], SYSTEMS.index(p["system"])))
+    return [
+        {
+            "target_key": p["target_key"],
+            "horizon": p["horizon"],
+            "origin_key": p["origin_key"],
+            "reference": p["reference"],
+            "high_case": p["reference"] >= threshold,
+            "system": p["system"],
+            "prediction": round(p["prediction"], 3),
+            "error": round(p["prediction"] - p["reference"], 3),
+            "abs_error": round(abs(p["prediction"] - p["reference"]), 3),
+        }
+        for p in rows
+    ]
+
+
 def largest_misses(predictions) -> list[dict]:
     """Learner view: each miss with its published count, forecast and signed error."""
     misses = sorted(predictions, key=lambda p: abs(p["prediction"] - p["reference"]), reverse=True)[
@@ -551,14 +624,21 @@ def prepare(root):
     if config.get("byod_csv"):
         if not config.get("source_blocks_confirmed"):
             raise ValueError("BYOD requires aggregate schema, units and source-block confirmation")
-        area = text_field(config.get("area"), "BYOD_AREA", 120)
-        citation = text_field(config.get("source_citation"), "BYOD_SOURCE_CITATION")
-        rows = byod_rows(Path(config["byod_csv"]))
-        core.validate_rows(rows)
-        if len(rows) < 6 * 52:
-            raise ValueError(
-                "Need six complete source years: two history, two validation, two test"
-            )
+        csv_path = Path(config["byod_csv"])
+        try:
+            area = text_field(config.get("area"), "BYOD_AREA", 120)
+            citation = text_field(config.get("source_citation"), "BYOD_SOURCE_CITATION")
+            rows = byod_rows(csv_path)
+            core.validate_rows(rows)
+            if len(rows) < 6 * 52:
+                raise ValueError(
+                    "Need six complete source years: two history, two validation, two test"
+                )
+        except ValueError as exc:
+            message = str(exc)
+            if not message.startswith(csv_path.name):
+                message = f"{csv_path.name}: {message}"
+            raise InputRefused(message) from exc
         write(root / "data.json", rows)
         write(
             root / "dataset_audit.json",
@@ -643,7 +723,7 @@ def prepare(root):
                         "max_training_target": int(max(task["target_indices"])),
                         "max_training_input": int(max(task["issuance_indices"])),
                         "query_latest_input": origin,
-                        "future_input_used": False,
+                        "future_input_used": future_input_used(rows, plan, partition, origin, h),
                     }
                 )
     table(output(root) / "availability_audit.csv", audit_rows)
@@ -712,6 +792,9 @@ def test(root):
     write(output(root) / "test_predictions.json", predictions)
     table(output(root) / "predictions.csv", predictions)
     table(output(root) / "largest_misses.csv", largest_misses(predictions))
+    table(
+        output(root) / "hard_targets.csv", hard_targets(predictions, plan["high_case_threshold"])
+    )
     write(output(root) / "metrics.json", scores(predictions))
 
     def ordered(system):
@@ -897,9 +980,13 @@ def future(root):
                 output(root),
                 sha(root / "data.json"),
             ),
-            "retained_data": "Aggregate numeric support contexts only: lagged case counts "
-            "(plus lagged rain and temperature for mitra_weather) for the final completed test "
-            "origin and the future origin, and fitted Ridge state. No individual records.",
+            "retained_data": "Support artifacts (artifact_*.json) hold aggregate numeric "
+            "support contexts: lagged case counts (plus lagged rain and temperature for "
+            "mitra_weather) for the final completed test origin and the future origin, and "
+            "fitted Ridge state. The complete results.zip also holds observed aggregate counts "
+            "(references) and predictions for validation, test and the delay activity, future "
+            "forecasts, metrics and diagnostics, the traced feature example, and source and "
+            "provenance summaries. No individual records.",
         },
     )
 
@@ -1117,7 +1204,8 @@ def report(root):
             "timing_verified": False,
             "weather_alignment_verified": False,
             "prospective_validation": False,
-            "limitations": LIMITATIONS + list(audit.get("limitations", [])),
+            "limitations": LIMITATIONS
+            + [x for x in audit.get("limitations", []) if x not in AUDIT_DUPLICATES],
             "environment": environment,
             "resource_targets": RESOURCE_TARGETS,
             "resource_measurements": {
@@ -1240,7 +1328,11 @@ def main():
         if not torch.cuda.is_available():
             raise RuntimeError("This stage requires the documented hosted T4 runtime")
         torch.cuda.reset_peak_memory_stats()
-    globals()[args.stage](root)
+    try:
+        globals()[args.stage](root)
+    except InputRefused as exc:  # a refused input is not a crash: one message, no traceback
+        print(f"Refused: {exc}", flush=True)
+        sys.exit(REFUSED_EXIT)
     if args.stage in ("prepare", "baselines", "validation", "test", "activity"):
         figures(root, args.stage)
     produced = {

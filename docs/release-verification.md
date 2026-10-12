@@ -193,6 +193,15 @@ The local positive/negative checks establish the input and baseline boundary;
 they do **not** yet establish BYOD foundation-model execution through export.
 Promote only after the exact-revision hosted and BYOD evidence is recorded.
 
+### Philippine dengue capstone
+
+Notebook identity is the Git blob id of `tutorials/DIMER_Philippine_Dengue_Forecasting_Capstone.ipynb`.
+Earlier runs of this notebook (2026-09-28 and 2026-10-03) are recorded in [the dengue evidence notes](dengue-capstone.md).
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-10-12 | `6eb5062` / `714070a35c00` | Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4 (not a browser `Run all`) | Default path, no toggles changed; forms and uploads not exercised | 574.5 s | **PASSED** — 9/9 code cells, 0 errors; every stage `PASS`, reload and `consume: PASS (32 predictions)` with max difference 0.0; test MAE persistence 59.05, Mitra + weather 64.79, Mitra case-only 71.40, weather difference −6.61 [−21.48, 6.44], all equal to the `08b2343` run. Status stays Candidate. Details in [dengue-capstone.md](dengue-capstone.md#colab-cli-execution-of-6eb5062-blob-714070a3--2026-10-12) |
+
 ## Current status
 
 Use the per-notebook, per-blob execution tables above for historical outcomes;
