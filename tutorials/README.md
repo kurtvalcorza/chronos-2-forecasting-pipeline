@@ -24,8 +24,9 @@ passed on 2026-09-28, including real-model reload and bundle reconstruction, and
 run of notebook blob `de007324` passed on 2026-10-03 (445 s end to end, 0.48 GiB peak GPU).
 The 2026-10-12 review findings (DNG-M1, DNG-m1 to m9) are fixed in source: the conclusion now
 reads the weather result against the persistence floor at three claim levels, a refused BYOD
-file prints one message, and the BYOD privacy and rerun steps are stated. That changed notebook
-has no hosted run yet. Hosted BYOD qualification and learner observation remain pending.
+file prints one message, and the BYOD privacy and rerun steps are stated. A Colab CLI T4 run of
+that changed notebook (blob `714070a3`, commit `6eb5062`) passed on 2026-10-12 with every printed
+metric equal to the 2026-10-03 run. Hosted BYOD qualification and learner observation remain pending.
 
 Generate with `python tools/build_dengue_capstone.py`; verify with `--check`.
 It carries a separate hashed dependency lock compatible with Mitra 1.5.0, uses in-context

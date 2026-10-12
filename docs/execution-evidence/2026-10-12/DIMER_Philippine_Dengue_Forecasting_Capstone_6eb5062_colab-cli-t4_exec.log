@@ -1,0 +1,1837 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-6eb5062-519d20/DIMER_Philippine_Dengue_Forecasting_Capstone_6eb5062_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/9 - dengue-01...
+Run directory: /content/outputs/dengue/ae24354e11d5 
+GPU: Tesla T4
+[colab] Executing cell 2/9 - Embedded source, integrity check and isolated environment (collapsed; expand to read)...
+[colab] Executing cell 3/9 - dengue-05...
+Running prepare — log: /content/outputs/dengue/ae24354e11d5/prepare.log
+prepare: PASS
+Area: Quezon City, Philippines · Source: Zenodo record 21978184 (QC Data sheet), ODC-ODbL 1.0
+{
+  "scope": "exploratory_published_source_blocks",
+  "validation_years": [
+    2022,
+    2023
+  ],
+  "test_years": [
+    2024,
+    2025
+  ],
+  "validation": [
+    623,
+    627,
+    631,
+    635,
+    639,
+    643,
+    647,
+    651,
+    655,
+    659,
+    663,
+    667,
+    671,
+    675,
+    679,
+    683,
+    687,
+    691,
+    695,
+    699,
+    703,
+    707,
+    711,
+    715,
+    719,
+    723
+  ],
+  "test": [
+    727,
+    731,
+    735,
+    739,
+    743,
+    747,
+    751,
+    755,
+    759,
+    763,
+    767,
+    771,
+    775,
+    779,
+    783,
+    787,
+    791,
+    795,
+    799,
+    803,
+    807,
+    811,
+    815,
+    819,
+    823,
+    827
+  ],
+  "default_delay": 0,
+  "windows": [
+    52,
+    104
+  ],
+  "chronos_window": 104,
+  "high_case_threshold": 242.4000000000001,
+  "calendar_verified": false,
+  "alignment_verified": false,
+  "area": "Quezon City, Philippines",
+  "source_citation": "Zenodo record 21978184 (QC Data sheet), ODC-ODbL 1.0",
+  "units": {
+    "cases": "reported cases per source block (nonnegative integer count)",
+    "rain": "mm per source block (nonnegative)",
+    "temp": "degrees Celsius"
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/plan.json                          
+{
+  "policy": "reject before model staging; no dropped origins, invented variance or relabelled fallback",
+  "contexts_checked": 1264,
+  "contexts_refused": 0,
+  "refused": []
+}
+/content/outputs/dengue/ae24354e11d5/results/context_preflight.json             
+
+                                                     
+ partition   origin_key  horizon  target_key  cutoff 
+ ─────────────────────────────────────────────────── 
+ validation  2021-B52    1        2022-B01    623    
+ validation  2021-B52    2        2022-B02    623    
+ validation  2021-B52    3        2022-B03    623    
+ validation  2021-B52    4        2022-B04    623    
+ validation  2022-B04    1        2022-B05    627    
+ validation  2022-B04    2        2022-B06    627    
+ validation  2022-B04    3        2022-B07    627    
+ validation  2022-B04    4        2022-B08    627    
+                                                     
+Showing 8 of 208 rows. All columns in the CSV: partition, origin, origin_key, horizon, target_key, cutoff
+/content/outputs/dengue/ae24354e11d5/results/origin_manifest.csv                
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmpvhznbleb.png]
+/content/outputs/dengue/ae24354e11d5/dataset_audit.json                         
+/content/outputs/dengue/ae24354e11d5/DATA_LICENSE.md                            
+[colab] Executing cell 4/9 - dengue-07...
+Running baselines — log: /content/outputs/dengue/ae24354e11d5/baselines.log
+baselines: PASS
+
+                                                                                
+ item                               value     source_blocks                     
+ ────────────────────────────────────────────────────────────────────────────── 
+ forecast origin (issued after                2023-B52                          
+ this block)                                                                    
+ target (not observed at issuance)            2024-B01                          
+ cases_lag_0                        72.0      2023-B52                          
+ cases_lag_1                        69.0      2023-B51                          
+ cases_lag_2                        85.0      2023-B50                          
+ cases_lag_3                        71.0      2023-B49                          
+ cases_lag_4                        100.0     2023-B48                          
+ cases_lag_8                        98.0      2023-B44                          
+ cases_lag_12                       147.0     2023-B40                          
+ cases_lag_52                       67.0      2022-B52                          
+ cases_mean_4                       74.25     2023-B49 .. 2023-B52              
+ cases_mean_8                       95.875    2023-B45 .. 2023-B52              
+ cases_mean_12                      103.6667  2023-B41 .. 2023-B52              
+ target_block_sin                   0.0       target block calendar position    
+                                              (known in advance)                
+ target_block_cos                   1.0       target block calendar position    
+                                              (known in advance)                
+ rain_lag_0                         28.9005   2023-B52                          
+ rain_lag_1                         76.1351   2023-B51                          
+ rain_lag_2                         20.864    2023-B50                          
+ rain_lag_3                         10.0761   2023-B49                          
+ rain_lag_4                         105.2351  2023-B48                          
+ rain_mean_4                        33.9939   2023-B49 .. 2023-B52              
+ rain_mean_8                        45.6504   2023-B45 .. 2023-B52              
+ temp_lag_0                         26.9143   2023-B52                          
+ temp_lag_1                         26.3714   2023-B51                          
+ temp_lag_2                         27.1857   2023-B50                          
+ temp_lag_3                         27.4857   2023-B49                          
+ temp_lag_4                         27.5286   2023-B48                          
+ temp_mean_4                        26.9893   2023-B49 .. 2023-B52              
+ temp_mean_8                        27.1893   2023-B45 .. 2023-B52              
+ latest mature training label       72        2023-B52                          
+ (cases)                                                                        
+                                                                                
+Showing 30 of 30 rows. All columns in the CSV: item, value, source_blocks
+/content/outputs/dengue/ae24354e11d5/results/feature_example.csv                
+
+                                                                                
+ partition   origin  horizon  cutoff  max_trainin…  max_trainin…  future_input… 
+ ────────────────────────────────────────────────────────────────────────────── 
+ validation  623     1        623     623           622           False         
+ validation  623     2        623     623           621           False         
+ validation  623     3        623     623           620           False         
+ validation  623     4        623     623           619           False         
+ validation  627     1        627     627           626           False         
+ validation  627     2        627     627           625           False         
+ validation  627     3        627     627           624           False         
+ validation  627     4        627     627           623           False         
+                                                                                
+Showing 8 of 208 rows. All columns in the CSV: partition, origin, horizon, cutoff, max_training_target, max_training_input, query_latest_input, future_input_used
+/content/outputs/dengue/ae24354e11d5/results/availability_audit.csv             
+{
+  "persistence": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 16.932692307692307,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 14.076923076923077,
+        "rmse": 18.619675284287524,
+        "bias": -3.5384615384615383
+      },
+      "2": {
+        "n": 26,
+        "mae": 12.76923076923077,
+        "rmse": 17.373720207432658,
+        "bias": 1.0
+      },
+      "3": {
+        "n": 26,
+        "mae": 18.307692307692307,
+        "rmse": 22.264148483432006,
+        "bias": 2.230769230769231
+      },
+      "4": {
+        "n": 26,
+        "mae": 22.576923076923077,
+        "rmse": 30.2139804624385,
+        "bias": -2.1923076923076925
+      }
+    },
+    "seasonal_skill": 0.6077951002227171
+  },
+  "ridge": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 75.12820084410619,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 43.071642038272984,
+        "rmse": 89.21780824814434,
+        "bias": 0.8208011001658968
+      },
+      "2": {
+        "n": 26,
+        "mae": 59.19336852557675,
+        "rmse": 170.98119347335313,
+        "bias": 21.42844743586155
+      },
+      "3": {
+        "n": 26,
+        "mae": 74.67334235324196,
+        "rmse": 215.8404287442084,
+        "bias": 30.453631446899458
+      },
+      "4": {
+        "n": 26,
+        "mae": 123.57445045933306,
+        "rmse": 364.69048372111274,
+        "bias": 63.654741724325746
+      }
+    },
+    "seasonal_skill": -0.7401632266786291
+  },
+  "seasonal": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 43.17307692307692,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 47.26923076923077,
+        "rmse": 63.366152090601425,
+        "bias": -27.653846153846153
+      },
+      "2": {
+        "n": 26,
+        "mae": 42.26923076923077,
+        "rmse": 58.565873496956726,
+        "bias": -24.5
+      },
+      "3": {
+        "n": 26,
+        "mae": 40.57692307692308,
+        "rmse": 55.53273462908715,
+        "bias": -27.73076923076923
+      },
+      "4": {
+        "n": 26,
+        "mae": 42.57692307692308,
+        "rmse": 58.245831808610326,
+        "bias": -25.26923076923077
+      }
+    },
+    "seasonal_skill": 0.0
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/baseline_metrics.json              
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmp3jbgu4tg.png]
+[colab] Executing cell 5/9 - dengue-09...
+Running validation — log: /content/outputs/dengue/ae24354e11d5/validation.log
+mitra_cases (window 52, delay 0): origin 1/26 2021-B52
+mitra_cases (window 52, delay 0): origin 2/26 2022-B04
+mitra_cases (window 52, delay 0): origin 3/26 2022-B08
+mitra_cases (window 52, delay 0): origin 4/26 2022-B12
+mitra_cases (window 52, delay 0): origin 5/26 2022-B16
+mitra_cases (window 52, delay 0): origin 6/26 2022-B20
+mitra_cases (window 52, delay 0): origin 7/26 2022-B24
+mitra_cases (window 52, delay 0): origin 8/26 2022-B28
+mitra_cases (window 52, delay 0): origin 9/26 2022-B32
+mitra_cases (window 52, delay 0): origin 10/26 2022-B36
+mitra_cases (window 52, delay 0): origin 11/26 2022-B40
+mitra_cases (window 52, delay 0): origin 12/26 2022-B44
+mitra_cases (window 52, delay 0): origin 13/26 2022-B48
+mitra_cases (window 52, delay 0): origin 14/26 2022-B52
+mitra_cases (window 52, delay 0): origin 15/26 2023-B04
+mitra_cases (window 52, delay 0): origin 16/26 2023-B08
+mitra_cases (window 52, delay 0): origin 17/26 2023-B12
+mitra_cases (window 52, delay 0): origin 18/26 2023-B16
+mitra_cases (window 52, delay 0): origin 19/26 2023-B20
+mitra_cases (window 52, delay 0): origin 20/26 2023-B24
+mitra_cases (window 52, delay 0): origin 21/26 2023-B28
+mitra_cases (window 52, delay 0): origin 22/26 2023-B32
+mitra_cases (window 52, delay 0): origin 23/26 2023-B36
+mitra_cases (window 52, delay 0): origin 24/26 2023-B40
+mitra_cases (window 52, delay 0): origin 25/26 2023-B44
+mitra_cases (window 52, delay 0): origin 26/26 2023-B48
+mitra_cases (window 104, delay 0): origin 1/26 2021-B52
+mitra_cases (window 104, delay 0): origin 2/26 2022-B04
+mitra_cases (window 104, delay 0): origin 3/26 2022-B08
+mitra_cases (window 104, delay 0): origin 4/26 2022-B12
+mitra_cases (window 104, delay 0): origin 5/26 2022-B16
+mitra_cases (window 104, delay 0): origin 6/26 2022-B20
+mitra_cases (window 104, delay 0): origin 7/26 2022-B24
+mitra_cases (window 104, delay 0): origin 8/26 2022-B28
+mitra_cases (window 104, delay 0): origin 9/26 2022-B32
+mitra_cases (window 104, delay 0): origin 10/26 2022-B36
+mitra_cases (window 104, delay 0): origin 11/26 2022-B40
+mitra_cases (window 104, delay 0): origin 12/26 2022-B44
+mitra_cases (window 104, delay 0): origin 13/26 2022-B48
+mitra_cases (window 104, delay 0): origin 14/26 2022-B52
+mitra_cases (window 104, delay 0): origin 15/26 2023-B04
+mitra_cases (window 104, delay 0): origin 16/26 2023-B08
+mitra_cases (window 104, delay 0): origin 17/26 2023-B12
+mitra_cases (window 104, delay 0): origin 18/26 2023-B16
+mitra_cases (window 104, delay 0): origin 19/26 2023-B20
+mitra_cases (window 104, delay 0): origin 20/26 2023-B24
+mitra_cases (window 104, delay 0): origin 21/26 2023-B28
+mitra_cases (window 104, delay 0): origin 22/26 2023-B32
+mitra_cases (window 104, delay 0): origin 23/26 2023-B36
+mitra_cases (window 104, delay 0): origin 24/26 2023-B40
+mitra_cases (window 104, delay 0): origin 25/26 2023-B44
+mitra_cases (window 104, delay 0): origin 26/26 2023-B48
+mitra_weather (window 52, delay 0): origin 1/26 2021-B52
+mitra_weather (window 52, delay 0): origin 2/26 2022-B04
+mitra_weather (window 52, delay 0): origin 3/26 2022-B08
+mitra_weather (window 52, delay 0): origin 4/26 2022-B12
+mitra_weather (window 52, delay 0): origin 5/26 2022-B16
+mitra_weather (window 52, delay 0): origin 6/26 2022-B20
+mitra_weather (window 52, delay 0): origin 7/26 2022-B24
+mitra_weather (window 52, delay 0): origin 8/26 2022-B28
+mitra_weather (window 52, delay 0): origin 9/26 2022-B32
+mitra_weather (window 52, delay 0): origin 10/26 2022-B36
+mitra_weather (window 52, delay 0): origin 11/26 2022-B40
+mitra_weather (window 52, delay 0): origin 12/26 2022-B44
+mitra_weather (window 52, delay 0): origin 13/26 2022-B48
+mitra_weather (window 52, delay 0): origin 14/26 2022-B52
+mitra_weather (window 52, delay 0): origin 15/26 2023-B04
+mitra_weather (window 52, delay 0): origin 16/26 2023-B08
+mitra_weather (window 52, delay 0): origin 17/26 2023-B12
+mitra_weather (window 52, delay 0): origin 18/26 2023-B16
+mitra_weather (window 52, delay 0): origin 19/26 2023-B20
+mitra_weather (window 52, delay 0): origin 20/26 2023-B24
+mitra_weather (window 52, delay 0): origin 21/26 2023-B28
+mitra_weather (window 52, delay 0): origin 22/26 2023-B32
+mitra_weather (window 52, delay 0): origin 23/26 2023-B36
+mitra_weather (window 52, delay 0): origin 24/26 2023-B40
+mitra_weather (window 52, delay 0): origin 25/26 2023-B44
+mitra_weather (window 52, delay 0): origin 26/26 2023-B48
+chronos (window 104, delay 0): origin 1/26 2021-B52
+chronos (window 104, delay 0): origin 2/26 2022-B04
+chronos (window 104, delay 0): origin 3/26 2022-B08
+chronos (window 104, delay 0): origin 4/26 2022-B12
+chronos (window 104, delay 0): origin 5/26 2022-B16
+chronos (window 104, delay 0): origin 6/26 2022-B20
+chronos (window 104, delay 0): origin 7/26 2022-B24
+chronos (window 104, delay 0): origin 8/26 2022-B28
+chronos (window 104, delay 0): origin 9/26 2022-B32
+chronos (window 104, delay 0): origin 10/26 2022-B36
+chronos (window 104, delay 0): origin 11/26 2022-B40
+chronos (window 104, delay 0): origin 12/26 2022-B44
+chronos (window 104, delay 0): origin 13/26 2022-B48
+chronos (window 104, delay 0): origin 14/26 2022-B52
+chronos (window 104, delay 0): origin 15/26 2023-B04
+chronos (window 104, delay 0): origin 16/26 2023-B08
+chronos (window 104, delay 0): origin 17/26 2023-B12
+chronos (window 104, delay 0): origin 18/26 2023-B16
+chronos (window 104, delay 0): origin 19/26 2023-B20
+chronos (window 104, delay 0): origin 20/26 2023-B24
+chronos (window 104, delay 0): origin 21/26 2023-B28
+chronos (window 104, delay 0): origin 22/26 2023-B32
+chronos (window 104, delay 0): origin 23/26 2023-B36
+chronos (window 104, delay 0): origin 24/26 2023-B40
+chronos (window 104, delay 0): origin 25/26 2023-B44
+chronos (window 104, delay 0): origin 26/26 2023-B48
+validation: PASS
+{
+  "window": 52,
+  "candidate_mae": {
+    "52": 20.498909961397832,
+    "104": 21.010184131446437
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/selection.json                     
+{
+  "chronos": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 18.628139569209175,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 17.841542097238396,
+        "rmse": 23.766555375487762,
+        "bias": -7.072476827181303
+      },
+      "2": {
+        "n": 26,
+        "mae": 14.899374851813683,
+        "rmse": 19.69820635613053,
+        "bias": -3.8670763969421387
+      },
+      "3": {
+        "n": 26,
+        "mae": 17.849592172182522,
+        "rmse": 23.548909409403382,
+        "bias": -3.3373965116647573
+      },
+      "4": {
+        "n": 26,
+        "mae": 23.92204915560209,
+        "rmse": 32.893399717680694,
+        "bias": -8.051948987520658
+      }
+    },
+    "seasonal_skill": 0.5685241614258899
+  },
+  "mitra_cases": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 20.498909961397832,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 21.15745250822003,
+        "rmse": 32.29545990773166,
+        "bias": -6.162982403505783
+      },
+      "2": {
+        "n": 26,
+        "mae": 15.93164166070101,
+        "rmse": 26.74337097109843,
+        "bias": -1.25066595634632
+      },
+      "3": {
+        "n": 26,
+        "mae": 19.10886697043687,
+        "rmse": 33.94057616519933,
+        "bias": 0.7446789470070916
+      },
+      "4": {
+        "n": 26,
+        "mae": 25.797678706233416,
+        "rmse": 42.34858209715178,
+        "bias": -2.4208868355534046
+      }
+    },
+    "seasonal_skill": 0.5251922859720769
+  },
+  "mitra_weather": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 19.607057452187966,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 20.150154447602727,
+        "rmse": 26.473116565522712,
+        "bias": -7.8394271309484
+      },
+      "2": {
+        "n": 26,
+        "mae": 14.88900112177207,
+        "rmse": 18.911532291023782,
+        "bias": -5.498393954771759
+      },
+      "3": {
+        "n": 26,
+        "mae": 17.790247256433904,
+        "rmse": 22.640252594798163,
+        "bias": -4.381579952551163
+      },
+      "4": {
+        "n": 26,
+        "mae": 25.59882698294317,
+        "rmse": 34.604262524561236,
+        "bias": -8.871051074699178
+      }
+    },
+    "seasonal_skill": 0.5458498942032186
+  },
+  "persistence": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 16.932692307692307,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 14.076923076923077,
+        "rmse": 18.619675284287524,
+        "bias": -3.5384615384615383
+      },
+      "2": {
+        "n": 26,
+        "mae": 12.76923076923077,
+        "rmse": 17.373720207432658,
+        "bias": 1.0
+      },
+      "3": {
+        "n": 26,
+        "mae": 18.307692307692307,
+        "rmse": 22.264148483432006,
+        "bias": 2.230769230769231
+      },
+      "4": {
+        "n": 26,
+        "mae": 22.576923076923077,
+        "rmse": 30.2139804624385,
+        "bias": -2.1923076923076925
+      }
+    },
+    "seasonal_skill": 0.6077951002227171
+  },
+  "ridge": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 75.12820084410619,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 43.071642038272984,
+        "rmse": 89.21780824814434,
+        "bias": 0.8208011001658968
+      },
+      "2": {
+        "n": 26,
+        "mae": 59.19336852557675,
+        "rmse": 170.98119347335313,
+        "bias": 21.42844743586155
+      },
+      "3": {
+        "n": 26,
+        "mae": 74.67334235324196,
+        "rmse": 215.8404287442084,
+        "bias": 30.453631446899458
+      },
+      "4": {
+        "n": 26,
+        "mae": 123.57445045933306,
+        "rmse": 364.69048372111274,
+        "bias": 63.654741724325746
+      }
+    },
+    "seasonal_skill": -0.7401632266786291
+  },
+  "seasonal": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 43.17307692307692,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 47.26923076923077,
+        "rmse": 63.366152090601425,
+        "bias": -27.653846153846153
+      },
+      "2": {
+        "n": 26,
+        "mae": 42.26923076923077,
+        "rmse": 58.565873496956726,
+        "bias": -24.5
+      },
+      "3": {
+        "n": 26,
+        "mae": 40.57692307692308,
+        "rmse": 55.53273462908715,
+        "bias": -27.73076923076923
+      },
+      "4": {
+        "n": 26,
+        "mae": 42.57692307692308,
+        "rmse": 58.245831808610326,
+        "bias": -25.26923076923077
+      }
+    },
+    "seasonal_skill": 0.0
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/validation_metrics.json            
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmpe3gkryi7.png]
+Running lock — log: /content/outputs/dengue/ae24354e11d5/lock.log
+lock: PASS
+{
+  "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+  "window": 52,
+  "plan_sha256": "4a76a645635a7a3f97e8128620ea4f6a1c866283ff853f005be82204d0e7dadd",
+  "systems": [
+    "persistence",
+    "seasonal",
+    "ridge",
+    "chronos",
+    "mitra_cases",
+    "mitra_weather"
+  ],
+  "target_transform": "log1p for ridge/mitra; expm1 then nonnegative floor",
+  "weather_comparison": "mitra_weather minus mitra_cases",
+  "seed": 42,
+  "retrospective_delay_assumption": 0,
+  "scope": "exploratory_published_source_blocks"
+}
+/content/outputs/dengue/ae24354e11d5/results/experiment_lock.json               
+[colab] Executing cell 6/9 - dengue-11...
+Running test — log: /content/outputs/dengue/ae24354e11d5/test.log
+chronos (window 104, delay 0): origin 1/26 2023-B52
+chronos (window 104, delay 0): origin 2/26 2024-B04
+chronos (window 104, delay 0): origin 3/26 2024-B08
+chronos (window 104, delay 0): origin 4/26 2024-B12
+chronos (window 104, delay 0): origin 5/26 2024-B16
+chronos (window 104, delay 0): origin 6/26 2024-B20
+chronos (window 104, delay 0): origin 7/26 2024-B24
+chronos (window 104, delay 0): origin 8/26 2024-B28
+chronos (window 104, delay 0): origin 9/26 2024-B32
+chronos (window 104, delay 0): origin 10/26 2024-B36
+chronos (window 104, delay 0): origin 11/26 2024-B40
+chronos (window 104, delay 0): origin 12/26 2024-B44
+chronos (window 104, delay 0): origin 13/26 2024-B48
+chronos (window 104, delay 0): origin 14/26 2024-B52
+chronos (window 104, delay 0): origin 15/26 2025-B04
+chronos (window 104, delay 0): origin 16/26 2025-B08
+chronos (window 104, delay 0): origin 17/26 2025-B12
+chronos (window 104, delay 0): origin 18/26 2025-B16
+chronos (window 104, delay 0): origin 19/26 2025-B20
+chronos (window 104, delay 0): origin 20/26 2025-B24
+chronos (window 104, delay 0): origin 21/26 2025-B28
+chronos (window 104, delay 0): origin 22/26 2025-B32
+chronos (window 104, delay 0): origin 23/26 2025-B36
+chronos (window 104, delay 0): origin 24/26 2025-B40
+chronos (window 104, delay 0): origin 25/26 2025-B44
+chronos (window 104, delay 0): origin 26/26 2025-B48
+mitra_cases (window 52, delay 0): origin 1/26 2023-B52
+mitra_cases (window 52, delay 0): origin 2/26 2024-B04
+mitra_cases (window 52, delay 0): origin 3/26 2024-B08
+mitra_cases (window 52, delay 0): origin 4/26 2024-B12
+mitra_cases (window 52, delay 0): origin 5/26 2024-B16
+mitra_cases (window 52, delay 0): origin 6/26 2024-B20
+mitra_cases (window 52, delay 0): origin 7/26 2024-B24
+mitra_cases (window 52, delay 0): origin 8/26 2024-B28
+mitra_cases (window 52, delay 0): origin 9/26 2024-B32
+mitra_cases (window 52, delay 0): origin 10/26 2024-B36
+mitra_cases (window 52, delay 0): origin 11/26 2024-B40
+mitra_cases (window 52, delay 0): origin 12/26 2024-B44
+mitra_cases (window 52, delay 0): origin 13/26 2024-B48
+mitra_cases (window 52, delay 0): origin 14/26 2024-B52
+mitra_cases (window 52, delay 0): origin 15/26 2025-B04
+mitra_cases (window 52, delay 0): origin 16/26 2025-B08
+mitra_cases (window 52, delay 0): origin 17/26 2025-B12
+mitra_cases (window 52, delay 0): origin 18/26 2025-B16
+mitra_cases (window 52, delay 0): origin 19/26 2025-B20
+mitra_cases (window 52, delay 0): origin 20/26 2025-B24
+mitra_cases (window 52, delay 0): origin 21/26 2025-B28
+mitra_cases (window 52, delay 0): origin 22/26 2025-B32
+mitra_cases (window 52, delay 0): origin 23/26 2025-B36
+mitra_cases (window 52, delay 0): origin 24/26 2025-B40
+mitra_cases (window 52, delay 0): origin 25/26 2025-B44
+mitra_cases (window 52, delay 0): origin 26/26 2025-B48
+mitra_weather (window 52, delay 0): origin 1/26 2023-B52
+mitra_weather (window 52, delay 0): origin 2/26 2024-B04
+mitra_weather (window 52, delay 0): origin 3/26 2024-B08
+mitra_weather (window 52, delay 0): origin 4/26 2024-B12
+mitra_weather (window 52, delay 0): origin 5/26 2024-B16
+mitra_weather (window 52, delay 0): origin 6/26 2024-B20
+mitra_weather (window 52, delay 0): origin 7/26 2024-B24
+mitra_weather (window 52, delay 0): origin 8/26 2024-B28
+mitra_weather (window 52, delay 0): origin 9/26 2024-B32
+mitra_weather (window 52, delay 0): origin 10/26 2024-B36
+mitra_weather (window 52, delay 0): origin 11/26 2024-B40
+mitra_weather (window 52, delay 0): origin 12/26 2024-B44
+mitra_weather (window 52, delay 0): origin 13/26 2024-B48
+mitra_weather (window 52, delay 0): origin 14/26 2024-B52
+mitra_weather (window 52, delay 0): origin 15/26 2025-B04
+mitra_weather (window 52, delay 0): origin 16/26 2025-B08
+mitra_weather (window 52, delay 0): origin 17/26 2025-B12
+mitra_weather (window 52, delay 0): origin 18/26 2025-B16
+mitra_weather (window 52, delay 0): origin 19/26 2025-B20
+mitra_weather (window 52, delay 0): origin 20/26 2025-B24
+mitra_weather (window 52, delay 0): origin 21/26 2025-B28
+mitra_weather (window 52, delay 0): origin 22/26 2025-B32
+mitra_weather (window 52, delay 0): origin 23/26 2025-B36
+mitra_weather (window 52, delay 0): origin 24/26 2025-B40
+mitra_weather (window 52, delay 0): origin 25/26 2025-B44
+mitra_weather (window 52, delay 0): origin 26/26 2025-B48
+test: PASS
+{
+  "chronos": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 57.696622518392715,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 35.59083337050218,
+        "rmse": 49.30431427413561,
+        "bias": 8.600458732018105
+      },
+      "2": {
+        "n": 26,
+        "mae": 48.38471999535194,
+        "rmse": 68.65390738450452,
+        "bias": 7.557612932645357
+      },
+      "3": {
+        "n": 26,
+        "mae": 62.712087631225586,
+        "rmse": 93.12694941180644,
+        "bias": 8.382941466111403
+      },
+      "4": {
+        "n": 26,
+        "mae": 84.09884907649113,
+        "rmse": 116.97873976179925,
+        "bias": -6.026236020601713
+      }
+    },
+    "seasonal_skill": 0.47465866381431965
+  },
+  "mitra_cases": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 71.40450682921112,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 44.07490938778503,
+        "rmse": 60.203398868571476,
+        "bias": 11.675564738808466
+      },
+      "2": {
+        "n": 26,
+        "mae": 66.20674375869109,
+        "rmse": 94.80141911103311,
+        "bias": 5.946165127154855
+      },
+      "3": {
+        "n": 26,
+        "mae": 79.25491648812066,
+        "rmse": 116.47073132524454,
+        "bias": 13.558392300434187
+      },
+      "4": {
+        "n": 26,
+        "mae": 96.08145768224767,
+        "rmse": 132.3283212168974,
+        "bias": -3.9355310951287334
+      }
+    },
+    "seasonal_skill": 0.3498451488147475
+  },
+  "mitra_weather": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 64.79175816486736,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 47.47118794718415,
+        "rmse": 61.79716285700375,
+        "bias": 4.312028130925763
+      },
+      "2": {
+        "n": 26,
+        "mae": 57.033376214337416,
+        "rmse": 77.82039487127822,
+        "bias": -5.896750231184327
+      },
+      "3": {
+        "n": 26,
+        "mae": 66.69956758628055,
+        "rmse": 98.04793884860338,
+        "bias": -3.881486656580422
+      },
+      "4": {
+        "n": 26,
+        "mae": 87.96290091166732,
+        "rmse": 132.57840053123246,
+        "bias": -18.861880834513382
+      }
+    },
+    "seasonal_skill": 0.4100557827748026
+  },
+  "persistence": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 59.04807692307692,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 36.38461538461539,
+        "rmse": 55.59537888931196,
+        "bias": 12.923076923076923
+      },
+      "2": {
+        "n": 26,
+        "mae": 51.19230769230769,
+        "rmse": 78.91353593551713,
+        "bias": 13.5
+      },
+      "3": {
+        "n": 26,
+        "mae": 64.15384615384616,
+        "rmse": 100.06920682131019,
+        "bias": 14.153846153846153
+      },
+      "4": {
+        "n": 26,
+        "mae": 84.46153846153847,
+        "rmse": 122.68283059612263,
+        "bias": -0.38461538461538464
+      }
+    },
+    "seasonal_skill": 0.46235335317807746
+  },
+  "ridge": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 111.19734738021305,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 78.08607861414472,
+        "rmse": 151.3575004127526,
+        "bias": 37.599498789269006
+      },
+      "2": {
+        "n": 26,
+        "mae": 117.8495237177821,
+        "rmse": 211.8192265983198,
+        "bias": 48.19122417302673
+      },
+      "3": {
+        "n": 26,
+        "mae": 118.67479366072271,
+        "rmse": 182.5160238068259,
+        "bias": 36.777796585246854
+      },
+      "4": {
+        "n": 26,
+        "mae": 130.1789935282027,
+        "rmse": 180.24152810210305,
+        "bias": 11.06528852716899
+      }
+    },
+    "seasonal_skill": -0.012478036030656225
+  },
+  "seasonal": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 109.8269230769231,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 102.92307692307692,
+        "rmse": 142.31844034255877,
+        "bias": -63.76923076923077
+      },
+      "2": {
+        "n": 26,
+        "mae": 110.65384615384616,
+        "rmse": 147.38215631479952,
+        "bias": -65.42307692307692
+      },
+      "3": {
+        "n": 26,
+        "mae": 98.57692307692308,
+        "rmse": 139.8338299554153,
+        "bias": -69.11538461538461
+      },
+      "4": {
+        "n": 26,
+        "mae": 127.15384615384616,
+        "rmse": 178.82221510591074,
+        "bias": -74.6923076923077
+      }
+    },
+    "seasonal_skill": 0.0
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/metrics.json                       
+{
+  "difference_b_minus_a": -6.612748664343753,
+  "ci95": [
+    -21.475152912462782,
+    6.441538327715383
+  ],
+  "n_origins": 26,
+  "n_pairs": 104,
+  "n_groups": 7,
+  "group_sizes": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    2
+  ],
+  "replicates": 2000,
+  "seed": 42
+}
+/content/outputs/dengue/ae24354e11d5/results/paired_comparison.json             
+{
+  "persistence": {
+    "n": 35,
+    "threshold": 242.4000000000001,
+    "metrics": {
+      "n": 35,
+      "mae": 99.31428571428572,
+      "rmse": 138.72933565554393,
+      "bias": 8.114285714285714
+    },
+    "underprediction_rate": 0.5714285714285714
+  },
+  "seasonal": {
+    "n": 35,
+    "threshold": 242.4000000000001,
+    "metrics": {
+      "n": 35,
+      "mae": 195.6,
+      "rmse": 228.30355732163764,
+      "bias": -194.22857142857143
+    },
+    "underprediction_rate": 0.9428571428571428
+  },
+  "ridge": {
+    "n": 35,
+    "threshold": 242.4000000000001,
+    "metrics": {
+      "n": 35,
+      "mae": 204.67169653469819,
+      "rmse": 280.74579447796185,
+      "bias": 43.95249797390653
+    },
+    "underprediction_rate": 0.5428571428571428
+  },
+  "chronos": {
+    "n": 35,
+    "threshold": 242.4000000000001,
+    "metrics": {
+      "n": 35,
+      "mae": 90.62327270507812,
+      "rmse": 119.11389386255914,
+      "bias": -15.545084926060268
+    },
+    "underprediction_rate": 0.6571428571428571
+  },
+  "mitra_cases": {
+    "n": 35,
+    "threshold": 242.4000000000001,
+    "metrics": {
+      "n": 35,
+      "mae": 111.26379157012153,
+      "rmse": 142.62534214700526,
+      "bias": -20.14297019859932
+    },
+    "underprediction_rate": 0.5714285714285714
+  },
+  "mitra_weather": {
+    "n": 35,
+    "threshold": 242.4000000000001,
+    "metrics": {
+      "n": 35,
+      "mae": 111.6615517746215,
+      "rmse": 142.46676850246283,
+      "bias": -28.905969557856206
+    },
+    "underprediction_rate": 0.6
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/high_case_metrics.json             
+{
+  "1": {
+    "n": 26,
+    "raw_coverage_80": 0.6923076923076923,
+    "raw_mean_width": 104.42915094815768,
+    "pinball": [
+      6.257534203162563,
+      17.79541668525109,
+      9.826239028343789
+    ]
+  },
+  "2": {
+    "n": 26,
+    "raw_coverage_80": 0.6538461538461539,
+    "raw_mean_width": 129.06402837313138,
+    "pinball": [
+      8.117321087763859,
+      24.19235999767597,
+      12.019364166259761
+    ]
+  },
+  "3": {
+    "n": 26,
+    "raw_coverage_80": 0.6153846153846154,
+    "raw_mean_width": 149.78901334909293,
+    "pinball": [
+      13.810683162395772,
+      31.356043815612793,
+      16.18350689227764
+    ]
+  },
+  "4": {
+    "n": 26,
+    "raw_coverage_80": 0.5384615384615384,
+    "raw_mean_width": 169.97247842641977,
+    "pinball": [
+      13.883276015061599,
+      42.04942453824557,
+      24.920944918118998
+    ]
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/interval_metrics.json              
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmp5ubndf1o.png]
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmp9spd9q8m.png]
+
+                                                                                
+ system         target_key  horizon  reference  prediction  error     abs_error 
+ ────────────────────────────────────────────────────────────────────────────── 
+ ridge          2025-B10    2        321        1229.035    908.035   908.035   
+ ridge          2025-B09    1        427        1096.748    669.748   669.748   
+ ridge          2025-B11    3        271        912.546     641.546   641.546   
+ seasonal       2025-B08    4        622        68.0        -554.0    554.0     
+ ridge          2025-B08    4        622        99.04       -522.96   522.96    
+ mitra_weather  2025-B08    4        622        197.232     -424.768  424.768   
+ ridge          2025-B44    4        205        618.397     413.397   413.397   
+ mitra_cases    2025-B08    4        622        217.505     -404.495  404.495   
+ persistence    2025-B12    4        246        622.0       376.0     376.0     
+ seasonal       2025-B07    3        437        77.0        -360.0    360.0     
+                                                                                
+Showing 10 of 20 rows. All columns in the CSV: system, origin_key, target_key, horizon, reference, prediction, error, abs_error, raw_prediction, clipped
+/content/outputs/dengue/ae24354e11d5/results/largest_misses.csv                 
+
+                                                                                
+ target_…  horizon  referen…  high_ca…  system     predict…  error    abs_error 
+ ────────────────────────────────────────────────────────────────────────────── 
+ 2025-B10  2        321       True      persiste…  622.0     301.0    301.0     
+ 2025-B10  2        321       True      seasonal   64.0      -257.0   257.0     
+ 2025-B10  2        321       True      ridge      1229.035  908.035  908.035   
+ 2025-B10  2        321       True      chronos    513.7     192.7    192.7     
+ 2025-B10  2        321       True      mitra_ca…  528.167   207.167  207.167   
+ 2025-B10  2        321       True      mitra_we…  510.084   189.084  189.084   
+ 2025-B09  1        427       True      persiste…  622.0     195.0    195.0     
+ 2025-B09  1        427       True      seasonal   70.0      -357.0   357.0     
+ 2025-B09  1        427       True      ridge      1096.748  669.748  669.748   
+ 2025-B09  1        427       True      chronos    534.556   107.556  107.556   
+ 2025-B09  1        427       True      mitra_ca…  580.472   153.472  153.472   
+ 2025-B09  1        427       True      mitra_we…  603.617   176.617  176.617   
+ 2025-B11  3        271       True      persiste…  622.0     351.0    351.0     
+ 2025-B11  3        271       True      seasonal   60.0      -211.0   211.0     
+ 2025-B11  3        271       True      ridge      912.546   641.546  641.546   
+ 2025-B11  3        271       True      chronos    506.051   235.051  235.051   
+ 2025-B11  3        271       True      mitra_ca…  508.35    237.35   237.35    
+ 2025-B11  3        271       True      mitra_we…  493.059   222.059  222.059   
+                                                                                
+Showing 18 of 18 rows. All columns in the CSV: target_key, horizon, origin_key, reference, high_case, system, prediction, error, abs_error
+/content/outputs/dengue/ae24354e11d5/results/hard_targets.csv                   
+[colab] Executing cell 7/9 - dengue-13...
+Running activity — log: /content/outputs/dengue/ae24354e11d5/activity.log
+chronos (window 104, delay 2): origin 1/26 2021-B52
+chronos (window 104, delay 2): origin 2/26 2022-B04
+chronos (window 104, delay 2): origin 3/26 2022-B08
+chronos (window 104, delay 2): origin 4/26 2022-B12
+chronos (window 104, delay 2): origin 5/26 2022-B16
+chronos (window 104, delay 2): origin 6/26 2022-B20
+chronos (window 104, delay 2): origin 7/26 2022-B24
+chronos (window 104, delay 2): origin 8/26 2022-B28
+chronos (window 104, delay 2): origin 9/26 2022-B32
+chronos (window 104, delay 2): origin 10/26 2022-B36
+chronos (window 104, delay 2): origin 11/26 2022-B40
+chronos (window 104, delay 2): origin 12/26 2022-B44
+chronos (window 104, delay 2): origin 13/26 2022-B48
+chronos (window 104, delay 2): origin 14/26 2022-B52
+chronos (window 104, delay 2): origin 15/26 2023-B04
+chronos (window 104, delay 2): origin 16/26 2023-B08
+chronos (window 104, delay 2): origin 17/26 2023-B12
+chronos (window 104, delay 2): origin 18/26 2023-B16
+chronos (window 104, delay 2): origin 19/26 2023-B20
+chronos (window 104, delay 2): origin 20/26 2023-B24
+chronos (window 104, delay 2): origin 21/26 2023-B28
+chronos (window 104, delay 2): origin 22/26 2023-B32
+chronos (window 104, delay 2): origin 23/26 2023-B36
+chronos (window 104, delay 2): origin 24/26 2023-B40
+chronos (window 104, delay 2): origin 25/26 2023-B44
+chronos (window 104, delay 2): origin 26/26 2023-B48
+mitra_cases (window 52, delay 2): origin 1/26 2021-B52
+mitra_cases (window 52, delay 2): origin 2/26 2022-B04
+mitra_cases (window 52, delay 2): origin 3/26 2022-B08
+mitra_cases (window 52, delay 2): origin 4/26 2022-B12
+mitra_cases (window 52, delay 2): origin 5/26 2022-B16
+mitra_cases (window 52, delay 2): origin 6/26 2022-B20
+mitra_cases (window 52, delay 2): origin 7/26 2022-B24
+mitra_cases (window 52, delay 2): origin 8/26 2022-B28
+mitra_cases (window 52, delay 2): origin 9/26 2022-B32
+mitra_cases (window 52, delay 2): origin 10/26 2022-B36
+mitra_cases (window 52, delay 2): origin 11/26 2022-B40
+mitra_cases (window 52, delay 2): origin 12/26 2022-B44
+mitra_cases (window 52, delay 2): origin 13/26 2022-B48
+mitra_cases (window 52, delay 2): origin 14/26 2022-B52
+mitra_cases (window 52, delay 2): origin 15/26 2023-B04
+mitra_cases (window 52, delay 2): origin 16/26 2023-B08
+mitra_cases (window 52, delay 2): origin 17/26 2023-B12
+mitra_cases (window 52, delay 2): origin 18/26 2023-B16
+mitra_cases (window 52, delay 2): origin 19/26 2023-B20
+mitra_cases (window 52, delay 2): origin 20/26 2023-B24
+mitra_cases (window 52, delay 2): origin 21/26 2023-B28
+mitra_cases (window 52, delay 2): origin 22/26 2023-B32
+mitra_cases (window 52, delay 2): origin 23/26 2023-B36
+mitra_cases (window 52, delay 2): origin 24/26 2023-B40
+mitra_cases (window 52, delay 2): origin 25/26 2023-B44
+mitra_cases (window 52, delay 2): origin 26/26 2023-B48
+mitra_weather (window 52, delay 2): origin 1/26 2021-B52
+mitra_weather (window 52, delay 2): origin 2/26 2022-B04
+mitra_weather (window 52, delay 2): origin 3/26 2022-B08
+mitra_weather (window 52, delay 2): origin 4/26 2022-B12
+mitra_weather (window 52, delay 2): origin 5/26 2022-B16
+mitra_weather (window 52, delay 2): origin 6/26 2022-B20
+mitra_weather (window 52, delay 2): origin 7/26 2022-B24
+mitra_weather (window 52, delay 2): origin 8/26 2022-B28
+mitra_weather (window 52, delay 2): origin 9/26 2022-B32
+mitra_weather (window 52, delay 2): origin 10/26 2022-B36
+mitra_weather (window 52, delay 2): origin 11/26 2022-B40
+mitra_weather (window 52, delay 2): origin 12/26 2022-B44
+mitra_weather (window 52, delay 2): origin 13/26 2022-B48
+mitra_weather (window 52, delay 2): origin 14/26 2022-B52
+mitra_weather (window 52, delay 2): origin 15/26 2023-B04
+mitra_weather (window 52, delay 2): origin 16/26 2023-B08
+mitra_weather (window 52, delay 2): origin 17/26 2023-B12
+mitra_weather (window 52, delay 2): origin 18/26 2023-B16
+mitra_weather (window 52, delay 2): origin 19/26 2023-B20
+mitra_weather (window 52, delay 2): origin 20/26 2023-B24
+mitra_weather (window 52, delay 2): origin 21/26 2023-B28
+mitra_weather (window 52, delay 2): origin 22/26 2023-B32
+mitra_weather (window 52, delay 2): origin 23/26 2023-B36
+mitra_weather (window 52, delay 2): origin 24/26 2023-B40
+mitra_weather (window 52, delay 2): origin 25/26 2023-B44
+mitra_weather (window 52, delay 2): origin 26/26 2023-B48
+activity: PASS
+
+                                                        
+ system         pairs  mae_delay_0  mae_delay_2  change 
+ ────────────────────────────────────────────────────── 
+ persistence    104    16.933       22.971       6.038  
+ seasonal       104    43.173       43.173       0.0    
+ ridge          104    75.128       109.049      33.921 
+ chronos        104    18.628       23.786       5.158  
+ mitra_cases    104    20.499       23.526       3.027  
+ mitra_weather  104    19.607       24.669       5.062  
+                                                        
+Showing 6 of 6 rows. All columns in the CSV: system, pairs, mae_delay_0, mae_delay_2, change
+/content/outputs/dengue/ae24354e11d5/results/delay_summary.csv                  
+
+                                                                                
+ system      target_key  horizon  reference  predictio…  predictio…  abs_error… 
+ ────────────────────────────────────────────────────────────────────────────── 
+ persisten…  2022-B01    1        11         15.0        23.0        8.0        
+ persisten…  2022-B02    2        7          15.0        23.0        8.0        
+ persisten…  2022-B03    3        18         15.0        23.0        2.0        
+ persisten…  2022-B04    4        16         15.0        23.0        6.0        
+ persisten…  2022-B05    1        16         16.0        7.0         9.0        
+ persisten…  2022-B06    2        26         16.0        7.0         9.0        
+ persisten…  2022-B07    3        12         16.0        7.0         1.0        
+ persisten…  2022-B08    4        19         16.0        7.0         9.0        
+ persisten…  2022-B09    1        23         19.0        26.0        -1.0       
+ persisten…  2022-B10    2        20         19.0        26.0        5.0        
+ persisten…  2022-B11    3        19         19.0        26.0        7.0        
+ persisten…  2022-B12    4        17         19.0        26.0        7.0        
+                                                                                
+Showing 12 of 624 rows. All columns in the CSV: system, origin_key, target_key, horizon, reference, prediction_delay_0, prediction_delay_2, abs_error_delay_0, abs_error_delay_2, abs_error_change
+/content/outputs/dengue/ae24354e11d5/results/delay_comparison.csv               
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmp19fzkug_.png]
+{
+  "chronos": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 23.786153463216927,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 22.139666997469387,
+        "rmse": 29.752639670051188,
+        "bias": -8.584697796748234
+      },
+      "2": {
+        "n": 26,
+        "mae": 21.204629311194786,
+        "rmse": 27.729174560819494,
+        "bias": -4.995193774883564
+      },
+      "3": {
+        "n": 26,
+        "mae": 24.850262495187614,
+        "rmse": 32.43382110329139,
+        "bias": -4.730645619905912
+      },
+      "4": {
+        "n": 26,
+        "mae": 26.950055049015926,
+        "rmse": 38.37046545755938,
+        "bias": -9.918203647320087
+      }
+    },
+    "seasonal_skill": 0.44905123381412904
+  },
+  "mitra_cases": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 23.52627773796629,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 23.692919143094706,
+        "rmse": 31.79630330523861,
+        "bias": -9.541432541175663
+      },
+      "2": {
+        "n": 26,
+        "mae": 21.156418942060903,
+        "rmse": 28.9131871108693,
+        "bias": -4.621409476805199
+      },
+      "3": {
+        "n": 26,
+        "mae": 21.26791158892414,
+        "rmse": 28.85571281887791,
+        "bias": -6.5153988684568045
+      },
+      "4": {
+        "n": 26,
+        "mae": 27.98786127778542,
+        "rmse": 41.19650566743965,
+        "bias": -12.954380773476714
+      }
+    },
+    "seasonal_skill": 0.45507062700478973
+  },
+  "mitra_weather": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 24.668729108634217,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 23.488233341432018,
+        "rmse": 33.679942859021885,
+        "bias": -11.104102027841874
+      },
+      "2": {
+        "n": 26,
+        "mae": 22.367711613151528,
+        "rmse": 31.723022765560227,
+        "bias": -9.245618505658204
+      },
+      "3": {
+        "n": 26,
+        "mae": 23.84734819650072,
+        "rmse": 33.11414310962117,
+        "bias": -7.964468185967688
+      },
+      "4": {
+        "n": 26,
+        "mae": 28.971623283452605,
+        "rmse": 43.18813454506136,
+        "bias": -13.976139026324061
+      }
+    },
+    "seasonal_skill": 0.4286085017153767
+  },
+  "persistence": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 22.971153846153843,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 20.46153846153846,
+        "rmse": 28.37658840013664,
+        "bias": -6.923076923076923
+      },
+      "2": {
+        "n": 26,
+        "mae": 19.384615384615383,
+        "rmse": 29.04638200692657,
+        "bias": -2.3846153846153846
+      },
+      "3": {
+        "n": 26,
+        "mae": 23.923076923076923,
+        "rmse": 33.310889880268654,
+        "bias": -1.1538461538461537
+      },
+      "4": {
+        "n": 26,
+        "mae": 28.115384615384617,
+        "rmse": 39.50608521773284,
+        "bias": -5.576923076923077
+      }
+    },
+    "seasonal_skill": 0.4679287305122495
+  },
+  "ridge": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 109.04904716758944,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 86.12320923956645,
+        "rmse": 221.21869796083757,
+        "bias": 31.05492352614961
+      },
+      "2": {
+        "n": 26,
+        "mae": 101.43110063756416,
+        "rmse": 308.3604029665985,
+        "bias": 50.99095686662353
+      },
+      "3": {
+        "n": 26,
+        "mae": 115.69138739695288,
+        "rmse": 422.63056087072596,
+        "bias": 60.875774041729365
+      },
+      "4": {
+        "n": 26,
+        "mae": 132.95049139627432,
+        "rmse": 503.13989699760873,
+        "bias": 65.4298446632064
+      }
+    },
+    "seasonal_skill": -1.5258576626791318
+  },
+  "seasonal": {
+    "origins": 26,
+    "pairs": 104,
+    "mae": 43.17307692307692,
+    "horizons": {
+      "1": {
+        "n": 26,
+        "mae": 47.26923076923077,
+        "rmse": 63.366152090601425,
+        "bias": -27.653846153846153
+      },
+      "2": {
+        "n": 26,
+        "mae": 42.26923076923077,
+        "rmse": 58.565873496956726,
+        "bias": -24.5
+      },
+      "3": {
+        "n": 26,
+        "mae": 40.57692307692308,
+        "rmse": 55.53273462908715,
+        "bias": -27.73076923076923
+      },
+      "4": {
+        "n": 26,
+        "mae": 42.57692307692308,
+        "rmse": 58.245831808610326,
+        "bias": -25.26923076923077
+      }
+    },
+    "seasonal_skill": 0.0
+  }
+}
+/content/outputs/dengue/ae24354e11d5/results/delay_metrics.json                 
+[colab] Executing cell 8/9 - dengue-15...
+Running future — log: /content/outputs/dengue/ae24354e11d5/future.log
+chronos (window 104, delay 0): origin 1/1 2025-B52
+mitra_cases (window 52, delay 0): origin 1/1 2025-B52
+mitra_weather (window 52, delay 0): origin 1/1 2025-B52
+future: PASS
+
+                                                                                
+ target_k…  horizon  persiste…  seasonal  ridge  chronos  mitra_ca…  mitra_wea… 
+ ────────────────────────────────────────────────────────────────────────────── 
+ 2026-B01   1        82.0       200.0     89.33  72.43    83.19      89.0       
+ 2026-B02   2        82.0       357.0     88.11  66.43    82.43      116.14     
+ 2026-B03   3        82.0       295.0     85.68  61.15    93.44      214.98     
+ 2026-B04   4        82.0       304.0     79.88  53.04    106.49     286.85     
+                                                                                
+Showing 4 of 4 rows. All columns in the CSV: target_key, horizon, persistence, seasonal, ridge, chronos, mitra_cases, mitra_weather
+/content/outputs/dengue/ae24354e11d5/results/future_forecast_view.csv           
+
+                                                                                
+ system   target…  horizon  predic…  raw_pr…  clipped  q10     q50      q90     
+ ────────────────────────────────────────────────────────────────────────────── 
+ persis…  2026-B…  1        82.0     82.0     False                             
+ season…  2026-B…  1        200.0    200.0    False                             
+ ridge    2026-B…  1        89.326…  89.326…  False                             
+ persis…  2026-B…  2        82.0     82.0     False                             
+ season…  2026-B…  2        357.0    357.0    False                             
+ ridge    2026-B…  2        88.114…  88.114…  False                             
+ persis…  2026-B…  3        82.0     82.0     False                             
+ season…  2026-B…  3        295.0    295.0    False                             
+ ridge    2026-B…  3        85.683…  85.683…  False                             
+ persis…  2026-B…  4        82.0     82.0     False                             
+ season…  2026-B…  4        304.0    304.0    False                             
+ ridge    2026-B…  4        79.881…  79.881…  False                             
+ chronos  2026-B…  1        72.434…  72.434…  False    56.00…  72.434…  99.718… 
+ chronos  2026-B…  2        66.432…  66.432…  False    44.75…  66.432…  102.73… 
+ chronos  2026-B…  3        61.152…  61.152…  False    32.66…  61.152…  103.01… 
+ chronos  2026-B…  4        53.037…  53.037…  False    20.62…  53.037…  108.29… 
+ mitra_…  2026-B…  1        83.188…  83.188…  False                             
+ mitra_…  2026-B…  2        82.432…  82.432…  False                             
+ mitra_…  2026-B…  3        93.440…  93.440…  False                             
+ mitra_…  2026-B…  4        106.48…  106.48…  False                             
+ mitra_…  2026-B…  1        88.997…  88.997…  False                             
+ mitra_…  2026-B…  2        116.13…  116.13…  False                             
+ mitra_…  2026-B…  3        214.98…  214.98…  False                             
+ mitra_…  2026-B…  4        286.84…  286.84…  False                             
+                                                                                
+Showing 24 of 24 rows. All columns in the CSV: system, origin, origin_key, cutoff, target_index, target_key, horizon, delay, reference, raw_prediction, prediction, clipped, q10, q50, q90
+/content/outputs/dengue/ae24354e11d5/results/future_predictions.csv             
+[colab] Executing cell 9/9 - dengue-17...
+Running reload — log: /content/outputs/dengue/ae24354e11d5/reload.log
+reload: PASS
+{
+  "passed": true,
+  "predictions_checked": 32,
+  "max_absolute_difference": 0.0,
+  "atol": 0.001,
+  "rtol": 0.0001,
+  "fresh_process": true,
+  "pid": 4121,
+  "scope": "same workspace; see consumer_verification.json for the exported bundle"
+}
+/content/outputs/dengue/ae24354e11d5/results/verification.json                  
+Running report — log: /content/outputs/dengue/ae24354e11d5/report.log
+report: PASS
+{
+  "scope": "exploratory_published_source_blocks",
+  "status": "executed_candidate",
+  "area": "Quezon City, Philippines",
+  "source_citation": "Zenodo record 21978184 (QC Data sheet), ODC-ODbL 1.0",
+  "units": {
+    "cases": "reported cases per source block (nonnegative integer count)",
+    "rain": "mm per source block (nonnegative)",
+    "temp": "degrees Celsius"
+  },
+  "timing_verified": false,
+  "weather_alignment_verified": false,
+  "prospective_validation": false,
+  "limitations": [
+    "Published source-block order only: calendar dates and case-weather alignment are unverified",
+    "Final data vintages: revised counts and retrospective IMERG/ERA5-Land products do not reconstruct what was available when each forecast would have been issued",
+    "Zero reporting delay is an assumption; the two-block delay activity is illustrative",
+    "Foundation-model pretraining overlap with this series is unknown",
+    "Two evaluation years (26 origins) limit every comparison; bootstrap intervals are descriptive",
+    "Reported counts, not population-adjusted incidence; not an operational warning system",
+    "Source labels describe block-specific reported counts, not rates or cumulative totals; underlying case line lists were not independently audited",
+    "No case revision or publication-time vintage archive is provided in this release",
+    "IMERG Final Run and ERA5-Land reanalysis are retrospective products; event-date truncation does not reconstruct historical availability",
+    "Single centroid weather cells do not represent all within-city variability",
+    "COVID-period flag retained; no post-outcome exclusion"
+  ],
+  "environment": {
+    "python": "3.12.12",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.39",
+    "device": "Tesla T4",
+    "precision": "float32 (Chronos dtype; Mitra precision override)",
+    "packages": {
+      "numpy": "2.3.5",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.7.2",
+      "torch": "2.9.1",
+      "chronos-forecasting": "2.3.1",
+      "transformers": "4.57.6",
+      "autogluon.tabular": "1.5.0",
+      "safetensors": "0.8.0",
+      "matplotlib": "3.10.8"
+    }
+  },
+  "resource_targets": {
+    "kind": "targets, not measurements",
+    "wall_minutes": 60,
+    "free_disk_gib": 20,
+    "peak_gpu_allocated_gib": 12
+  },
+  "resource_measurements": {
+    "stage_seconds": {
+      "prepare": 56.42583230299999,
+      "baselines": 0.9625647130000061,
+      "validation": 147.56676951999998,
+      "lock": 0.009880235999958131,
+      "test": 83.42878449,
+      "activity": 80.47064604299999,
+      "future": 16.435018602000014,
+      "reload": 19.448706343999902
+    },
+    "peak_allocated_gpu_bytes": 512901632
+  },
+  "source_audit": "dataset_audit.json",
+  "metrics": {
+    "chronos": {
+      "origins": 26,
+      "pairs": 104,
+      "mae": 57.696622518392715,
+      "horizons": {
+        "1": {
+          "n": 26,
+          "mae": 35.59083337050218,
+          "rmse": 49.30431427413561,
+          "bias": 8.600458732018105
+        },
+        "2": {
+          "n": 26,
+          "mae": 48.38471999535194,
+          "rmse": 68.65390738450452,
+          "bias": 7.557612932645357
+        },
+        "3": {
+          "n": 26,
+          "mae": 62.712087631225586,
+          "rmse": 93.12694941180644,
+          "bias": 8.382941466111403
+        },
+        "4": {
+          "n": 26,
+          "mae": 84.09884907649113,
+          "rmse": 116.97873976179925,
+          "bias": -6.026236020601713
+        }
+      },
+      "seasonal_skill": 0.47465866381431965
+    },
+    "mitra_cases": {
+      "origins": 26,
+      "pairs": 104,
+      "mae": 71.40450682921112,
+      "horizons": {
+        "1": {
+          "n": 26,
+          "mae": 44.07490938778503,
+          "rmse": 60.203398868571476,
+          "bias": 11.675564738808466
+        },
+        "2": {
+          "n": 26,
+          "mae": 66.20674375869109,
+          "rmse": 94.80141911103311,
+          "bias": 5.946165127154855
+        },
+        "3": {
+          "n": 26,
+          "mae": 79.25491648812066,
+          "rmse": 116.47073132524454,
+          "bias": 13.558392300434187
+        },
+        "4": {
+          "n": 26,
+          "mae": 96.08145768224767,
+          "rmse": 132.3283212168974,
+          "bias": -3.9355310951287334
+        }
+      },
+      "seasonal_skill": 0.3498451488147475
+    },
+    "mitra_weather": {
+      "origins": 26,
+      "pairs": 104,
+      "mae": 64.79175816486736,
+      "horizons": {
+        "1": {
+          "n": 26,
+          "mae": 47.47118794718415,
+          "rmse": 61.79716285700375,
+          "bias": 4.312028130925763
+        },
+        "2": {
+          "n": 26,
+          "mae": 57.033376214337416,
+          "rmse": 77.82039487127822,
+          "bias": -5.896750231184327
+        },
+        "3": {
+          "n": 26,
+          "mae": 66.69956758628055,
+          "rmse": 98.04793884860338,
+          "bias": -3.881486656580422
+        },
+        "4": {
+          "n": 26,
+          "mae": 87.96290091166732,
+          "rmse": 132.57840053123246,
+          "bias": -18.861880834513382
+        }
+      },
+      "seasonal_skill": 0.4100557827748026
+    },
+    "persistence": {
+      "origins": 26,
+      "pairs": 104,
+      "mae": 59.04807692307692,
+      "horizons": {
+        "1": {
+          "n": 26,
+          "mae": 36.38461538461539,
+          "rmse": 55.59537888931196,
+          "bias": 12.923076923076923
+        },
+        "2": {
+          "n": 26,
+          "mae": 51.19230769230769,
+          "rmse": 78.91353593551713,
+          "bias": 13.5
+        },
+        "3": {
+          "n": 26,
+          "mae": 64.15384615384616,
+          "rmse": 100.06920682131019,
+          "bias": 14.153846153846153
+        },
+        "4": {
+          "n": 26,
+          "mae": 84.46153846153847,
+          "rmse": 122.68283059612263,
+          "bias": -0.38461538461538464
+        }
+      },
+      "seasonal_skill": 0.46235335317807746
+    },
+    "ridge": {
+      "origins": 26,
+      "pairs": 104,
+      "mae": 111.19734738021305,
+      "horizons": {
+        "1": {
+          "n": 26,
+          "mae": 78.08607861414472,
+          "rmse": 151.3575004127526,
+          "bias": 37.599498789269006
+        },
+        "2": {
+          "n": 26,
+          "mae": 117.8495237177821,
+          "rmse": 211.8192265983198,
+          "bias": 48.19122417302673
+        },
+        "3": {
+          "n": 26,
+          "mae": 118.67479366072271,
+          "rmse": 182.5160238068259,
+          "bias": 36.777796585246854
+        },
+        "4": {
+          "n": 26,
+          "mae": 130.1789935282027,
+          "rmse": 180.24152810210305,
+          "bias": 11.06528852716899
+        }
+      },
+      "seasonal_skill": -0.012478036030656225
+    },
+    "seasonal": {
+      "origins": 26,
+      "pairs": 104,
+      "mae": 109.8269230769231,
+      "horizons": {
+        "1": {
+          "n": 26,
+          "mae": 102.92307692307692,
+          "rmse": 142.31844034255877,
+          "bias": -63.76923076923077
+        },
+        "2": {
+          "n": 26,
+          "mae": 110.65384615384616,
+          "rmse": 147.38215631479952,
+          "bias": -65.42307692307692
+        },
+        "3": {
+          "n": 26,
+          "mae": 98.57692307692308,
+          "rmse": 139.8338299554153,
+          "bias": -69.11538461538461
+        },
+        "4": {
+          "n": 26,
+          "mae": 127.15384615384616,
+          "rmse": 178.82221510591074,
+          "bias": -74.6923076923077
+        }
+      },
+      "seasonal_skill": 0.0
+    }
+  },
+  "receipts": {
+    "prepare": {
+      "stage": "prepare",
+      "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+      "previous": null,
+      "seconds": 56.42583230299999,
+      "pid": 2476,
+      "completed": true,
+      "peak_allocated_gpu_bytes": null,
+      "outputs": {
+        "feature_schema.json": "3c421cd4326d569fce8fbe75b2c609915f03b468a29839f211aadf6b144d8a5f",
+        "feature_example.csv": "7796331c9a530caea4e68dc8dec39228a0ed097e8f42c590412e0bb97851cea5",
+        "context_preflight.json": "0a032b12e6dadbf7ba34acf6947112230557a8b6245b705c039e2956323db058",
+        "prepare.png": "edf805d454e9038742b74db503b68e07f5534348862d958fddd6118769d5ad82",
+        "plan.json": "4a76a645635a7a3f97e8128620ea4f6a1c866283ff853f005be82204d0e7dadd",
+        "origin_manifest.csv": "5ca4ab8f1db8af4da14081f77fff8f97f52df2cf390d7119dc7d0ae192af4757",
+        "availability_audit.csv": "6a7392a0f531107d4a16e662c724fe46ceeb3b0ad836b49cc8dffde81dcd88b3"
+      }
+    },
+    "baselines": {
+      "stage": "baselines",
+      "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+      "previous": "5c9a94fa2436c2a6be079c3a50dea6dfe5d946e7d64b07d5eab624f125e782ea",
+      "seconds": 0.9625647130000061,
+      "pid": 2712,
+      "completed": true,
+      "peak_allocated_gpu_bytes": null,
+      "outputs": {
+        "baselines.png": "c9e52d93aecc0893a3fdf12e29c4febac3ed8594e704bd9fc9bd604b609ed3e5",
+        "baseline_validation.json": "24328abd9299ce40b6021af02910f4025d618a620c2420e1a3046857312c4bab",
+        "baseline_metrics.json": "a62e7a2836ad82429cbbb44a9584679e9f10486b0085088b1b1ac4d3584637cd"
+      }
+    },
+    "validation": {
+      "stage": "validation",
+      "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+      "previous": "7240d229b0ff4fd548a599f3463c552ce88a1df075d168d2c0c296197ec3c61a",
+      "seconds": 147.56676951999998,
+      "pid": 2722,
+      "completed": true,
+      "peak_allocated_gpu_bytes": 512901632,
+      "outputs": {
+        "validation_metrics.json": "d081bb03c0ba6d16431466727f177db9e93175ba2810c6f0200f0969364d74e0",
+        "validation_predictions.json": "fb9b74286a871c0f8798c7a294e9862e26642e4e2dcc0fe2cf62d884b2a1f54f",
+        "validation_cases_52.json": "187ff0f05431eca414eeb576af1d7dd4d0047545be212289e8d166d132a2062a",
+        "validation.png": "490c2cfb272e92e1a48e3eaebcf1aeb7bd62431599de1ad0f0582bdf4c6f5e5b",
+        "selection.json": "573319e7d97b73e142f498a33a86d2365a1587f0305c3518849831b1e13960b5",
+        "validation_cases_104.json": "011832b9ea524a71bef175faa13949424d687833741208f965419562bb46e489"
+      }
+    },
+    "lock": {
+      "stage": "lock",
+      "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+      "previous": "522a0c0d8c77c7f453f4e1ab683b188de794b14337fe31ac1e90daaadde2a89b",
+      "seconds": 0.009880235999958131,
+      "pid": 3339,
+      "completed": true,
+      "peak_allocated_gpu_bytes": null,
+      "outputs": {
+        "experiment_lock.json": "c2b216155950c2fa5bd40d025037bbf0c40ef1055aa646dddd3d0e6468777bef"
+      }
+    },
+    "test": {
+      "stage": "test",
+      "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+      "previous": "d27359aa34b0c1688c4231d358a8b28edc97054b7a07a661955f9b1bf0e7e2b1",
+      "seconds": 83.42878449,
+      "pid": 3345,
+      "completed": true,
+      "peak_allocated_gpu_bytes": 512901632,
+      "outputs": {
+        "paired_comparison.json": "70ccc009dbfe798bd18a651c2d283b1227a6ca98a4fe476a575824dbcc6d2f5a",
+        "artifact_test_mitra_cases.json": "a9ca86d69bf06e53ce0cd99516a254146f7521bd767975d9c3549769c43aff51",
+        "metrics.json": "01a2a977e319d63a2a6dcc721c695c5245925c7215f608f2058ea64c7ed1098a",
+        "high_case_metrics.json": "9a9422e8afce445753f778c53b03d93b031890018e945e3e40b80dde5ee3caec",
+        "test_predictions.json": "129ff57d705a242dc8bcc0a99b3d1be7f6dfbf5a84106f0758d9ae634f26c981",
+        "artifact_test_ridge.json": "6a20032ccc27c2c4c0bd6d7846a9638081656fd25dcfb0c08da907d870c6b5d6",
+        "predictions.csv": "5db587c75fd6f9b0fb16f22c5fc1271f8b75a78d7462287ed255ccd38804a230",
+        "reload_expected_test.json": "19480bd77f89fb36b57d087d5035065e8a20073774676dec801b6653f693f0b5",
+        "hard_targets.csv": "0537bc4d926e103a1c27a43807511b21495102b16012b89360fffb819a8f9f92",
+        "artifact_test_mitra_weather.json": "7019bcaf2d1af6e2421dc34b679eb63e1b3bdfba4556e6fd18468ef6cae5704a",
+        "artifact_test_chronos.json": "6b7600ee74f30f86084cb9b6a9040240db13f326c5d5292563c40d00d4204053",
+        "interval_metrics.json": "c4fc983424ea1d722474187b4daac5fbc10b7c61a8eb03642ae2618a6b3ae022",
+        "test_forecasts.png": "62b2ee446324dcd5c40c0a038354a5af150b5753b7e06a1547dfbf5e5fbbdcb9",
+        "test.png": "106ef0a60662cf8320d4ee1446689268845adc3e1ab1c258681aa43b1ef4c0e9",
+        "largest_misses.csv": "524d915fbe65c44f2a483ef0099a9eb1611405067eb70f2b22697f7944792c69"
+      }
+    },
+    "activity": {
+      "stage": "activity",
+      "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+      "previous": "3b7f484865d8a9688b55878c11d1fdb7277298199948882c3437fcddf40496db",
+      "seconds": 80.47064604299999,
+      "pid": 3700,
+      "completed": true,
+      "peak_allocated_gpu_bytes": 512901632,
+      "outputs": {
+        "activity.png": "e115d67fd5c4dee5027069f5e8636e129a7dd08aca3653a46664786e2667656d",
+        "validation_delay_activity.csv": "bed8dce0d66fc1d8eed019e453fee10dda85b3d4b36ceed9c065a0ea8a912639",
+        "delay_comparison.csv": "8c57be2978d1e5f38f5f871e9bd93a2280dc51c1b14034d198cf766c7f2b4cb9",
+        "delay_summary.csv": "94b22a9b52693cf5b3674a9e892e4a0496f016bf98f35d4863fb78f5ff679b50",
+        "delay_metrics.json": "441a489c35244acb3792f7fea31e4eaeae0b97cee2317ccf32634644f4cba693"
+      }
+    },
+    "future": {
+      "stage": "future",
+      "identity": "7bba1431d5080f7722f0633b7fa823dd06ca375ffdba1fea3800256f893f769d",
+      "previous": "07e7f73d648c05e6a5c47617f9cdabe0cc1095ea04c04d1827a1f4491566c0ce",
+      "seconds": 16.435018602000014,
+      "pid": 4043,
+      "completed": true,
+      "peak_allocated_gpu_bytes": 512901632,
+      "outputs": {
+        "artifact_future_mitra_weather.json": "c66ea41c2db3638e78acd1c7b0eaba24278eb73f5e2df6aa0cdc38c8a9f4bd6a",
+        "artifact_future_chronos.json": "85f4814a40179cd2dd42297a53be0e87e1bbac3753ef6c42aecf4ceda45b3438",
+        "future_forecast_view.csv": "abfc24410a5475d407b7a8741b9aba14f3c3c926
+... [truncated excerpt: first 14,000 of 15,314 characters; the full file is linked below]
+/content/outputs/dengue/ae24354e11d5/results/run_summary.json                   
+/content/outputs/dengue/ae24354e11d5/results/results.zip                        
+consume: PASS (32 predictions)
+
+{
+  "passed": true,
+  "bundle_sha256": "94a08ae3f124c67a135ff47ba6375dd29420cb426d3f18db579e0e70799d493a",
+  "predictions_checked": 32,
+  "max_absolute_difference": 0.0,
+  "atol": 0.001,
+  "rtol": 0.0001,
+  "original_workspace_read": false,
+  "inputs": "results.zip, trusted embedded code/manifests and verified model snapshots"
+}
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-6eb5062-519d20/DIMER_Philippine_Dengue_Forecasting_Capstone_6eb5062_colab-cli-t4_output.ipynb'...
