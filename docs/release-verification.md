@@ -692,6 +692,15 @@ changes from `238285bda22a` to `90dfa21f20e2`. Every hosted run recorded above w
 - **Boundary:** saved outputs were inspected; BYOD and the optional semantics toggle were not exercised. Status remains Candidate.
 
 
+### Notebook Review Framework v1 findings — 2026-10-12 fixes
+
+The review of blob `90dfa21f` (revision `81ab292`) found eight Minors (REEF-m1 to REEF-m8), two Suggestions
+and one owner decision (REEF-m4). The corrections are listed in [reef-review-fixes.md](reef-review-fixes.md#2026-10-12-review-notebook-review-framework-v1-reef-m1-to-reef-m8);
+REEF-m4 is reworded only, pending the owner decision. The notebook blob changes, so every hosted run recorded
+above is of an earlier blob (REL14). Local checks are CPU-only with a model double and are not clean-runtime
+evidence. Needed before release: a Colab CLI T4 run of the new blob, a browser BYOD run with one valid and one
+invalid CSV (REL12), and maintainer review. Status remains Candidate.
+
 ## Primary tutorial: Notebook Review Framework v1 findings — row 11 fixes (2026-10-03)
 
 The review of `chronos_2_forecasting_colab.ipynb` at `d661102` (blob `e06fea3d`, PR #24) concluded **Needs revision**

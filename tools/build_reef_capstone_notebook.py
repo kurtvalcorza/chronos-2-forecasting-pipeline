@@ -49,7 +49,8 @@ def build() -> dict:
     md("""# DIMER Capstone: Philippine Reef Heat-Stress Outlook
 
 **Profile:** TASK-INFERENCE · **Mode:** GUIDED · **Standard:** NOTEBOOK_SPEC 2.2
-**Status:** Candidate pending fresh Colab T4 qualification.
+**Status:** Candidate; promotion is a maintainer decision. Hosted runs of each revision are recorded in the
+repository's `docs/release-verification.md`.
 
 Can a pretrained model improve short-horizon forecasts of Philippine regional heat stress over simple baselines?
 You will forecast daily HotSpot at 7, 14 and 28 days, calculate accumulated Degree Heating Weeks (DHW),
@@ -60,7 +61,10 @@ Select **Runtime → Change runtime type → T4 GPU**, then **Run all**. Any cur
 setup downloads a pinned, managed Python 3.12.13 into an isolated environment, so you do not need to choose an
 older runtime version. No tokens, uploads, repository clone, manual restart or configuration edits are required.
 Setup and model downloads need internet access.
-The target budget is 30 minutes and 12 GiB GPU memory; these limits are unverified until hosted qualification.
+The target budget is 30 minutes and 12 GiB GPU memory; the lock stage checks the projected run time and peak
+GPU memory against it. Measured on the previous revision (`08b2343`, Colab CLI on a fresh Colab T4, 2026-10-03;
+not re-run at this revision): about 5.5 minutes in total, including about 1.5 minutes of environment install,
+and about 0.5 GB peak GPU memory.
 The five NOAA text files are embedded as a verified 1 MB data archive; approximately 0.48 GB of model weights
 and a larger Python environment are downloaded. Leave several GB of runtime disk free.
 
@@ -79,7 +83,7 @@ AI assistance is not independent verification, provider endorsement or release a
 1. Explain what a satellite-derived regional HotSpot represents.
 2. Reconstruct accumulated stress and distinguish known heat from predicted heat.
 3. Compare models on identical chronological origins without future-data leakage.
-4. Change one setting on validation data and interpret uncertainty and failure cases.
+4. Read a pre-set shorter-context comparison on validation data and interpret uncertainty and failure cases.
 5. Export evidence, verify it in a fresh process, and write a bounded conclusion.
 
 **Core concepts** explain the science; **Evaluation practice** explains comparisons; **Infrastructure** cells
@@ -105,8 +109,8 @@ Source: [NOAA regional methodology](https://coralreefwatch.noaa.gov/product/vs/m
 """)
     lock = (ROOT / "tools/reef-requirements.lock").read_text(encoding="utf-8")
     code(
-        """# Infrastructure: isolated pinned environment on a managed Python 3.12; the kernel is unchanged.
-import sys, subprocess, pathlib, json, hashlib, base64, os, time, platform, shutil
+        """# Infrastructure: isolated pinned environment on a managed Python 3.12; nothing is installed into the kernel.
+import sys, subprocess, pathlib, json, hashlib, base64, os, time, platform, shutil, io, urllib.request, zipfile
 SETUP_STARTED = time.perf_counter()
 TARGET_PYTHON = "3.12.13"  # uv-managed interpreter, independent of the Colab kernel's Python
 RUN_ROOT = pathlib.Path.cwd() / "reef_capstone_run"
@@ -136,11 +140,13 @@ def resource_note():
     except (OSError, KeyError, ValueError):
         memory = "RAM state unavailable"
     return f"{memory}, disk free {shutil.disk_usage(RUN_ROOT).free / 1e9:.0f} GB"
-def run_logged(command, log_name, echo=True):
+def run_logged(command, log_name, echo=True, refused_exit=3):
     # Run a child with its output appended to logs/<name>.log under a per-attempt header, so a
     # retry keeps the earlier attempt's log. Poll it, echo new lines, and print a heartbeat every
     # 30 s so a long silent step is visibly alive; on failure show the log tail. An interrupted
     # cell stops its child instead of leaving it running, and a signal is reported by name.
+    # The stage runner exits with refused_exit only after printing one "Refused:" message about an
+    # input file; that is a refusal, not a crash, so it returns None instead of raising.
     import signal
     started = last_beat = time.perf_counter()
     log_path, shown, returncode = LOG_DIR / f"{log_name}.log", 0, None
@@ -181,6 +187,8 @@ def run_logged(command, log_name, echo=True):
                     process.wait()
                 print(f"  {log_name} interrupted; child pid {process.pid} stopped", flush=True)
         log.write(f"=== exit {returncode} after {time.perf_counter() - started:.0f} s ===\\n")
+    if returncode == refused_exit and log_name.startswith("stage_"):
+        return None
     if returncode:
         tail = "\\n".join(attempt_text().splitlines()[-30:])
         reason = f"exit code {returncode}"
@@ -191,8 +199,26 @@ def run_logged(command, log_name, echo=True):
                 pass
         raise RuntimeError(f"{log_name} failed with {reason}; log: {log_path}\\n{tail}")
     return time.perf_counter() - started
-run_logged([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "uv==0.10.12"],
-           "setup_uv", echo=False)
+# Pinned uv 0.10.12 Linux x86_64 wheel from PyPI, checked by size and SHA-256 before use. Only its
+# uv binary is extracted into the run directory and checked again; nothing is installed into the kernel.
+if sys.platform != "linux" or platform.machine() != "x86_64":
+    raise RuntimeError("Setup supports Linux x86_64 runtimes only (Colab or Kaggle with a T4 GPU).")
+UV_WHEEL_URL = ("https://files.pythonhosted.org/packages/8d/42/139e68d7d92bb90a33b5e269dbe474acb00b6c"
+                "9797541032f859c5bf4c4d/uv-0.10.12-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl")
+UV_WHEEL_SIZE, UV_WHEEL_SHA256 = 23498314, "101481a1f48db6becf219914a591a588c0b3bfd05bef90768a5d04972bd6455e"
+UV_BINARY_SHA256 = "56ad65c85aa2c92013807d89d2ff55579dfed03255363e6180c1cc8ca2c4ac59"
+UV = RUN_ROOT / "uv-0.10.12"
+if not (UV.exists() and hashlib.sha256(UV.read_bytes()).hexdigest() == UV_BINARY_SHA256):
+    with urllib.request.urlopen(UV_WHEEL_URL, timeout=120) as response:
+        wheel = response.read(UV_WHEEL_SIZE + 1)
+    if len(wheel) != UV_WHEEL_SIZE or hashlib.sha256(wheel).hexdigest() != UV_WHEEL_SHA256:
+        raise RuntimeError("uv bootstrap size/SHA-256 mismatch. Retry in a fresh runtime; never skip this check.")
+    with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
+        binary = archive.read("uv-0.10.12.data/scripts/uv")
+    if hashlib.sha256(binary).hexdigest() != UV_BINARY_SHA256:
+        raise RuntimeError("uv binary SHA-256 mismatch. Retry in a fresh runtime; never skip this check.")
+    UV.write_bytes(binary)
+    UV.chmod(0o700)
 def environment_python():
     if not PYTHON.exists():
         return None
@@ -200,7 +226,7 @@ def environment_python():
     return subprocess.run(probe, capture_output=True, text=True).stdout.strip() or None
 ENV_REUSED = environment_python() == TARGET_PYTHON
 if not ENV_REUSED:
-    run_logged([sys.executable, "-m", "uv", "venv", "--clear", "--managed-python",
+    run_logged([UV, "venv", "--clear", "--managed-python",
                 "--python", TARGET_PYTHON, ENV_ROOT], "setup_python")
 if environment_python() != TARGET_PYTHON:
     raise RuntimeError(f"Isolated environment is not Python {TARGET_PYTHON}; preserve this log.")
@@ -209,8 +235,8 @@ if environment_python() != TARGET_PYTHON:
         + """
 (RUN_ROOT / "requirements.lock").write_text(REQUIREMENTS, encoding="utf-8")
 print("Installing the hash-locked environment (a few minutes on a fresh runtime)...", flush=True)
-seconds = run_logged([sys.executable, "-m", "uv", "pip", "sync", "--python", PYTHON,
-                      "--require-hashes", RUN_ROOT / "requirements.lock"], "setup_sync", echo=False)
+seconds = run_logged([UV, "pip", "sync", "--python", PYTHON, "--require-hashes",
+                      "--only-binary", ":all:", RUN_ROOT / "requirements.lock"], "setup_sync", echo=False)
 print(f"Locked packages installed in {seconds:.0f} s (log: {LOG_DIR / 'setup_sync.log'}).")
 # Finish writing the ~7 GB environment to disk before any stage starts reading from it.
 flush_started = time.perf_counter()
@@ -266,6 +292,10 @@ The following three cells carry the validation/mathematics, pinned model adapter
 Python source. They are written locally inside this runtime; no DIMER repository source is downloaded or imported.
 The core stage helpers expose dates, baselines, DHW accumulation and metrics. Each stage runs in a separate process,
 so no hidden kernel model state is required. Chronos is frozen; no fine-tuning is performed.
+
+**Re-running cells.** Re-running a stage cell clears that stage's results and every later stage's results, so no
+stale numbers survive. After re-running one, re-run each following cell in order, or use **Runtime → Run all**.
+The summary cell in Section 9 says which results are missing instead of failing.
 """)
     sources = []
     hashes = {}
@@ -303,6 +333,9 @@ def run_stage(name, *extra):
     command = [PYTHON, "-u", "-X", "faulthandler", RUN_ROOT / "reef_runner.py", name,
                "--root", RUN_ROOT, *extra]
     seconds = run_logged(command, f"stage_{name}")
+    if seconds is None:  # the runner printed one "Refused:" message above; nothing was saved
+        print(f"[{time.strftime('%H:%M:%S')}] stage {name} refused the input (message above)", flush=True)
+        return
     print(f"[{time.strftime('%H:%M:%S')}] stage {name} finished in {seconds:.0f} s", flush=True)
 run_stage("prepare")
 """,
@@ -310,7 +343,8 @@ run_stage("prepare")
     )
     md("""**What to notice:** DHW should reconstruct to within 0.0001 °C-weeks. The origin table should show
 23 validation origins per region, 46 test origins for Northern/Central/Eastern, and 23 for Western/Southern.
-The latter two have no eligible 2025 origins because their 365-day contexts include gaps.
+The latter two have no eligible 2025 origins because missing dates fall in their 365-day contexts or 28-day
+outcome windows; the `reason` column of `origin_manifest.csv` names the cause for each origin.
 This loss of coverage is part of the result, not a model failure.
 
 ## 4. Evaluation practice: freeze the calendar
@@ -341,10 +375,12 @@ daily forecasts, not simultaneous guarantees.
 Run validation first. Model downloads are pinned by immutable revision and verified digests.
 """)
     code('run_stage("validation")')
-    md("""## 6. Change one thing: how much history?
+    md("""## 6. A pre-set comparison: how much history?
 
-Predict whether shortening context from 365 to 180 days helps. The next cell changes only context length on the
-same validation origins; model, dates, horizon and scoring remain fixed. It then prints a validation-only table:
+Predict whether shortening context from 365 to 180 days helps. This comparison is pre-set: the 180-day length is
+fixed in the carried runner and recorded in `experiment_config.json`, whose digest the lock stores; it is not a
+setting you change here. The next cell differs from the default only in context length, on the same validation
+origins; model, dates, horizon and scoring remain fixed. It then prints a validation-only table:
 compare the `chronos_180` and `chronos` rows at 7, 14 and 28 days, check the support columns (regions, origins,
 days), and read the traced valid and rejected contexts. The 365-day test default remains frozen regardless of
 this activity.
@@ -384,29 +420,43 @@ not automatic release approval.
 """)
     code('run_stage("reload")\nrun_stage("report")')
     code("""# Read reports with the standard library; no notebook-kernel dependency changes.
-reports = json.loads((RUN_ROOT / "metrics.json").read_text())
 from IPython.display import display, Markdown, Image, FileLink
-rows = reports["all"]["macro"]
-keys = ["split", "period", "arm", "hotspot_mae", "dhw_endpoint_mae", "regions", "origins", "days"]
-table = ("Primary 14-day summary with support. Tables A–F printed by the scoring cell hold the detail.\\n\\n"
-         "| Split | Period | Arm | HotSpot MAE | DHW endpoint MAE | Regions | Origins | Days |\\n"
-         "|---|---|---|---:|---:|---:|---:|---:|\\n")
+SUMMARY_FILES = ["metrics.json", "outlook.png", "dhw_components.png", "failure_examples.png", "reef_evidence.zip"]
 def cell(value):
     return "n/a" if value is None else f"{value:.3f}" if isinstance(value, float) else str(value)
-for row in rows:
-    if row["horizon"] == 14:
-        table += "| " + " | ".join(cell(row.get(key)) for key in keys) + " |\\n"
-display(Markdown(table))
-display(Image(filename=str(RUN_ROOT / "outlook.png")))
-display(Image(filename=str(RUN_ROOT / "dhw_components.png")))
-display(Image(filename=str(RUN_ROOT / "failure_examples.png")))
-display(FileLink(str(RUN_ROOT / "reef_evidence.zip")))
-print("All mandatory stages completed. Preserve this executed notebook and the evidence bundle.")
+def show_summary():
+    missing = [name for name in SUMMARY_FILES if not (RUN_ROOT / name).exists()]
+    if missing:
+        print(f"Results not available yet: {', '.join(missing)}. A stage cell was re-run (which clears every"
+              " later stage's results) or has not run yet. Re-run the stage cells from there down in order,"
+              " or use Runtime → Run all.")
+        return
+    reports = json.loads((RUN_ROOT / "metrics.json").read_text())
+    rows = reports["all"]["macro"]
+    keys = ["split", "period", "arm", "hotspot_mae", "dhw_endpoint_mae", "regions", "origins", "days"]
+    table = ("Primary 14-day summary with support. Tables A–F printed by the scoring cell hold the detail.\\n\\n"
+             "| Split | Period | Arm | HotSpot MAE | DHW endpoint MAE | Regions | Origins | Days |\\n"
+             "|---|---|---|---:|---:|---:|---:|---:|\\n")
+    for row in rows:
+        if row["horizon"] == 14:
+            table += "| " + " | ".join(cell(row.get(key)) for key in keys) + " |\\n"
+    display(Markdown(table))
+    display(Image(filename=str(RUN_ROOT / "outlook.png")))
+    display(Image(filename=str(RUN_ROOT / "dhw_components.png")))
+    display(Image(filename=str(RUN_ROOT / "failure_examples.png")))
+    display(FileLink(str(RUN_ROOT / "reef_evidence.zip")))
+    print("All mandatory stages completed. Preserve this executed notebook and the evidence bundle.")
+show_summary()
 """)
     md("""## 10. Interpret the evidence
 
-- Which arm has the lowest 14-day HotSpot MAE (table A)? How large is its paired difference from persistence
-  and seasonality (table F)? Check the regions/origins columns so both scores cover the same cases.
+- Answer three separate claims from the 14-day HotSpot MAE (table A) and the paired differences (table F):
+  is Chronos distinguishable from persistence, is it better than the seasonal reference, and would either
+  difference matter operationally? Check the regions/origins columns so both scores cover the same cases.
+- HotSpot is recorded in steps of 0.01 °C. Treat an MAE difference smaller than that as no meaningful difference at
+  this precision: report the arms as indistinguishable rather than naming a winner. Region-origin pairs share
+  overlapping 28-day windows, so they are not independent; the share of origins where one arm is better (table F)
+  is descriptive, not a significance test. How often do Chronos and persistence disagree on events (table E)?
 - Does the common-2024 comparison support the same conclusion as the unbalanced full panel (table A)?
 - Is good DHW performance mainly inherited from known history (compare `dhw_persistence` in table A and the
   component chart)? Does the model anticipate new exceedances (table E, `new_exceedance`)?
@@ -415,9 +465,11 @@ print("All mandatory stages completed. Preserve this executed notebook and the e
 - Report event support (table E). "No observations", "no observed positives" and a poor score are different
   findings; undefined precision/recall stays n/a with a reason and never becomes perfect performance.
 
-<details><summary>Conclusion template</summary>For [regions and dates], [arm] had [MAE] at 14 days versus
-[baseline errors]. The common-period comparison [agreed/differed]. A failure case was [example]. These findings
-describe a retrospective satellite stress indicator; they do not establish reef-level bleaching, operational
+<details><summary>Conclusion template</summary>For [regions and dates], the 14-day MAEs were [Chronos], [persistence]
+and [seasonal]. Chronos was [distinguishable / not distinguishable at 0.01 °C] from persistence and
+[better / not better] than the seasonal reference. The common-period comparison [agreed/differed].
+A failure case was [example]. These findings describe a
+retrospective satellite stress indicator; they do not establish reef-level bleaching, operational
 warning skill, or independence from foundation-model training data. My next controlled experiment is [change].</details>
 
 Your completion record is a personal learning aid, **not a required submission**. An inconclusive result is acceptable.
@@ -431,14 +483,38 @@ pretend unlabelled future dates provide evaluation evidence. Leave the path empt
 `byod_example.csv`. Each distinct input file gets its own folder with forecasts (raw, constrained, quantiles,
 DHW components) and a receipt recording the input digest, units, semantics and model revision.
 A historical backtest requires separate future outcomes and a newly declared evaluation design.
+
+**Putting your file in the runtime.** Open the **Files** pane (folder icon on the left), choose **Upload**, then
+right-click the uploaded file, choose **Copy path** and paste it into `BYOD_CSV_PATH` (for example
+`/content/my_regions.csv`). Tick `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED`, then run the next cell only;
+the default results above are not recomputed. Colab deletes uploaded files when the runtime is recycled.
+
+**Where your data goes.** The notebook's code reads your CSV only inside this Colab runtime and sends it to no other
+service: the model is loaded from a pinned local copy, and the only network traffic is downloading the environment
+and the model weights. What the BYOD cell writes, all inside the runtime:
+- `reef_capstone_run/byod/<first 16 characters of the file's SHA-256>/forecasts.csv`: for each region, 28 forecast
+  days after your last date with raw and constrained HotSpot, Chronos quantiles and DHW split into known and
+  predicted parts. It does not copy your rows, but the known-DHW values are computed from your last 84 days.
+- `receipt.json` in the same folder: the file name, its SHA-256, the row count, each region ID with its first and
+  last dates and context length, the units, the semantics confirmation, the model revision and the runner and
+  output digests.
+- The cell output and `reef_capstone_run/logs/stage_byod.log`: the input path and the region IDs.
+
+BYOD results are never added to `reef_evidence.zip`. Copies leave the runtime only when you download files, or save
+or share the executed notebook, whose printed output shows the path and region IDs. Do not use confidential,
+restricted, personal or regulated data unless you are authorised to process it in Google Colab.
+
+A refused file prints one `Refused:` message naming the file and the rule it failed; nothing is forecast or saved
+for it. Fix the file (or the path) and run the cell again.
 """)
     code("""USE_BYOD = False # @param {type:"boolean"}
 BYOD_CSV_PATH = "" # @param {type:"string"}
 HOTSPOT_SEMANTICS_CONFIRMED = False # @param {type:"boolean"}
-if USE_BYOD:
-    if not HOTSPOT_SEMANTICS_CONFIRMED:
-        raise ValueError("Confirm NOAA-compatible threshold-relative HotSpot semantics in °C.")
-    source = pathlib.Path(BYOD_CSV_PATH) if BYOD_CSV_PATH else RUN_ROOT / "byod_example.csv"
+if USE_BYOD and not HOTSPOT_SEMANTICS_CONFIRMED:
+    print("Refused: tick HOTSPOT_SEMANTICS_CONFIRMED to confirm NOAA-compatible threshold-relative HotSpot"
+          " in °C, then run this cell again. Nothing was forecast.")
+elif USE_BYOD:
+    source = pathlib.Path(BYOD_CSV_PATH.strip()) if BYOD_CSV_PATH.strip() else RUN_ROOT / "byod_example.csv"
     print("BYOD input:", source)
     run_stage("byod", "--csv", str(source.resolve()))
 else:
@@ -452,7 +528,8 @@ else:
   If that download fails, retry in a fresh runtime and preserve the log; do not edit the pinned requirements.
 - **Out of memory or excessive runtime:** preserve the failure; do not quietly omit regions, change precision or replace predictions.
 - **Missing context:** inspect origin_manifest.csv; missing data is not zero stress.
-- **BYOD refusal:** check date uniqueness/continuity, finite nonnegative values, units and target semantics.
+- **BYOD `Refused:` message:** it names the file and the rule; check the path, date uniqueness/continuity, finite
+  nonnegative values, units and target semantics, then run the BYOD cell again.
 
 **MAE:** mean absolute prediction error. **RMSE:** error emphasizing large misses. **Pinball loss:** quantile error.
 **Coverage:** observed fraction inside the stated interval. **Persistence:** repeat the last value. **Macro average:**

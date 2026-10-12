@@ -268,3 +268,45 @@ User-visible changes: the stage output gains the child-PID line, the runner chec
 2. The BYOD journey on the generated example and on one invalid input.
 3. Maintainer review of the executed notebook and evidence bundle. The status stays Candidate until
    then.
+
+## 2026-10-12 review (Notebook Review Framework v1): REEF-m1 to REEF-m8
+
+The review of blob `90dfa21f` (revision `81ab292`) concluded **Needs revision**: no Blockers or
+Majors, eight Minors, two Suggestions and one owner decision. The fixes are in the generator
+(`tools/build_reef_capstone_notebook.py`) and the carried runner (`tools/reef_runtime.py`); the
+notebook is regenerated, never hand-edited. Status stays **Candidate**.
+
+| Finding | Correction |
+|---|---|
+| REEF-m1: a refused BYOD file showed the child traceback, then a `RuntimeError` repeating it | The runner turns a validation error or an unreadable path into `ReefInputRefused`, prints one `Refused: <file>: <rule>` line plus what to do, and exits with code 3. `run_logged()` treats code 3 from a stage child as a refusal (no exception); `run_stage()` prints that the stage refused the input. Unconfirmed HotSpot semantics also print one `Refused:` line instead of raising. Genuine crashes still raise |
+| REEF-m2: no data-locality statement or confidential-data warning (DAT17, DAT18) | Section 11 says how to upload the CSV (Files pane, Copy path), that the code sends it to no other service, exactly what the BYOD cell writes (`byod/<digest>/forecasts.csv`, `receipt.json`, the cell output and `logs/stage_byod.log`), that BYOD results never enter `reef_evidence.zip`, and warns against confidential, restricted, personal or regulated data |
+| REEF-m3: the opening said hosted qualification was pending | The opening states Candidate, points to `docs/release-verification.md`, and labels the measured figures with their source: revision `08b2343`, Colab CLI T4, 2026-10-03, not re-run at this revision (about 5.5 min including a 1.5 min install; about 0.5 GB peak GPU memory). `clean_runtime_evidence` and the release status are unchanged (maintainer-only) |
+| REEF-m4 (owner decision, wording only) | Objective 4 and Section 6 now describe a pre-set comparison; no control was added. The options are listed in the PR under "Owner decisions pending" |
+| REEF-m5: the interpretation asked for a winner on a 0.001 °C gap | Section 10, the conclusion template and `conclusion.md` ask three claim-level questions and state the equivalence rule: HotSpot is recorded in 0.01 °C steps (all 76,170 values in the snapshot), so smaller MAE differences are no meaningful difference at this precision. Region-origin pairs share overlapping 28-day windows, so the share of origins one arm wins is descriptive |
+| REEF-m6: no re-run guidance; the summary cell failed on missing files | Section 3 states the re-run rule; the summary cell lists missing results and says how to recover instead of raising |
+| REEF-m7: unverified `pip install uv==0.10.12` into the kernel; sync without `--only-binary` | Setup downloads the pinned uv 0.10.12 manylinux x86_64 wheel, checks its size (23,498,314 bytes) and SHA-256 (`101481a1…455e`, equal to PyPI's published digest), extracts only the `uv` binary into the run directory and checks its SHA-256 (`56ad65c8…ac59`). Nothing is installed into the kernel. The locked sync passes `--require-hashes --only-binary :all:` (all 57 locked packages resolve to wheels for CPython 3.12 manylinux x86_64). Setup refuses non-Linux-x86_64 runtimes with one message |
+| REEF-m8: the 2025 exclusion reason named only context gaps | Section 4 names context or 28-day outcome-window gaps and points to the `reason` column of `origin_manifest.csv` |
+
+Not addressed (Suggestions): REEF-S1 (define quantile band, coverage and pinball loss where table C first
+appears), REEF-S2 (count test origins from the frozen plan in the lock's runtime estimate).
+
+**User-visible changes.** A refused BYOD file prints `Refused:` and exits cleanly; setup no longer runs
+pip in the kernel and refuses non-Linux-x86_64 runtimes; `conclusion.md` in the evidence bundle has the
+claim-level text, so the bundle and `checksums.json` digests change. Forecasts and metrics do not.
+
+**Local verification (not clean-runtime evidence).** Windows, CPU, a venv built from CI's install line
+(`uv sync --locked --extra dev`). Every stage of the old and new carried runner was run on the real
+embedded NOAA snapshot with the same deterministic persistence model double (not Chronos): 36 of 45
+output files are byte-identical, including `metrics.json`; six summaries differ only in timing fields;
+`conclusion.md` differs by the m5 text, and `checksums.json` and `reef_evidence.zip` follow from it.
+`tests/test_reef_capstone_review_2026_10_12.py` covers the refusals (four invalid inputs in a separate
+CPU process and through the notebook's own `run_logged()`), the BYOD inventory against the runner, the
+0.01 °C data claim, the guarded summary, a tampered uv wheel and the 2025 exclusion reasons.
+
+### Remaining gates
+
+1. A Colab CLI T4 run of the new blob (default path).
+2. A browser run with BYOD ticked on one valid CSV and one invalid CSV (REL12), recorded with the refusal
+   output.
+3. The owner decision on REEF-m4.
+4. Maintainer review and promotion.

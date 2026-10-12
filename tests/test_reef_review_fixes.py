@@ -437,7 +437,7 @@ def _runner_helpers(notebook, tmp_path):
         if c["cell_type"] == "code" and "def run_logged" in "".join(c["source"])
     )
     helpers = setup[
-        setup.index("def child_environment") : setup.index("run_logged([sys.executable")
+        setup.index("def child_environment") : setup.index("# Pinned uv 0.10.12")
     ]
     assert "def resource_note" in helpers
     import os

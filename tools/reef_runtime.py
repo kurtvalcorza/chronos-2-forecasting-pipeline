@@ -16,6 +16,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+REEF_REFUSED_EXIT = 3  # a BYOD input refused with one learner-facing message; not a crash
+
+
+class ReefInputRefused(ValueError):
+    """A BYOD file refused with one actionable message naming the file and the failed rule."""
+
 
 def reef_json(path: Path, value: object) -> None:
     path.write_text(
@@ -801,8 +807,15 @@ def reef_report(root: Path) -> None:
     reef_json(root / "run_summary.json", summary)
     (root / "conclusion.md").write_text(
         "# Interpretation\n\nUse metrics.csv: compare 14-day HotSpot MAE on identical origins. "
-        "Report the winning arm and error, persistence/seasonal errors, common-2024 comparison, "
-        "and the sign of the paired difference. A loss or inconclusive result is valid.\n\n"
+        "Report each arm's error and state the claim level separately: (1) is Chronos "
+        "distinguishable from persistence, (2) is it better than the seasonal reference, and "
+        "(3) would either difference matter operationally? HotSpot is recorded in 0.01 degC "
+        "steps, so MAE differences smaller than 0.01 degC are no meaningful difference at this "
+        "precision: report them as indistinguishable, not as a win. Region-origin pairs share "
+        "overlapping 28-day windows, so they are not independent and the share of origins one "
+        "arm wins is descriptive, not a significance test. Also report the common-2024 "
+        "comparison and the sign of the paired difference. A loss or inconclusive result is "
+        "valid.\n\n"
         "Explain one failure mode, interval coverage and event support. Separate already "
         "accumulated DHW from newly predicted stress. These are regional satellite summaries, "
         "not reef-level observations or bleaching diagnoses. Missing contexts exclude two "
@@ -835,9 +848,19 @@ def reef_report(root: Path) -> None:
 
 def reef_byod(root: Path, source: Path) -> Path:
     """Forward-only BYOD: literal IDs, unscored forecasts and a per-input receipt."""
-    raw = source.read_bytes()
+    try:
+        raw = source.read_bytes()
+    except OSError as exc:
+        reason = exc.strerror or type(exc).__name__
+        raise ReefInputRefused(
+            f"{source.name}: cannot read {source} ({reason}). Upload the CSV with the Files pane "
+            "and set BYOD_CSV_PATH to the path it shows, e.g. /content/" + source.name
+        ) from exc
     digest = hashlib.sha256(raw).hexdigest()
-    frame = validate_byod(read_byod_csv(source), units="degC", semantics_confirmed=True)
+    try:
+        frame = validate_byod(read_byod_csv(source), units="degC", semantics_confirmed=True)
+    except ValueError as exc:  # includes unreadable text and CSV parser errors
+        raise ReefInputRefused(f"{source.name}: {exc}") from exc
     panel = daily_panel([frame])
     manifest = reef_read(root / "model_manifest.json")
     out = root / "byod" / digest[:16]
@@ -901,7 +924,16 @@ def reef_main() -> None:
     print(f"[runner pid {os.getpid()}] imports loaded; stage {args.stage}", flush=True)
     root = args.root.resolve()
     if args.stage == "byod":
-        reef_byod(root, args.csv)
+        try:
+            reef_byod(root, args.csv)
+        except ReefInputRefused as exc:  # a refused file is not a crash: one message, no traceback
+            print(f"Refused: {exc}", flush=True)
+            print(
+                "Nothing was forecast or saved for this file. Fix the file (or BYOD_CSV_PATH) "
+                "and re-run the BYOD cell; the default results are unchanged.",
+                flush=True,
+            )
+            raise SystemExit(REEF_REFUSED_EXIT) from None
         return
     reef_invalidate(root, args.stage)
     if args.stage in {"baselines", "validation", "activity", "test"}:

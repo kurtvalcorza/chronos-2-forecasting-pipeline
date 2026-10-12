@@ -1,6 +1,8 @@
 # Philippine Reef Heat-Stress Outlook
 
-**Status: Candidate — complete hosted Run all at `d55d51c` on Colab T4 and on Kaggle T4 (with BYOD); awaiting maintainer review.**
+**Status: Candidate.** Hosted runs: complete Run all at `d55d51c` on Colab T4 and on Kaggle T4 (with BYOD), and a
+Colab CLI T4 run of `08b2343` (blob `90dfa21f`). The 2026-10-12 review fixes changed the notebook blob; that
+revision needs its own hosted runs ([release verification](release-verification.md)). Promotion is the maintainer's decision.
 
 The standalone guided notebook compares Chronos-2, persistence and a seasonal reference
 on five NOAA Coral Reef Watch Philippine regional HotSpot series. It forecasts 28 daily
@@ -106,7 +108,7 @@ DHW, metric and real-model reload parity. Release promotion requires review of a
 | Export/reload | Fresh processes and explicit inputs; metric and weight reload checks |
 | Fine-tuning/trained artifact | Not applicable: frozen pretrained task inference |
 | External artifact inference | Not applicable: not ARTIFACT-INFERENCE |
-| Hosted Run all | **Pending** — mandatory release evidence not yet available |
+| Hosted Run all | Recorded for earlier blobs in [release verification](release-verification.md); the 2026-10-12 fix revision is not yet re-run |
 
 AI assistance supported development and technical writing under maintainer direction. Review,
 validation and release decisions remain the maintainer's responsibility; assistance is not
