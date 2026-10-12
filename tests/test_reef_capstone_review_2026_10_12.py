@@ -1,3 +1,4 @@
+# ruff: noqa: F811 -- the imported pytest fixtures (ns, scored) are requested by parameter name.
 """Regression checks for the 2026-10-12 reef capstone review (REEF-m1 to REEF-m8).
 
 The refusal checks run the carried stage runner in a separate CPU process and the notebook's own
@@ -207,21 +208,43 @@ def test_activity_is_described_as_preset(notebook):
     assert "it is not a setting you change here" in section
 
 
-# REEF-m5: claim levels and the 0.01 degC rule ------------------------------------------------
+# REEF-m5 as corrected by the peer review (CX1, CX5, CX7): signed differences, no equivalence ---
 
 
-def test_interpretation_uses_claim_levels(notebook, carried):
+def test_interpretation_reports_signed_differences_without_equivalence(notebook, carried):
     section = " ".join(_markdown(notebook, "## 10. Interpret the evidence").split())
     assert "Which arm has the lowest" not in section
-    assert "no meaningful difference at this precision" in section
-    assert "not independent" in section
-    conclusion = carried["RUNTIME_SOURCE"]
+    assert "lower or higher MAE **on these evaluated cases**" in section
+    assert "does not assess whether a difference is statistically distinguishable or" in section
+    assert "`equal_region_difference`" in section and "table E2" in section
+    assert "not to seasonal forecasting in general" in section
+    for wrong in ("indistinguishable", "no meaningful difference", "0.01 °C"):
+        assert wrong not in section
+    runtime = carried["RUNTIME_SOURCE"]
+    conclusion = runtime[runtime.index('"# Interpretation') : runtime.index("Personal completion")]
     assert "winning arm" not in conclusion.lower()
-    assert "no meaningful difference at this" in conclusion
+    assert "describe it only as lower " in conclusion
+    assert "or higher MAE on these evaluated cases" in conclusion
+    assert "Statistical distinguishability and equivalence " in conclusion
+    assert "have not been assessed" in conclusion
+    for wrong in ("indistinguishable", "meaningful difference", "0.01"):
+        assert wrong not in conclusion
+
+
+def test_scores_are_labelled_by_estimand(notebook):
+    section = " ".join(_markdown(notebook, "## 7. Locked test").split())
+    assert '"HotSpot MAE, leads 1–14" averages the errors of every forecast day' in section
+    assert '"DHW MAE, lead-14 endpoint" scores DHW on the final day only' in section
+    assert "Pinball loss scores each quantile" in section and "more than 80%" in section
+    summary = _code(notebook, "def show_summary")
+    assert "HotSpot MAE, leads 1–14 | DHW MAE, lead-14 endpoint" in summary
 
 
 def test_hotspot_is_recorded_in_hundredths(notebook):
-    """The 0.01 degC rule rests on the data: every HotSpot value is a multiple of 0.01."""
+    """Recording precision of the snapshot (every HotSpot value is a multiple of 0.01 degC).
+
+    A data fact only: it is not used as an equivalence rule for MAE differences.
+    """
     data = ROOT / "tutorials/data/reef"
     manifest = json.loads((data / "manifest.json").read_text())
     archive = zipfile.ZipFile(io.BytesIO((data / manifest["archive"]["filename"]).read_bytes()))
@@ -327,3 +350,55 @@ def test_2025_exclusion_note_matches_origin_reasons(notebook, carried, tmp_path)
     ]
     assert len(late) > 0 and not late.eligible.any()
     assert late.reason.str.contains("incomplete_28_day_outcome").any()
+
+
+# Peer review follow-up (CX2, CX3, CX4, CX6) on a scored run with a model double ---------------
+
+
+from test_reef_review_fixes import ns, scored  # noqa: E402,F401 -- shared fixtures
+
+
+def test_table_f_equal_region_difference_matches_table_a(scored, ns):
+    reports = json.loads((scored / "metrics.json").read_text())
+    summary = ns["reef_paired_summary"](reports["all"])
+    macro = {
+        (r["period"], r["arm"]): r["hotspot_mae"]
+        for r in reports["all"]["macro"]
+        if r["split"] == "test" and r["horizon"] == 14 and r["arm"] != "dhw_persistence"
+    }
+    assert len(summary) == 6  # full, 2024, 2025 x persistence, seasonal
+    for row in summary.itertuples():
+        expected = macro[(row.period, "chronos")] - macro[(row.period, row.baseline)]
+        assert row.equal_region_difference == pytest.approx(expected, abs=1e-8)  # JSON: 10 digits
+    assert "pooled_mean_difference" in summary and "mean_difference" not in summary
+
+
+def test_results_tables_add_labels_counts_and_paired_events(scored):
+    text = (scored / "results_tables.txt").read_text(encoding="utf-8")
+    for phrase in (
+        "HotSpot MAE, leads 1–14",
+        "DHW MAE, lead-14 endpoint",
+        "target records, leads 1–14",
+        "equal_region_difference",
+        "pooled_mean_difference",
+        "with crossing quantiles (rearranged)",
+        "E2. Paired endpoint event predictions",
+        "chronos_only",
+        "persistence_only",
+    ):
+        assert phrase in text
+
+
+def test_paired_event_counts_partition_the_test_origins(scored, ns):
+    joined, _plan = ns["reef_joined"](scored)
+    table = ns["reef_paired_events"](joined)
+    assert len(table) == 4  # horizons 14, 28 x thresholds 4, 8
+    for row in table.itertuples():
+        assert row.pairs == 184
+        assert row.both + row.chronos_only + row.persistence_only + row.neither == row.pairs
+
+
+def test_compare_does_not_claim_an_unopened_test_set(carried):
+    runtime = carried["RUNTIME_SOURCE"]
+    assert "still unopened" not in runtime
+    assert "Test baseline records exist, but test scores have not been" in runtime

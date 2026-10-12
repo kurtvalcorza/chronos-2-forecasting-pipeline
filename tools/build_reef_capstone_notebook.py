@@ -396,10 +396,23 @@ predicted HotSpots. The separate DHW-persistence reference simply carries DHW at
 Good DHW scores may reflect already accumulated heat; check HotSpot skill and the known/predicted contribution.
 The DHW of median HotSpots is not necessarily the median DHW forecast. No DHW probability bands are claimed.
 
-Scoring prints six compact tables, labelled A–F: (A) the full, common-2024 and three-region-2025 comparisons with
-region/origin/day support; (B) regional 14-day errors; (C) interval coverage, width and pinball loss;
-(D) high-stress-day errors; (E) 4 and 8 °C-week threshold events, including new exceedances; (F) paired
-Chronos-minus-baseline differences. Section 10 asks questions you can answer from these tables.
+Scoring prints compact tables labelled A–F: (A) the full, common-2024 and three-region-2025 comparisons with
+region/origin/record support; (B) regional errors; (C) interval coverage, width and pinball loss;
+(D) high-stress-day errors; (E) 4 and 8 °C-week threshold events, including new exceedances, and (E2) how often
+Chronos and persistence predict the same events on the same origins; (F) paired Chronos-minus-baseline differences.
+Section 10 asks questions you can answer from these tables.
+
+**Two different scores.** "HotSpot MAE, leads 1–14" averages the errors of every forecast day from lead 1 to
+lead 14; it is not the error at day 14 alone. "DHW MAE, lead-14 endpoint" scores DHW on the final day only.
+Support columns count regions, origins and target records (forecast days); overlapping windows repeat target dates.
+
+**Reading table C.** q10, q50 and q90 forecast each future day's 10th, 50th and 90th percentile separately; they
+are not a joint path and not a DHW interval. Coverage is the fraction of observed days inside q10–q90 (the nominal
+value is 0.80); width is the mean distance from q10 to q90 in °C, so a narrow band is not automatically a good one.
+Pinball loss scores each quantile and penalises misses asymmetrically; lower is better. HotSpot is often exactly
+zero, so an interval that includes its end points can cover more than 80% even when the quantiles are correct.
+Crossing quantiles are sorted, and negative values clipped to zero, before scoring; table C prints how many test
+days needed each. These scores are diagnostics: no probabilistic baseline is scored.
 """)
     code('run_stage("test")\nrun_stage("score")')
     md("""## 8. Illustrative regional outlook
@@ -434,8 +447,10 @@ def show_summary():
     reports = json.loads((RUN_ROOT / "metrics.json").read_text())
     rows = reports["all"]["macro"]
     keys = ["split", "period", "arm", "hotspot_mae", "dhw_endpoint_mae", "regions", "origins", "days"]
-    table = ("Primary 14-day summary with support. Tables A–F printed by the scoring cell hold the detail.\\n\\n"
-             "| Split | Period | Arm | HotSpot MAE | DHW endpoint MAE | Regions | Origins | Days |\\n"
+    table = ("Primary summary with support: HotSpot MAE over leads 1–14 and DHW MAE at the lead-14 endpoint;"
+             " target records count forecast days. Tables A–F printed by the scoring cell hold the detail.\\n\\n"
+             "| Split | Period | Arm | HotSpot MAE, leads 1–14 | DHW MAE, lead-14 endpoint | Regions | Origins |"
+             " Target records |\\n"
              "|---|---|---|---:|---:|---:|---:|---:|\\n")
     for row in rows:
         if row["horizon"] == 14:
@@ -450,24 +465,28 @@ show_summary()
 """)
     md("""## 10. Interpret the evidence
 
-- Answer three separate claims from the 14-day HotSpot MAE (table A) and the paired differences (table F):
-  is Chronos distinguishable from persistence, is it better than the seasonal reference, and would either
-  difference matter operationally? Check the regions/origins columns so both scores cover the same cases.
-- HotSpot is recorded in steps of 0.01 °C. Treat an MAE difference smaller than that as no meaningful difference at
-  this precision: report the arms as indistinguishable rather than naming a winner. Region-origin pairs share
-  overlapping 28-day windows, so they are not independent; the share of origins where one arm is better (table F)
-  is descriptive, not a significance test. How often do Chronos and persistence disagree on events (table E)?
+- Compare HotSpot MAE over leads 1–14 (table A) for Chronos, persistence and the seasonal reference. Read the
+  signed difference in `equal_region_difference` (table F), which weights regions equally like table A, and
+  describe it only as lower or higher MAE **on these evaluated cases**. Check the regions/origins columns so
+  both scores cover the same cases.
+- This notebook does not assess whether a difference is statistically distinguishable or practically equivalent.
+  Overlapping 28-day windows and shared weather across regions make the cases dependent, and no uncertainty
+  analysis is run. The share of origins where one arm is better (table F) is descriptive, not a significance test.
+  Conclusions apply to these two named baselines (persistence and the development-period seasonal mean), not to
+  seasonal forecasting in general.
+- How often do Chronos and persistence predict the same threshold events on the same origins (table E2)?
 - Does the common-2024 comparison support the same conclusion as the unbalanced full panel (table A)?
 - Is good DHW performance mainly inherited from known history (compare `dhw_persistence` in table A and the
   component chart)? Does the model anticipate new exceedances (table E, `new_exceedance`)?
 - Inspect q10–q90 coverage and width (table C) and high-stress-day errors (table D). An 80% nominal band need not
-  cover 80% here.
+  cover 80% here. Treat these quantile scores as diagnostics: no probabilistic baseline is scored.
 - Report event support (table E). "No observations", "no observed positives" and a poor score are different
   findings; undefined precision/recall stays n/a with a reason and never becomes perfect performance.
 
-<details><summary>Conclusion template</summary>For [regions and dates], the 14-day MAEs were [Chronos], [persistence]
-and [seasonal]. Chronos was [distinguishable / not distinguishable at 0.01 °C] from persistence and
-[better / not better] than the seasonal reference. The common-period comparison [agreed/differed].
+<details><summary>Conclusion template</summary>For [regions and dates], HotSpot MAE over leads 1–14 was [Chronos],
+[persistence] and [seasonal] (equal-region means). On these evaluated cases Chronos had [lower/higher] MAE than
+persistence by [equal-region difference] and [lower/higher] MAE than the seasonal reference by [difference];
+distinguishability and equivalence were not assessed. The common-period comparison [agreed/differed].
 A failure case was [example]. These findings describe a
 retrospective satellite stress indicator; they do not establish reef-level bleaching, operational
 warning skill, or independence from foundation-model training data. My next controlled experiment is [change].</details>
@@ -531,7 +550,8 @@ else:
 - **BYOD `Refused:` message:** it names the file and the rule; check the path, date uniqueness/continuity, finite
   nonnegative values, units and target semantics, then run the BYOD cell again.
 
-**MAE:** mean absolute prediction error. **RMSE:** error emphasizing large misses. **Pinball loss:** quantile error.
+**MAE:** mean absolute prediction error. **RMSE:** error emphasizing large misses. **Pinball loss:** error score for one quantile that
+penalises misses asymmetrically (lower is better).
 **Coverage:** observed fraction inside the stated interval. **Persistence:** repeat the last value. **Macro average:**
 equal weight per region, rather than letting more numerous records dominate. **Held out:** not used to tune the experiment.
 

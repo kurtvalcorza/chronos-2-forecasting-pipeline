@@ -282,7 +282,7 @@ notebook is regenerated, never hand-edited. Status stays **Candidate**.
 | REEF-m2: no data-locality statement or confidential-data warning (DAT17, DAT18) | Section 11 says how to upload the CSV (Files pane, Copy path), that the code sends it to no other service, exactly what the BYOD cell writes (`byod/<digest>/forecasts.csv`, `receipt.json`, the cell output and `logs/stage_byod.log`), that BYOD results never enter `reef_evidence.zip`, and warns against confidential, restricted, personal or regulated data |
 | REEF-m3: the opening said hosted qualification was pending | The opening states Candidate, points to `docs/release-verification.md`, and labels the measured figures with their source: revision `08b2343`, Colab CLI T4, 2026-10-03, not re-run at this revision (about 5.5 min including a 1.5 min install; about 0.5 GB peak GPU memory). `clean_runtime_evidence` and the release status are unchanged (maintainer-only) |
 | REEF-m4 (owner decision, wording only) | Objective 4 and Section 6 now describe a pre-set comparison; no control was added. The options are listed in the PR under "Owner decisions pending" |
-| REEF-m5: the interpretation asked for a winner on a 0.001 °C gap | Section 10, the conclusion template and `conclusion.md` ask three claim-level questions and state the equivalence rule: HotSpot is recorded in 0.01 °C steps (all 76,170 values in the snapshot), so smaller MAE differences are no meaningful difference at this precision. Region-origin pairs share overlapping 28-day windows, so the share of origins one arm wins is descriptive |
+| REEF-m5: the interpretation asked for a winner on a 0.001 °C gap | Section 10, the conclusion template and `conclusion.md` no longer ask for a winner. As corrected after the peer review (CX1 below), they ask for the signed MAE difference, described only as lower or higher MAE on these evaluated cases, and state that distinguishability and equivalence are not assessed. The first version of this fix used a 0.01 °C "indistinguishable" rule; that rule was withdrawn |
 | REEF-m6: no re-run guidance; the summary cell failed on missing files | Section 3 states the re-run rule; the summary cell lists missing results and says how to recover instead of raising |
 | REEF-m7: unverified `pip install uv==0.10.12` into the kernel; sync without `--only-binary` | Setup downloads the pinned uv 0.10.12 manylinux x86_64 wheel, checks its size (23,498,314 bytes) and SHA-256 (`101481a1…455e`, equal to PyPI's published digest), extracts only the `uv` binary into the run directory and checks its SHA-256 (`56ad65c8…ac59`). Nothing is installed into the kernel. The locked sync passes `--require-hashes --only-binary :all:` (all 57 locked packages resolve to wheels for CPython 3.12 manylinux x86_64). Setup refuses non-Linux-x86_64 runtimes with one message |
 | REEF-m8: the 2025 exclusion reason named only context gaps | Section 4 names context or 28-day outcome-window gaps and points to the `reason` column of `origin_manifest.csv` |
@@ -302,6 +302,26 @@ output files are byte-identical, including `metrics.json`; six summaries differ 
 `tests/test_reef_capstone_review_2026_10_12.py` covers the refusals (four invalid inputs in a separate
 CPU process and through the notebook's own `run_logged()`), the BYOD inventory against the runner, the
 0.01 °C data claim, the guarded summary, a tampered uv wheel and the 2025 exclusion reasons.
+
+### Peer-review follow-up (CX1 to CX7)
+
+A peer review of the first fix commit found that recording precision was being used as an equivalence rule, and
+that table F weighted regions differently from the primary outcome. Corrections, all in the generator and
+`tools/reef_runtime.py`; no previously computed number changes, and new values are added as columns and rows:
+
+| Item | Correction |
+|---|---|
+| CX1 (Major): 0.01 °C "indistinguishable" rule | Withdrawn from Section 10, the conclusion template and `conclusion.md`. Results are reported as signed differences ("lower/higher MAE on these evaluated cases"); statistical distinguishability and equivalence are stated as not assessed because overlapping windows and shared weather make cases dependent. The data-precision test remains as a data fact only |
+| CX2 (Major): table F pooled region-origins | Table F adds `equal_region_difference` (mean within each region, then equal weight across regions), which equals table A's Chronos-minus-baseline macro MAE difference (tested); the pooled value is kept and renamed `pooled_mean_difference`. Section 10 points to the equal-region column |
+| CX3: "the test set is still unopened" | Now "Test baseline records exist, but test scores have not been inspected and model choices are fixed". Stage order unchanged |
+| CX4: table E cannot answer the disagreement question | New table E2: paired endpoint event predictions of Chronos and persistence on the same test region-origins (both / Chronos only / persistence only / neither, with horizon, threshold, pairs and observed support) |
+| CX5: estimand labels | Table A and the summary cell say "HotSpot MAE, leads 1–14" and "DHW MAE, lead-14 endpoint"; support is "target records" (forecast days; overlapping windows repeat dates); the conclusion template uses the same estimand |
+| CX6: quantile scores | Section 7 and table C explain q10/q50/q90, coverage, width and pinball loss, why zero-inflated targets can push coverage above 80%, and that crossings are sorted and values clipped before scoring; table C prints the test crossing and clipping counts |
+| CX7 (Suggestion, wording only) | Conclusions are limited to the two named baselines; quantile scores are called diagnostics. Not addressed: a development-only seasonal-median baseline for MAE and a seasonal-quantile baseline for pinball loss |
+
+CPU parity with the model double on the real snapshot (old `af4c84d` versus this commit): `metrics.json` is
+byte-identical; `results_tables.txt` and `validation_tables.txt` differ only by the added rows, columns, labels and
+wording above, with every earlier number unchanged.
 
 ### Remaining gates
 

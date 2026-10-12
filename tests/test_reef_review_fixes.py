@@ -251,7 +251,8 @@ def test_validation_comparison_and_context_trace(scored):
     assert "chronos_180" in text and "180 minus 365" in text
     assert "Trace a valid context" in text and "Trace a rejected origin" in text
     assert "incomplete_365_day_context" in text
-    assert "test set is still unopened" in text
+    flat = " ".join(text.split())
+    assert "test scores have not been inspected and model choices are fixed" in flat
 
 
 def test_stage_handoffs_surface_tables(notebook):
@@ -263,7 +264,7 @@ def test_stage_handoffs_surface_tables(notebook):
         'run_stage("lock")',
     ]
     display = next(c for c in code if "Read reports" in c)
-    for column in ("Regions", "Origins", "Days"):
+    for column in ("Regions", "Origins", "Target records"):
         assert column in display
     text = "".join("".join(c["source"]) for c in notebook["cells"] if c["cell_type"] == "markdown")
     assert "(table A)" in text and "(table E" in text and "(table C)" in text
