@@ -74,42 +74,84 @@ def test_validation_prints_each_model_environment(tmp_path, monkeypatch, capsys)
     assert "Section 7.1" in _markdown_with("Participant submission checklist")[0]
 
 
-# --- TSW2-m3 (option B): the freeze records a validation-based choice; Section 9 checks it
+# --- TSW2-m3 (option B) + Codex CX2: the frozen choice is checked against its own criterion
 
 
-def test_prose_describes_a_recorded_choice():
+def test_prose_describes_a_recorded_choice_and_criterion():
     claim = "Choose the models, the horizons and the metrics using the validation period"
     assert claim not in ALL_MARKDOWN
     assert "The choice the freeze records" in ALL_MARKDOWN
+    assert "SELECTION_CRITERION" in ALL_MARKDOWN and "SELECTION_RATIONALE" in ALL_MARKDOWN
+    assert "confirms your choice" not in ALL_MARKDOWN
     assert "CHOSEN_MODEL" in _markdown_with("Participant submission checklist")[0]
 
 
 @pytest.mark.usefixtures("plots")
-def test_default_choice_is_frozen_and_checked_on_the_test(tmp_path, monkeypatch, capsys):
+def test_default_choice_is_frozen_and_reported_literally(tmp_path, monkeypatch, capsys):
     ns = through_freeze(start(tmp_path, monkeypatch))
     frozen = json.loads(
         (ns["OUTPUT_ROOT"] / "frozen" / "frozen_experiment.json").read_text(encoding="utf-8")
     )
     choice = frozen["validation_choice"]
-    aggregate = ns["validation_aggregate"].set_index("model")["macro_mae"]
-    assert choice["chosen_model"] == choice["validation_ranking"][0]
-    assert aggregate[choice["validation_ranking"][0]] <= aggregate[choice["validation_ranking"][1]]
+    assert choice["criterion"] == "lowest macro MAE" and choice["rationale"] == ""
+    scores = choice["validation_macro_mae"]
+    assert scores[choice["chosen_model"]] == min(scores.values())
     capsys.readouterr()
     run_cell("9.1 Check the freeze, then forecast the test period", ns)
     out = capsys.readouterr().out
-    assert "Frozen choice: " in out and "Test ranking:" in out
+    assert "Best among the foundation models" in out and "Against the baselines" in out
+    assert "lowest observed macro MAE on this test origin" in out
+    assert "confirm" not in out
     check = json.loads(
         (ns["OUTPUT_ROOT"] / "test" / "validation_choice_check.json").read_text(encoding="utf-8")
     )
     assert check["chosen_model"] == choice["chosen_model"]
-    assert set(check) >= {"choice_confirmed", "ranking_held", "test_ranking"}
+    for key in ("chosen_has_lowest_test_macro_mae", "lowest_test_macro_mae_is_tied",
+                "test_macro_mae_minus_chosen", "against_baselines"):
+        assert key in check
+    assert "choice_confirmed" not in check and "ranking_held" not in check
+    base = check["against_baselines"]
+    assert base["n_series"] == 2 and 0 <= base["series_with_positive_skill"] <= 2
+
+
+@pytest.mark.usefixtures("plots")
+def test_ties_are_reported_as_ties(tmp_path, monkeypatch, capsys):
+    # The fake runner gives every model the same forecasts, so every model ties.
+    ns = through_freeze(start(tmp_path, monkeypatch))
+    assert "tied with" in ns["validation_choice"]()["rule"]
+    run_cell("9.1 Check the freeze, then forecast the test period", ns)
+    check = json.loads(
+        (ns["OUTPUT_ROOT"] / "test" / "validation_choice_check.json").read_text(encoding="utf-8")
+    )
+    assert check["lowest_test_macro_mae_is_tied"] is True
+    assert "tied with" in capsys.readouterr().out
+
+
+@pytest.mark.usefixtures("plots")
+def test_a_hand_choice_needs_a_rationale_and_is_checked_on_its_criterion(tmp_path, monkeypatch):
+    ns = install_fake_models(start(tmp_path, monkeypatch))
+    run_cell("7.1 Forecast the validation period with each model", ns)
+    hand = {
+        'CHOSEN_MODEL = "lowest validation macro MAE"': 'CHOSEN_MODEL = "TiRex-2"',
+        'SELECTION_CRITERION = "lowest macro MAE"': 'SELECTION_CRITERION = "smallest checkpoint"',
+    }
+    with pytest.raises(ValueError, match="SELECTION_RATIONALE"):
+        run_cell("8.1 Freeze the experiment", ns, hand)
+    hand['SELECTION_RATIONALE = ""'] = 'SELECTION_RATIONALE = "cheapest to run"'
+    run_cell("8.1 Freeze the experiment", ns, hand)
+    run_cell("9.1 Check the freeze, then forecast the test period", ns)
+    check = json.loads(
+        (ns["OUTPUT_ROOT"] / "test" / "validation_choice_check.json").read_text(encoding="utf-8")
+    )
+    assert check["criterion"] == "smallest checkpoint" and check["rationale"] == "cheapest to run"
+    assert check["chosen_best_on_frozen_criterion"] is True  # TiRex-2 has the smaller checkpoint
 
 
 @pytest.mark.usefixtures("plots")
 def test_a_changed_choice_after_the_freeze_stops_the_test(tmp_path, monkeypatch):
     ns = through_freeze(start(tmp_path, monkeypatch))
-    other = ns["foundation_ranking"](ns["validation_aggregate"])[1]
-    ns["CHOSEN_MODEL"] = other
+    ns["CHOSEN_MODEL"] = "Chronos-2"
+    ns["SELECTION_RATIONALE"] = "changed my mind"
     with pytest.raises(RuntimeError, match="validation_choice"):
         run_cell("9.1 Check the freeze, then forecast the test period", ns)
 
@@ -124,6 +166,42 @@ def test_an_unknown_choice_is_refused_with_guidance(tmp_path, monkeypatch):
             ns,
             {'CHOSEN_MODEL = "lowest validation macro MAE"': 'CHOSEN_MODEL = "Toto 2.0 2.5B"'},
         )
+
+
+# --- Codex CX4: no test value is previewed before the freeze, whatever the file order
+
+
+@pytest.mark.usefixtures("plots")
+def test_reverse_ordered_byod_preview_shows_no_test_rows(tmp_path, monkeypatch):
+    lines = panel_bytes().decode().splitlines()
+    newline = chr(10)
+    reversed_payload = (newline.join([lines[0]] + lines[1:][::-1]) + newline).encode()
+    shown = []
+    ns = start(tmp_path, monkeypatch, reversed_payload)
+    test_start = ns["test_truth"]["timestamp"].min()
+    # Re-run the data cells with a recording display, as a learner would see them.
+    ns["display"] = shown.append
+    run_cell("3.1 Generate or load the sample", ns)
+    run_cell("3.2 Check the data before any model download", ns)
+    frames = [obj for obj in shown if isinstance(obj, pd.DataFrame) and "timestamp" in obj]
+    assert frames
+    for obj in frames:
+        assert (pd.to_datetime(obj["timestamp"]) < test_start).all()
+    assert "display(frame.head())" not in CELLS["3.1 Generate or load the sample"]
+
+
+# --- Codex CX1: recovery text says a restart reuses the same holdout
+
+
+def test_recovery_text_says_a_restart_reuses_the_holdout():
+    restart = "Restarting reuses the same holdout."
+    titles = ("8.1 Freeze the experiment", "9.1 Check the freeze, then forecast the test period")
+    for title in titles:
+        assert restart in CELLS[title]
+    assert restart in _markdown_with("# Troubleshooting")[0]
+    assert "would not be a new independent test" not in CELLS[
+        "9.1 Check the freeze, then forecast the test period"
+    ]
 
 
 # --- TSW2-m4: the input copy is written after validation and can be left out of the report
@@ -196,7 +274,8 @@ def test_comparison_scope_is_stated():
     assert "zero-shot and untuned, at its upstream default settings" in ALL_MARKDOWN
     assert "whole configurations" in ALL_MARKDOWN
     assert "Coverage moved nearer to 0.80" not in ALL_MARKDOWN
-    assert "too few, and too correlated" in ALL_MARKDOWN
+    assert "they do not establish calibration or a reliable improvement toward 80%" in ALL_MARKDOWN
+    assert "too few, and too correlated" not in ALL_MARKDOWN
 
 
 # --- TSW2-m8 (option A): NOTEBOOK_SPEC 2.5 declaration and write-up layer

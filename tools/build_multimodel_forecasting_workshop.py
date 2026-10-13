@@ -110,7 +110,9 @@ def build_notebook():
                         "fixed-width BYOD steps; recovery messages say rerun from 1.1 onward; comparison "
                         "scoped as untuned whole configurations; NOTEBOOK_SPEC 2.5 (TSW2-m8, option A): "
                         "notebook_kind, problem statement, data context, use notice, What did not work and "
-                        "References. Default-path "
+                        "References. Codex peer review CX1-CX9: criterion-honest choice "
+                        "check, preview after validation and before the test boundary, holdout and "
+                        "freeze wording, pretraining dates, Open-Meteo provenance. Default-path "
                         "computation unchanged.",
                     }
                 ],
