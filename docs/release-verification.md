@@ -363,6 +363,23 @@ The maintainer ran the uv isolated-environment revision in a browser Colab T4 se
 
 **Status: Candidate.**
 
+### 2026-10-12 review fixes (TSW2-m1 to m8)
+
+The 2026-10-12 Notebook Review Framework v1 review of blob `ff0389bccd42` (commit `81ab292`) found eight Minor issues, two of them owner decisions. All are fixed in the generator; the notebook blob becomes `0e4936324fc9`.
+
+- **TSW2-m1 (REL13).** Each sample answer and the Section 10 timings now name the run they quote and say they were not re-run with this revision: synthetic answers and TiRex-2/Chronos-2 timings from the Colab T4 run of `8cda8d5`; Open-Meteo Chronos-2 and baseline figures from the 2026-09-26 run of `9e10f24`; Open-Meteo TiRex-2 figures from `reviews/2026-09-27-notebook-review/tirex_cpu_rerun_0.2.0.json`; Toto timings from the `FULL` run of `4199536`. Cell 1 and Appendix A agree.
+- **TSW2-m2 (ENV3).** Section 7.1 prints, per model, the Python, device, precision, torch, model package and other package versions reported by the runner in its own environment; the submission checklist points at it.
+- **TSW2-m3 (owner decision: option B, 2026-10-12).** Section 8.1 has a `CHOSEN_MODEL` field (default: the model with the lowest validation macro MAE). The freeze stores the choice and the validation ranking as part of the experiment identity, so changing the choice after the freeze stops the test. Section 9.1 reports whether the test confirms the choice and whether the ranking held, and writes `test/validation_choice_check.json`. The choice changes no forecast.
+- **TSW2-m4.** The input copy `data/validated_panel_source.csv` is written in Section 3.2 after `validate_panel` passes (same bytes as before), the report's contents (input copy, validation and test truth) are disclosed, and a new control `REPORT_INCLUDES_INPUT_DATA` (default on) leaves the copy out of the report when unticked.
+- **TSW2-m5.** BYOD text says only fixed-width steps are supported (calendar months, quarters and years are refused) and that horizons and `SEASON_LENGTH` count the data's own steps; the irregular-frequency message names the fixed-width requirement.
+- **TSW2-m6.** Every recovery message says to rerun from Section 1.1 onward.
+- **TSW2-m7.** The comparison is described as zero-shot, untuned, at upstream defaults, over whole configurations (device, torch stack, Toto padding); the Open-Meteo coverage answer no longer reads a one-day change as calibration.
+- **TSW2-m8 (owner decision, provisional).** `metadata.dimer.notebook_kind = "WORKSHOP"`, a Problem statement, the canonical use notice and an IEEE References section citing Chronos-2, TiRex-2, Toto 2.0 and Open-Meteo. The declared spec stays 2.1.
+- **Local checks only (not clean-runtime evidence):** the review's acceptance checks fail on `ff0389bccd42` and pass on `0e4936324fc9`; `tests/test_forecasting_workshop_review_2026_10_12.py`; a stand-in-model run of both blobs' default path gives identical request digests, runner-program sources, sample digest, validation and test metric tables, and 20 of 29 output files byte for byte (input copy, forecasts, metrics); the other 9 carry the experiment ID, timestamps or timings, the freeze also holds the recorded choice, and the experiment manifest records the new control. One file is new: `test/validation_choice_check.json`.
+- A hosted T4 re-run of `0e4936324fc9` (default path, then Open-Meteo, BYOD accept/refuse and `FULL`) is pending.
+
+**Status: Candidate.**
+
 ## Philippine reef heat-stress capstone: maintainer-supplied Colab execution — 2026-09-28
 
 Notebook identity is the Git blob of `tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb`.

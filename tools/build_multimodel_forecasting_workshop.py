@@ -81,6 +81,7 @@ def build_notebook():
                 "notebook_spec": "2.1",
                 "notebook_profile": "TASK-INFERENCE",
                 "notebook_mode": "WORKSHOP",
+                "notebook_kind": "WORKSHOP",
                 "standalone": True,
                 "capability": "multi-model-time-series-forecasting",
                 "carrier": "self-contained multi-model comparative forecasting workshop",
@@ -99,6 +100,17 @@ def build_notebook():
                         "(--require-hashes --only-binary :all:), no kernel install and no restart; "
                         "Linux x86-64 only. Direct model pins unchanged.",
                         "locks": [f"tools/forecasting-workshop-{name}-requirements.lock" for name in LOCK_MODELS],
+                    },
+                    {
+                        "date": "2026-10-12",
+                        "change": "Review TSW2 fixes: sample answers and timings name their source runs; "
+                        "model-environment versions, device and precision displayed after 7.1; CHOSEN_MODEL "
+                        "recorded in the freeze and checked in 9.1 (TSW2-m3, option B); report input-copy "
+                        "disclosure and REPORT_INCLUDES_INPUT_DATA opt-out; copy written after validation; "
+                        "fixed-width BYOD steps; recovery messages say rerun from 1.1 onward; comparison "
+                        "scoped as untuned whole configurations; notebook_kind, problem statement, use "
+                        "notice and References added (declared spec 2.1 kept, provisional). Default-path "
+                        "computation unchanged.",
                     }
                 ],
                 "generated_from": {
