@@ -1,7 +1,7 @@
 # DIMER Workshop Specification: Comparing Time-Series Foundation Models
 
 **Status:** Revised proposal  
-**Notebook specification:** DIMER `NOTEBOOK_SPEC` **2.1**  
+**Notebook specification:** DIMER `NOTEBOOK_SPEC` **2.5** (2.1 until 2026-10-12; the 2.5 write-up layer adds kind, problem statement, data context, use notice, What did not work and References)  
 **Notebook profile:** `TASK-INFERENCE`  
 **Pedagogical mode:** `WORKSHOP`  
 **Proposed filename:** `DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb`  
@@ -1272,7 +1272,8 @@ evaluation:
 ```json
 {
   "dimer": {
-    "notebook_spec": "2.1",
+    "notebook_spec": "2.5",
+    "notebook_kind": "WORKSHOP",
     "notebook_profile": "TASK-INFERENCE",
     "notebook_mode": "WORKSHOP",
     "standalone": true,

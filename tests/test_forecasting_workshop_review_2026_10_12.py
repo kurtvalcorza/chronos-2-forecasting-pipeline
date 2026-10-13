@@ -199,16 +199,22 @@ def test_comparison_scope_is_stated():
     assert "too few, and too correlated" in ALL_MARKDOWN
 
 
-# --- TSW2-m8 (provisional): kind, problem statement, use notice and references; spec 2.1 kept
+# --- TSW2-m8 (option A): NOTEBOOK_SPEC 2.5 declaration and write-up layer
 
 
-def test_write_up_layer_with_declared_spec_kept():
+def test_spec_2_5_declaration_and_write_up_layer():
     meta = NB["metadata"]["dimer"]
     assert meta["notebook_kind"] == "WORKSHOP"
-    assert meta["notebook_spec"] == "2.1"
+    assert meta["notebook_spec"] == "2.5"
+    assert "Notebook Specification 2.5" in MARKDOWN[0]
+    for title in ("8.1 Freeze the experiment", "13.2 Run-all completion summary"):
+        assert '"notebook_spec": "2.5"' in CELLS[title]
+    assert '"spec": "2.5"' in CELLS["13.1 Export the experiment record"]
     first_code = next(i for i, cell in enumerate(NB["cells"]) if cell["cell_type"] == "code")
     opening = "\n".join("".join(cell["source"]) for cell in NB["cells"][:first_code])
     assert "## Problem statement" in opening
+    assert "**Out of scope.**" in opening and "**What a useful outcome looks like.**" in opening
+    assert "## Data context" in ALL_MARKDOWN and "# What did not work" in ALL_MARKDOWN
     assert "> **⚠️ Notice.** For research, training and evaluation only." in opening
     assert re.search(r"^## References$", ALL_MARKDOWN, re.M)
     for arxiv in ("2510.15821", "2607.01204", "2605.20119"):

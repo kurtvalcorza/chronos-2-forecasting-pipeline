@@ -1,7 +1,7 @@
 # ruff: noqa: E501,I001
 """Generate the DIMER multi-model time-series forecasting workshop notebook.
 
-NOTEBOOK_SPEC 2.1. Pure-stdlib generator so generation itself adds no project dependency.
+NOTEBOOK_SPEC 2.5. Pure-stdlib generator so generation itself adds no project dependency.
 """
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def build_notebook():
             "accelerator": "GPU",
             "colab": {"gpuType": "T4", "provenance": []},
             "dimer": {
-                "notebook_spec": "2.1",
+                "notebook_spec": "2.5",
                 "notebook_profile": "TASK-INFERENCE",
                 "notebook_mode": "WORKSHOP",
                 "notebook_kind": "WORKSHOP",
@@ -108,8 +108,9 @@ def build_notebook():
                         "recorded in the freeze and checked in 9.1 (TSW2-m3, option B); report input-copy "
                         "disclosure and REPORT_INCLUDES_INPUT_DATA opt-out; copy written after validation; "
                         "fixed-width BYOD steps; recovery messages say rerun from 1.1 onward; comparison "
-                        "scoped as untuned whole configurations; notebook_kind, problem statement, use "
-                        "notice and References added (declared spec 2.1 kept, provisional). Default-path "
+                        "scoped as untuned whole configurations; NOTEBOOK_SPEC 2.5 (TSW2-m8, option A): "
+                        "notebook_kind, problem statement, data context, use notice, What did not work and "
+                        "References. Default-path "
                         "computation unchanged.",
                     }
                 ],
