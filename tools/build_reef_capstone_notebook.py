@@ -83,7 +83,7 @@ AI assistance is not independent verification, provider endorsement or release a
 1. Explain what a satellite-derived regional HotSpot represents.
 2. Reconstruct accumulated stress and distinguish known heat from predicted heat.
 3. Compare models on identical chronological origins without future-data leakage.
-4. Read a pre-set shorter-context comparison on validation data and interpret uncertainty and failure cases.
+4. Change one setting (the validation context length) and interpret uncertainty and failure cases.
 5. Export evidence, verify it in a fresh process, and write a bounded conclusion.
 
 **Core concepts** explain the science; **Evaluation practice** explains comparisons; **Infrastructure** cells
@@ -327,7 +327,14 @@ compile(RUNNER_SOURCE, "reef_runner.py", "exec")
         + """
 SOURCE_IDENTITY["runner_sha256"] = hashlib.sha256(RUNNER_SOURCE.encode()).hexdigest()
 (RUN_ROOT / "source_identity.json").write_text(json.dumps(SOURCE_IDENTITY, indent=2))
+ACTIVITY_REFUSED = False  # set by the Section 6 cell when its setting is refused
+AFTER_ACTIVITY = {"compare", "lock", "test", "score", "future", "reload", "report"}
 def run_stage(name, *extra):
+    global ACTIVITY_REFUSED
+    if ACTIVITY_REFUSED and name in AFTER_ACTIVITY:
+        print(f"Skipped {name}: the Section 6 setting was refused (message above). Fix it and re-run"
+              " Section 6, then the cells below it in order.", flush=True)
+        return
     print(f"[{time.strftime('%H:%M:%S')}] stage {name} started ({resource_note()})", flush=True)
     # -u and faulthandler: a crash inside the child leaves its Python traceback in the log.
     command = [PYTHON, "-u", "-X", "faulthandler", RUN_ROOT / "reef_runner.py", name,
@@ -335,6 +342,7 @@ def run_stage(name, *extra):
     seconds = run_logged(command, f"stage_{name}")
     if seconds is None:  # the runner printed one "Refused:" message above; nothing was saved
         print(f"[{time.strftime('%H:%M:%S')}] stage {name} refused the input (message above)", flush=True)
+        ACTIVITY_REFUSED = ACTIVITY_REFUSED or name == "activity"
         return
     print(f"[{time.strftime('%H:%M:%S')}] stage {name} finished in {seconds:.0f} s", flush=True)
 run_stage("prepare")
@@ -375,20 +383,35 @@ daily forecasts, not simultaneous guarantees.
 Run validation first. Model downloads are pinned by immutable revision and verified digests.
 """)
     code('run_stage("validation")')
-    md("""## 6. A pre-set comparison: how much history?
+    md("""## 6. Change one setting: how much history?
 
-Predict whether shortening context from 365 to 180 days helps. This comparison is pre-set: the 180-day length is
-fixed in the carried runner and recorded in `experiment_config.json`, whose digest the lock stores; it is not a
-setting you change here. The next cell differs from the default only in context length, on the same validation
-origins; model, dates, horizon and scoring remain fixed. It then prints a validation-only table:
-compare the `chronos_180` and `chronos` rows at 7, 14 and 28 days, check the support columns (regions, origins,
-days), and read the traced valid and rejected contexts. The 365-day test default remains frozen regardless of
-this activity.
+**Your control.** `ACTIVITY_CONTEXT_DAYS` in the next cell sets how many past days Chronos sees in this
+validation-only activity: 90, 180 (the default) or 270. Nothing else changes: same validation origins, model,
+dates, horizon and scoring. The test in Section 7 always uses 365 days, whatever you choose here; the lock records
+your choice, and the setting is never passed to the test stage. Any other value prints one `Refused:` line and
+the later stages print `Skipped` until you fix it.
+
+**Predict first:** will a shorter or longer context than 365 days give lower validation error? Then run the cell.
+To try another value, change the setting, re-run this cell, then re-run the cells below it in order (re-running
+clears the later results, as Section 3 explains).
+
+**What to notice:** the table compares the `chronos_<days>` row (your setting) with the 365-day `chronos` row at
+7, 14 and 28 days; check the support columns (regions, origins, days) so both cover the same cases, and read the
+traced valid and rejected contexts. The `<days> minus 365` column shows the regional difference at 14 days.
 
 <details><summary>How to interpret the comparison</summary>A shorter context may respond to recent conditions,
 but can lose seasonal information. Use measured errors; a plausible explanation alone is not evidence.</details>
 """)
-    code('run_stage("activity")\nrun_stage("compare")\nrun_stage("lock")')
+    code("""ACTIVITY_CONTEXT_DAYS = 180 # @param [90, 180, 270] {type:"raw"}
+if ACTIVITY_CONTEXT_DAYS not in (90, 180, 270):
+    ACTIVITY_REFUSED = True
+    print(f"Refused: ACTIVITY_CONTEXT_DAYS={ACTIVITY_CONTEXT_DAYS!r}: choose 90, 180 or 270 days, then re-run"
+          " this cell and the cells below it in order. Nothing was run.")
+else:
+    ACTIVITY_REFUSED = False
+    run_stage("activity", "--context-days", str(ACTIVITY_CONTEXT_DAYS))
+run_stage("compare")
+run_stage("lock")""")
     md("""## 7. Locked test and accumulated stress
 
 Now evaluate once on the held-out origins. For each arm, future DHW combines known past heat with that arm's

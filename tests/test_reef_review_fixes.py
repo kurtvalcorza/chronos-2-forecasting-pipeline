@@ -257,12 +257,9 @@ def test_validation_comparison_and_context_trace(scored):
 
 def test_stage_handoffs_surface_tables(notebook):
     code = ["".join(c["source"]) for c in notebook["cells"] if c["cell_type"] == "code"]
-    activity = next(c for c in code if c.startswith('run_stage("activity")'))
-    assert activity.splitlines() == [
-        'run_stage("activity")',
-        'run_stage("compare")',
-        'run_stage("lock")',
-    ]
+    activity = next(c for c in code if c.startswith("ACTIVITY_CONTEXT_DAYS = 180"))
+    assert 'run_stage("activity", "--context-days", str(ACTIVITY_CONTEXT_DAYS))' in activity
+    assert activity.splitlines()[-2:] == ['run_stage("compare")', 'run_stage("lock")']
     display = next(c for c in code if "Read reports" in c)
     for column in ("Regions", "Origins", "Target records"):
         assert column in display

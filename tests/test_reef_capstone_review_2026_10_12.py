@@ -13,12 +13,15 @@ import importlib.util
 import io
 import json
 import re
+import shutil
 import subprocess
 import sys
 import types
 import zipfile
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -197,15 +200,146 @@ def test_opening_status_is_not_stale_and_figures_are_labelled(notebook):
     assert notebook["metadata"]["dimer"]["release_status"] == "candidate"
 
 
-# REEF-m4: the activity is described as pre-set ----------------------------------------------
+# REEF-m4, owner decision A: a bounded, validation-only context-length setting -----------------
 
 
-def test_activity_is_described_as_preset(notebook):
+def test_activity_setting_is_explained_before_use(notebook):
     objectives = _markdown(notebook, "## Roadmap and learning objectives")
-    assert "Change one setting" not in objectives
+    assert "Change one setting (the validation context length)" in objectives
     section = " ".join(_markdown(notebook, "## 6.").split())
-    assert section.startswith("## 6. A pre-set comparison")
-    assert "it is not a setting you change here" in section
+    assert section.startswith("## 6. Change one setting: how much history?")
+    for phrase in ("**Your control.**", "90, 180 (the default) or 270",
+                   "The test in Section 7 always uses 365 days", "**What to notice:**"):
+        assert phrase in section
+    cells = _cells(notebook, "code")
+    field = next(i for i, c in enumerate(cells) if c.startswith("ACTIVITY_CONTEXT_DAYS = 180"))
+    assert '# @param [90, 180, 270] {type:"raw"}' in cells[field]
+    later = "\n".join(cells[field + 1 :])
+    assert "ACTIVITY_CONTEXT_DAYS" not in later and "--context-days" not in later
+
+
+def test_activity_cell_refuses_other_values_and_later_stages_skip(notebook, capsys):
+    cell = _code(notebook, "ACTIVITY_CONTEXT_DAYS = 180").replace(
+        "ACTIVITY_CONTEXT_DAYS = 180", "ACTIVITY_CONTEXT_DAYS = 120", 1
+    )
+    calls = []
+    space = {"run_stage": lambda *a: calls.append(a)}
+    exec(cell, space)
+    out = capsys.readouterr().out
+    assert out.startswith("Refused: ACTIVITY_CONTEXT_DAYS=120: choose 90, 180 or 270 days")
+    assert space["ACTIVITY_REFUSED"] is True
+    assert ("activity", "--context-days", "120") not in calls
+    runner_cell = _code(notebook, "def run_stage")
+    assert "if ACTIVITY_REFUSED and name in AFTER_ACTIVITY:" in runner_cell
+    after = '{"compare", "lock", "test", "score", "future", "reload", "report"}'
+    assert f"AFTER_ACTIVITY = {after}" in runner_cell
+
+
+@pytest.mark.parametrize("args", [["activity", "--context-days", "120"],
+                                  ["test", "--context-days", "180"]])
+def test_runner_refuses_bad_or_misplaced_context_days(tmp_path, runner, args):
+    result = subprocess.run(
+        [sys.executable, "-u", str(runner), args[0], "--root", str(tmp_path), *args[1:]],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    shown = result.stdout + result.stderr
+    assert result.returncode == 3, shown
+    assert "Traceback" not in shown
+    assert len([line for line in shown.splitlines() if line.startswith("Refused: ")]) == 1
+
+
+@pytest.fixture(scope="module")
+def activity_runs(tmp_path_factory, notebook, monkeypatch_module):
+    """Prepare, baselines, validation, activity (90 or default), compare, lock, test, score.
+
+    Model calls are a deterministic persistence double that records its context length.
+    """
+    space = {"__name__": "reef_activity_double"}
+    for source in _cells(notebook, "code"):
+        if source.startswith("# Infrastructure: reef_"):
+            exec(source, space)
+    exec(
+        compile(
+            "from __future__ import annotations\n"
+            + "".join(space[n] for n in ("CORE_SOURCE", "MODEL_SOURCE", "RUNTIME_SOURCE")),
+            "carried.py",
+            "exec",
+        ),
+        space,
+    )
+    lengths = []
+
+    def fake_predict(model, history, horizon=28):
+        values = np.asarray(history, dtype=float)
+        lengths.append(len(values))
+        return np.tile([values[-1] - 0.1, values[-1], values[-1] + 0.1], (horizon, 1))
+
+    space["reef_load_model"] = lambda *a: object()
+    space["reef_predict"] = fake_predict
+    torch = types.ModuleType("torch")
+    torch.cuda = types.SimpleNamespace(max_memory_allocated=lambda: 0)
+    monkeypatch_module.setitem(sys.modules, "torch", torch)
+    data = ROOT / "tutorials/data/reef"
+    manifest = json.loads((data / "manifest.json").read_text())
+    runs = {}
+    for label, days in (("default", None), ("ninety", 90)):
+        root = tmp_path_factory.mktemp(f"activity_{label}")
+        shutil.copy(data / "manifest.json", root / "dataset_manifest.json")
+        shutil.copy(data / manifest["archive"]["filename"], root)
+        shutil.copy(ROOT / "tools/reef_model_manifest.json", root / "model_manifest.json")
+        (root / "source_identity.json").write_text('{"runner_sha256": "test-double"}')
+        (root / "setup_summary.json").write_text('{"seconds": 1}')
+        space["reef_prepare"](root)
+        space["reef_experiment"](root, "baselines")
+        space["reef_experiment"](root, "validation")
+        lengths.clear()
+        space["reef_experiment"](root, "activity", days)
+        activity_lengths = set(lengths)
+        space["reef_compare"](root)
+        space["reef_lock"](root)
+        lengths.clear()
+        space["reef_experiment"](root, "test")
+        test_lengths = set(lengths)
+        space["reef_score"](root)
+        runs[label] = dict(root=root, activity=activity_lengths, test=test_lengths)
+    return runs
+
+
+@pytest.fixture(scope="module")
+def monkeypatch_module():
+    patch = pytest.MonkeyPatch()
+    yield patch
+    patch.undo()
+
+
+def test_default_activity_reproduces_the_180_day_comparison(activity_runs):
+    run = activity_runs["default"]
+    assert run["activity"] == {180}
+    frame = pd.read_csv(run["root"] / "activity_forecasts.csv")
+    assert set(frame.arm) == {"chronos_180"}
+    text = (run["root"] / "validation_tables.txt").read_text(encoding="utf-8")
+    assert "180 minus 365" in text and "vs 180-day activity" in text
+    assert "(its final 180 days)" in text
+    lock = json.loads((run["root"] / "experiment_lock.json").read_text())
+    assert lock["activity_context_days"] == 180
+
+
+def test_activity_setting_never_reaches_the_test(activity_runs):
+    default, ninety = activity_runs["default"], activity_runs["ninety"]
+    assert ninety["activity"] == {90} and default["test"] == ninety["test"] == {365}
+    lock = json.loads((ninety["root"] / "experiment_lock.json").read_text())
+    assert lock["activity_context_days"] == 90
+    assert set(pd.read_csv(ninety["root"] / "activity_forecasts.csv").arm) == {"chronos_90"}
+    for name in ("test_forecasts.csv", "baselines_forecasts.csv", "validation_forecasts.csv"):
+        a = (default["root"] / name).read_bytes()
+        b = (ninety["root"] / name).read_bytes()
+        assert a == b, name
+    ma = json.loads((default["root"] / "metrics.json").read_text())
+    mb = json.loads((ninety["root"] / "metrics.json").read_text())
+    test_rows = lambda m: [r for r in m["all"]["macro"] if r["split"] == "test"]  # noqa: E731
+    assert test_rows(ma) == test_rows(mb)
 
 
 # REEF-m5 as corrected by the peer review (CX1, CX5, CX7): signed differences, no equivalence ---

@@ -696,7 +696,9 @@ changes from `238285bda22a` to `90dfa21f20e2`. Every hosted run recorded above w
 
 The review of blob `90dfa21f` (revision `81ab292`) found eight Minors (REEF-m1 to REEF-m8), two Suggestions
 and one owner decision (REEF-m4). The corrections are listed in [reef-review-fixes.md](reef-review-fixes.md#2026-10-12-review-notebook-review-framework-v1-reef-m1-to-reef-m8);
-REEF-m4 is reworded only, pending the owner decision. A peer review of that fix (CX1 to CX7) withdrew a
+REEF-m4 was then resolved by the owner as option A: a bounded, validation-only `ACTIVITY_CONTEXT_DAYS`
+setting (90/180/270, default 180) recorded in the lock and never passed to the 365-day test. **The recorded
+hosted T4 runs above cover the previous design** (a fixed 180-day activity); none exercises the new setting. A peer review of that fix (CX1 to CX7) withdrew a
 0.01 °C equivalence rule, aligned table F with the equal-region primary outcome and added estimand labels, a
 paired event table and quantile explanations; no earlier computed number changed. The notebook blob changes, so every hosted run recorded
 above is of an earlier blob (REL14). Local checks are CPU-only with a model double and are not clean-runtime

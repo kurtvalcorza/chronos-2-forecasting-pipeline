@@ -281,7 +281,7 @@ notebook is regenerated, never hand-edited. Status stays **Candidate**.
 | REEF-m1: a refused BYOD file showed the child traceback, then a `RuntimeError` repeating it | The runner turns a validation error or an unreadable path into `ReefInputRefused`, prints one `Refused: <file>: <rule>` line plus what to do, and exits with code 3. `run_logged()` treats code 3 from a stage child as a refusal (no exception); `run_stage()` prints that the stage refused the input. Unconfirmed HotSpot semantics also print one `Refused:` line instead of raising. Genuine crashes still raise |
 | REEF-m2: no data-locality statement or confidential-data warning (DAT17, DAT18) | Section 11 says how to upload the CSV (Files pane, Copy path), that the code sends it to no other service, exactly what the BYOD cell writes (`byod/<digest>/forecasts.csv`, `receipt.json`, the cell output and `logs/stage_byod.log`), that BYOD results never enter `reef_evidence.zip`, and warns against confidential, restricted, personal or regulated data |
 | REEF-m3: the opening said hosted qualification was pending | The opening states Candidate, points to `docs/release-verification.md`, and labels the measured figures with their source: revision `08b2343`, Colab CLI T4, 2026-10-03, not re-run at this revision (about 5.5 min including a 1.5 min install; about 0.5 GB peak GPU memory). `clean_runtime_evidence` and the release status are unchanged (maintainer-only) |
-| REEF-m4 (owner decision, wording only) | Objective 4 and Section 6 now describe a pre-set comparison; no control was added. The options are listed in the PR under "Owner decisions pending" |
+| REEF-m4 (owner decision: option A) | Section 6 has a bounded, validation-only form field `ACTIVITY_CONTEXT_DAYS` (90, 180 or 270; default 180), explained before use with a What to notice. The activity arm is `chronos_<days>`; the activity summary and `experiment_lock.json` record the value; the test stage never receives it and always uses 365 days. Any other value prints one `Refused:` line (notebook cell and runner, exit 3) and the later stages print `Skipped`. Objective 4 says the learner changes one setting |
 | REEF-m5: the interpretation asked for a winner on a 0.001 °C gap | Section 10, the conclusion template and `conclusion.md` no longer ask for a winner. As corrected after the peer review (CX1 below), they ask for the signed MAE difference, described only as lower or higher MAE on these evaluated cases, and state that distinguishability and equivalence are not assessed. The first version of this fix used a 0.01 °C "indistinguishable" rule; that rule was withdrawn |
 | REEF-m6: no re-run guidance; the summary cell failed on missing files | Section 3 states the re-run rule; the summary cell lists missing results and says how to recover instead of raising |
 | REEF-m7: unverified `pip install uv==0.10.12` into the kernel; sync without `--only-binary` | Setup downloads the pinned uv 0.10.12 manylinux x86_64 wheel, checks its size (23,498,314 bytes) and SHA-256 (`101481a1…455e`, equal to PyPI's published digest), extracts only the `uv` binary into the run directory and checks its SHA-256 (`56ad65c8…ac59`). Nothing is installed into the kernel. The locked sync passes `--require-hashes --only-binary :all:` (all 57 locked packages resolve to wheels for CPython 3.12 manylinux x86_64). Setup refuses non-Linux-x86_64 runtimes with one message |
@@ -323,10 +323,20 @@ CPU parity with the model double on the real snapshot (old `af4c84d` versus this
 byte-identical; `results_tables.txt` and `validation_tables.txt` differ only by the added rows, columns, labels and
 wording above, with every earlier number unchanged.
 
+### REEF-m4 option A (owner decision)
+
+Kurt chose option A. The default (180 days) reproduces the previous output: in CPU parity with the model double on
+the real snapshot (`af4c84d` versus this commit), every forecast file, `metrics.json` and the activity comparison
+table are unchanged. The only byte changes are records of the new setting: `experiment_config.json` lists the
+allowed values and the default instead of one fixed value, `activity_summary.json` gains `context_days`, and
+`experiment_lock.json` gains `activity_context_days` and `activity_scope` (and the new config digest). A test runs
+the activity at 90 and at the default and checks that the test forecasts, the validation and baseline forecasts and
+the test metrics are byte-identical and that the test model calls always see 365 days.
+
 ### Remaining gates
 
 1. A Colab CLI T4 run of the new blob (default path).
 2. A browser run with BYOD ticked on one valid CSV and one invalid CSV (REL12), recorded with the refusal
    output.
-3. The owner decision on REEF-m4.
+3. A browser run of the Section 6 setting at a non-default value (90 or 270) and one refused value.
 4. Maintainer review and promotion.

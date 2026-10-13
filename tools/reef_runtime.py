@@ -23,6 +23,33 @@ class ReefInputRefused(ValueError):
     """A BYOD file refused with one actionable message naming the file and the failed rule."""
 
 
+# Learner setting of the validation-only context-length activity (Section 6). The 365-day test
+# context is fixed; this value never reaches the test stage.
+REEF_ACTIVITY_DAYS = (90, 180, 270)
+REEF_ACTIVITY_DEFAULT = 180
+
+
+def reef_activity_arm(days: int) -> str:
+    return f"chronos_{days}"
+
+
+def reef_activity_days(root: Path) -> int:
+    """Context length the activity stage used, as recorded in its summary (default if absent)."""
+    path = root / "activity_summary.json"
+    if path.exists():
+        return int(reef_read(path).get("context_days", REEF_ACTIVITY_DEFAULT))
+    return REEF_ACTIVITY_DEFAULT
+
+
+def reef_check_activity_days(days) -> int:
+    if days not in REEF_ACTIVITY_DAYS:
+        raise ReefInputRefused(
+            f"ACTIVITY_CONTEXT_DAYS={days!r}: choose 90, 180 or 270 days. Fix the setting in "
+            "Section 6 and re-run that cell, then the cells below it in order."
+        )
+    return int(days)
+
+
 def reef_json(path: Path, value: object) -> None:
     path.write_text(
         json.dumps(value, indent=2, allow_nan=False, default=json_native) + "\n", encoding="utf-8"
@@ -139,6 +166,8 @@ def reef_plan(root: Path) -> pd.DataFrame:
 
 def reef_stage_forecasts(root: Path, panel: pd.DataFrame, plan: pd.DataFrame, stage: str):
     splits, arms = REEF_STAGE_ARMS[stage]
+    if stage == "activity":
+        arms = [reef_activity_arm(reef_activity_days(root))]
     frame = reef_records(root / f"{stage}_forecasts.csv")
     try:
         validate_forecast_grid(frame, plan[plan.split.isin(splits)], arms, panel)
@@ -163,7 +192,8 @@ def reef_prepare(root: Path) -> None:
         root / "experiment_config.json",
         {
             "context_days": 365,
-            "activity_context_days": 180,
+            "activity_context_days_allowed": list(REEF_ACTIVITY_DAYS),
+            "activity_context_days_default": REEF_ACTIVITY_DEFAULT,
             "horizons": [7, 14, 28],
             "primary": "14-day HotSpot MAE; equal-region macro mean",
             "validation_years": [2023],
@@ -214,8 +244,13 @@ def reef_prepare(root: Path) -> None:
     print("DHW reconstructed within 0.0001 °C-weeks. Frozen origins and settings saved.")
 
 
-def reef_experiment(root: Path, stage: str) -> None:
+def reef_experiment(root: Path, stage: str, context_days: int | None = None) -> None:
     start = time.perf_counter()
+    if stage != "activity" and context_days is not None:
+        raise ValueError("Only the validation activity takes a context-length setting")
+    activity_days = reef_check_activity_days(
+        REEF_ACTIVITY_DEFAULT if context_days is None else context_days
+    )
     panel = reef_load_data(root)
     manifest = origin_manifest(panel)
     config = reef_read(root / "experiment_config.json")
@@ -237,7 +272,7 @@ def reef_experiment(root: Path, stage: str) -> None:
     output = []
     for number, row in enumerate(selected.itertuples(), 1):
         origin = pd.Timestamp(row.origin)
-        length = 180 if stage == "activity" else 365
+        length = activity_days if stage == "activity" else 365
         context = context_at(panel, row.region_id, origin, length=length)
         values = np.asarray(context, dtype=float)
         if stage == "baselines":
@@ -249,7 +284,7 @@ def reef_experiment(root: Path, stage: str) -> None:
                 )
         else:
             q = reef_predict(model, values)
-            arm = "chronos_180" if stage == "activity" else "chronos"
+            arm = reef_activity_arm(activity_days) if stage == "activity" else "chronos"
             output.append(
                 forecast_frame(panel, row.region_id, origin, arm, q[:, 1], row.split, quantiles=q)
             )
@@ -273,6 +308,8 @@ def reef_experiment(root: Path, stage: str) -> None:
         "complete": True,
         "rows": len(result),
     }
+    if stage == "activity":
+        summary["context_days"] = activity_days
     if "quantile_crossing_c" in result:
         crossed = result.quantile_crossing_c > 0
         summary["quantile_crossing_days"] = int(crossed.sum())
@@ -318,6 +355,8 @@ def reef_lock(root: Path) -> None:
         {
             "sha256": {name: reef_sha(root / name) for name in REEF_LOCKED_FILES},
             "selection": "365-day default retained; no test-based tuning",
+            "activity_context_days": reef_activity_days(root),
+            "activity_scope": "validation only; the test stage always uses 365 days",
         },
     )
     print("365-day context retained. Test settings locked.")
@@ -741,9 +780,11 @@ def reef_compare(root: Path) -> None:
     cols = ["arm", "horizon", "hotspot_mae", "dhw_endpoint_mae", "regions", "origins", "days"]
     table = macro[cols].sort_values(["horizon", "arm"])
     region = pd.DataFrame(report["metrics"])
-    region = region[(region.horizon == 14) & region.arm.isin(["chronos", "chronos_180"])]
+    days = reef_activity_days(root)
+    arm = reef_activity_arm(days)
+    region = region[(region.horizon == 14) & region.arm.isin(["chronos", arm])]
     wide = region.pivot(index="region_id", columns="arm", values="hotspot_mae")
-    wide["180 minus 365"] = wide.chronos_180 - wide.chronos
+    wide[f"{days} minus 365"] = wide[arm] - wide.chronos
     wide["origins"] = region.groupby("region_id").origins.first()
     manifest = pd.read_csv(root / "origin_manifest.csv", parse_dates=["origin"])
     valid = plan[plan.split == "validation"].iloc[0]
@@ -757,13 +798,13 @@ def reef_compare(root: Path) -> None:
         "Macro HotSpot MAE (°C) and DHW endpoint MAE (°C-weeks) with support:",
         _fmt(table),
         "",
-        "14-day HotSpot MAE by region: 365-day default (chronos) vs 180-day activity:",
+        f"14-day HotSpot MAE by region: 365-day default (chronos) vs {days}-day activity:",
         _fmt(wide.reset_index()),
         "",
         f"Trace a valid context: {valid.region_id}, origin {origin.date()}.",
         f"  365-day context {(origin - pd.Timedelta(days=364)).date()} to {origin.date()};",
-        f"  180-day context {(origin - pd.Timedelta(days=179)).date()} to {origin.date()}"
-        " (its final 180 days);",
+        f"  {days}-day context {(origin - pd.Timedelta(days=days - 1)).date()} to "
+        f"{origin.date()} (its final {days} days);",
         f"  targets {(origin + pd.Timedelta(days=1)).date()} to "
         f"{(origin + pd.Timedelta(days=28)).date()}.",
         f"Trace a rejected origin: {reject.region_id}, {pd.Timestamp(reject.origin).date()}: "
@@ -1013,6 +1054,7 @@ def reef_main() -> None:
     )
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--csv", type=Path)
+    parser.add_argument("--context-days", type=int)
     args = parser.parse_args()
     # Checkpoint: the child started and its imports loaded (separates launch from stage failures).
     print(f"[runner pid {os.getpid()}] imports loaded; stage {args.stage}", flush=True)
@@ -1029,9 +1071,21 @@ def reef_main() -> None:
             )
             raise SystemExit(REEF_REFUSED_EXIT) from None
         return
+    if args.context_days is not None:
+        try:
+            if args.stage != "activity":
+                raise ReefInputRefused(
+                    f"--context-days is only for the validation activity, not stage {args.stage}"
+                )
+            reef_check_activity_days(args.context_days)
+        except ReefInputRefused as exc:  # refused before anything is cleared or run
+            print(f"Refused: {exc}", flush=True)
+            raise SystemExit(REEF_REFUSED_EXIT) from None
     reef_invalidate(root, args.stage)
-    if args.stage in {"baselines", "validation", "activity", "test"}:
+    if args.stage in {"baselines", "validation", "test"}:
         reef_experiment(root, args.stage)
+    elif args.stage == "activity":
+        reef_experiment(root, args.stage, args.context_days)
     else:
         {
             "prepare": reef_prepare,
