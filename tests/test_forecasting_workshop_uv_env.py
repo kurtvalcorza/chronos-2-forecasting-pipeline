@@ -157,4 +157,5 @@ def test_non_linux_runtime_stops_before_any_download(tmp_path, monkeypatch):
 def test_generator_is_in_sync_and_logs_the_revision():
     assert NOTEBOOK.read_text(encoding="utf-8") == builder.serialized()
     log = NB["metadata"]["dimer"]["revision_log"]
-    assert log[-1]["date"] == "2026-10-03" and "uv isolated environment" in log[-1]["change"]
+    uv_entries = [entry for entry in log if entry["date"] == "2026-10-03"]
+    assert len(uv_entries) == 1 and "uv isolated environment" in uv_entries[0]["change"]

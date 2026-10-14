@@ -1,7 +1,7 @@
 # ruff: noqa: E501,I001
 """Generate the DIMER multi-model time-series forecasting workshop notebook.
 
-NOTEBOOK_SPEC 2.1. Pure-stdlib generator so generation itself adds no project dependency.
+NOTEBOOK_SPEC 2.5. Pure-stdlib generator so generation itself adds no project dependency.
 """
 from __future__ import annotations
 
@@ -78,9 +78,10 @@ def build_notebook():
             "accelerator": "GPU",
             "colab": {"gpuType": "T4", "provenance": []},
             "dimer": {
-                "notebook_spec": "2.1",
+                "notebook_spec": "2.5",
                 "notebook_profile": "TASK-INFERENCE",
                 "notebook_mode": "WORKSHOP",
+                "notebook_kind": "WORKSHOP",
                 "standalone": True,
                 "capability": "multi-model-time-series-forecasting",
                 "carrier": "self-contained multi-model comparative forecasting workshop",
@@ -99,6 +100,20 @@ def build_notebook():
                         "(--require-hashes --only-binary :all:), no kernel install and no restart; "
                         "Linux x86-64 only. Direct model pins unchanged.",
                         "locks": [f"tools/forecasting-workshop-{name}-requirements.lock" for name in LOCK_MODELS],
+                    },
+                    {
+                        "date": "2026-10-12",
+                        "change": "Review TSW2 fixes: sample answers and timings name their source runs; "
+                        "model-environment versions, device and precision displayed after 7.1; CHOSEN_MODEL "
+                        "recorded in the freeze and checked in 9.1 (TSW2-m3, option B); report input-copy "
+                        "disclosure and REPORT_INCLUDES_INPUT_DATA opt-out; copy written after validation; "
+                        "fixed-width BYOD steps; recovery messages say rerun from 1.1 onward; comparison "
+                        "scoped as untuned whole configurations; NOTEBOOK_SPEC 2.5 (TSW2-m8, option A): "
+                        "notebook_kind, problem statement, data context, use notice, What did not work and "
+                        "References. Codex peer review CX1-CX9: criterion-honest choice "
+                        "check, preview after validation and before the test boundary, holdout and "
+                        "freeze wording, pretraining dates, Open-Meteo provenance. Default-path "
+                        "computation unchanged.",
                     }
                 ],
                 "generated_from": {
