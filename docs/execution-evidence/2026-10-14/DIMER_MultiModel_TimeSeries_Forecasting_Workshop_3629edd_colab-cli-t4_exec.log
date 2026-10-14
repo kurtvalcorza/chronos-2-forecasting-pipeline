@@ -1,0 +1,272 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-3629edd-b7471e/DIMER_MultiModel_TimeSeries_Forecasting_Workshop_3629edd_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/19 - 1.1 Notebook controls...
+{'tier': 'STANDARD', 'sample_dataset': 'SYNTHETIC', 'byod': False, 'selected_models': ['tirex', 'chronos'], 'validation_horizon': 24, 'test_horizon': 24, 'season_length': 24, 'quantiles': [0.1, 0.5, 0.9], 'conditioning_mode': 'independent-per-series', 'report_includes_input_data': True, 'experiment_id': '20261014T142133Z-4a813b', 'output_root': '/content/outputs/20261014T142133Z-4a813b'}
+[colab] Executing cell 2/19 - 1.2 Check the notebook runtime...
+numpy 2.1.3
+pandas 2.2.3
+matplotlib 3.10.0
+packaging 26.3
+python 3.13.15
+{'platform': 'Linux-6.6.122+-x86_64-with-glibc2.39', 'gpus': ['Tesla T4'], 'free_disk_gb': 207.6}
+[colab] Executing cell 3/19 - 2.1 Pinned model identities and footprint...
+| model | model_id | revision | weights_MiB | reference_device | selected       
+---|---|---|---|---|---|---                                                     
+0 | TiRex-2 | NX-AI/TiRex-2 | 05e5b26db52b… | 363.0 | CPU | True                
+1 | Chronos-2 | amazon/chronos-2 | 95a9710e2596… | 455.8 | CPU/GPU | True       
+2 | Toto 2.0 2.5B | Datadog/Toto-2.0-2.5B | 51a2812bbe44… | 9362.4 | CUDA GPU | 
+False                                                                           
+[colab] Executing cell 4/19 - 3.1 Generate or load the sample...
+{'sample_kind': 'synthetic', 'source': 'inline generator equivalent to chronos_multi_series.csv', 'sha256': '6f12f1475411aaab13a2de860ba50f008bd7185a9266f99147c244db4a5de8b3', 'rows': 192, 'columns': ['series_id', 'timestamp', 'target']}
+[colab] Executing cell 5/19 - 3.2 Check the data before any model download...
+{
+  "sample_kind": "synthetic",
+  "source": "inline generator equivalent to chronos_multi_series.csv",
+  "sha256": "6f12f1475411aaab13a2de860ba50f008bd7185a9266f99147c244db4a5de8b3",
+  "license": "Apache-2.0",
+  "n_series": 2,
+  "series_ids": [
+    "A",
+    "B"
+  ],
+  "n_steps_per_series": 96,
+  "frequency": "0 days 01:00:00",
+  "frequency_alias": "h",
+  "validation_horizon": 24,
+  "test_horizon": 24,
+  "season_length": 24
+}
+| series_id | timestamp | target                                                
+---|---|---|---                                                                 
+0 | A | 2026-01-01 00:00:00 | 120.0000                                          
+1 | A | 2026-01-01 01:00:00 | 121.7329                                          
+2 | A | 2026-01-01 02:00:00 | 123.3600                                          
+3 | A | 2026-01-01 03:00:00 | 124.7826                                          
+4 | A | 2026-01-01 04:00:00 | 125.9162                                          
+[colab] Executing cell 6/19 - 4.1 Plot the development period and mark the hidden test period...
+<Figure size 1200x500 with 1 Axes>
+
+[Image saved to: /tmp/tmp7symrg0u.png]
+<Figure size 1200x400 with 1 Axes>
+
+[Image saved to: /tmp/tmpvw5emdvo.png]
+Summary of the development rows only (144 rows); the test period is not included.
+| count | mean | std | min | max                                                
+---|---|---|---|---|---                                                         
+series_id |  |  |  |  |                                                         
+A | 72 | 126.39 | 4.911808 | 117.24 | 135.7200                                  
+B | 72 | 159.26 | 6.645793 | 147.56 | 171.3142                                  
+[colab] Executing cell 7/19 - 5.1 Split the data, build the baselines and define the metrics...
+{'validation_context_steps': 48, 'validation_horizon': 24, 'test_context_steps': 72, 'test_horizon': 24}
+| model | macro_mae | macro_rmse                                                
+---|---|---|---                                                                 
+0 | last_value | 5.534783 | 6.94593                                             
+1 | seasonal_naive | 3.600000 | 3.60000                                         
+| model | series_id | mae                                                       
+---|---|---|---                                                                 
+0 | last_value | A | 4.074217                                                   
+1 | last_value | B | 6.995350                                                   
+2 | seasonal_naive | A | 4.320000                                               
+3 | seasonal_naive | B | 2.880000                                               
+[colab] Executing cell 8/19 - 6.1 Build one environment per model...
+uv 0.12.15: downloaded and checked
+tirex: building the environment (Python 3.12.12, hash-locked wheels)
+tirex: environment ready
+chronos: building the environment (Python 3.12.12, hash-locked wheels)
+chronos: environment ready
+{'tirex': 'work/envs/tirex/bin/python', 'chronos': 'work/envs/chronos/bin/python'}
+[colab] Executing cell 9/19 - 6.2 Write the model runner programs...
+tirex work/experiments/20261014T142133Z-4a813b/runners/tirex_runner.py 7c47ee69be68e5f0…
+chronos work/experiments/20261014T142133Z-4a813b/runners/chronos_runner.py 24da095ca6b5eef8…
+toto work/experiments/20261014T142133Z-4a813b/runners/toto_runner.py 8ea3624c709e9fa9…
+[colab] Executing cell 10/19 - 7.1 Forecast the validation period with each model...
+validation: tirex
+  [tirex] checking the pinned checkpoint files (the first run downloads them) — 5 s
+  [tirex] loading the model — 15 s
+  [tirex] forecasting 2 series independently — 30 s
+  [tirex] still working — 30 s elapsed
+  [tirex] finished in 52 s
+validation: chronos
+  [chronos] checking the pinned checkpoint files (the first run downloads them) — 5 s
+  [chronos] loading the model — 10 s
+  [chronos] forecasting 2 series independently — 25 s
+  [chronos] still working — 30 s elapsed
+  [chronos] finished in 31 s
+| model | pooled_mae | pooled_rmse | macro_mae | macro_rmse |                   
+macro_mae_skill_vs_seasonal | skill_series | q10_q90_coverage |                 
+mean_interval_width | pinball_q0.1 | pinball_q0.5 | pinball_q0.9                
+---|---|---|---|---|---|---|---|---|---|---|---|---                             
+0 | TiRex-2 | 2.438256 | 2.688686 | 2.438256 | 2.653567 | 0.317316 | 2 |        
+0.645833 | 4.995992 | 0.464219 | 1.219128 | 0.205501                            
+1 | Chronos-2 | 0.267486 | 0.321103 | 0.267486 | 0.321092 | 0.923636 | 2 |      
+1.000000 | 3.867108 | 0.224749 | 0.133743 | 0.161962                            
+2 | last_value | 5.534783 | 7.192069 | 5.534783 | 6.945930 | -0.686023 | 2 |    
+0.000000 | 0.000000 | 3.265652 | 2.767392 | 2.269132                            
+3 | seasonal_naive | 3.600000 | 3.671294 | 3.600000 | 3.600000 | 0.000000 | 2 | 
+0.000000 | 0.000000 | 0.360000 | 1.800000 | 3.240000                            
+| model | series_id | mae | rmse | seasonal_naive_mae | mae_skill_vs_seasonal | 
+pinball_q0.1 | pinball_q0.5 | pinball_q0.9 | q10_q90_coverage |                 
+mean_interval_width                                                             
+---|---|---|---|---|---|---|---|---|---|---|---                                 
+0 | TiRex-2 | A | 2.832762 | 3.086708 | 4.32 | 0.344268 | 0.522807 | 1.416381 | 
+0.294585 | 0.541667 | 5.364841                                                  
+1 | TiRex-2 | B | 2.043749 | 2.220427 | 2.88 | 0.290365 | 0.405632 | 1.021875 | 
+0.116417 | 0.750000 | 4.627143                                                  
+2 | Chronos-2 | A | 0.285351 | 0.323846 | 4.32 | 0.933947 | 0.269991 | 0.142675 
+| 0.149180 | 1.000000 | 4.191709                                                
+3 | Chronos-2 | B | 0.249621 | 0.318337 | 2.88 | 0.913326 | 0.179507 | 0.124810 
+| 0.174744 | 1.000000 | 3.542507                                                
+4 | last_value | A | 4.074217 | 5.080475 | 4.32 | 0.056894 | 0.515948 | 2.037108
+| 3.558268 | 0.000000 | 0.000000                                                
+5 | last_value | B | 6.995350 | 8.811385 | 2.88 | -1.428941 | 6.015355 |        
+3.497675 | 0.979995 | 0.000000 | 0.000000                                       
+6 | seasonal_naive | A | 4.320000 | 4.320000 | 4.32 | 0.000000 | 0.432000 |     
+2.160000 | 3.888000 | 0.000000 | 0.000000                                       
+7 | seasonal_naive | B | 2.880000 | 2.880000 | 2.88 | 0.000000 | 0.288000 |     
+1.440000 | 2.592000 | 0.000000 | 0.000000                                       
+Model environments as observed in the validation run (record these with your results):
+    model  python device     precision  torch             model_package                                                         other_packages
+  TiRex-2 3.12.12    cpu       float32  2.8.0             tirex-2 0.2.1                      numpy 2.3.3, pandas 2.3.3, huggingface-hub 0.36.2
+Chronos-2 3.12.12   cuda torch.float32 2.14.0 chronos-forecasting 2.3.1 transformers 4.57.6, numpy 2.5.3, pandas 3.0.5, huggingface-hub 0.36.2
+[colab] Executing cell 11/19 - 7.2 Plot the validation forecasts...
+<Figure size 1300x600 with 1 Axes>
+
+[Image saved to: /tmp/tmpqgubk3g6.png]
+<Figure size 1100x400 with 1 Axes>
+
+[Image saved to: /tmp/tmp76wavpsr.png]
+<Figure size 1100x400 with 1 Axes>
+
+[Image saved to: /tmp/tmptpcn9eon.png]
+[colab] Executing cell 12/19 - 8.1 Freeze the experiment...
+Frozen experiment: outputs/20261014T142133Z-4a813b/frozen/frozen_experiment.json
+Validation-based choice recorded in the freeze: {'chosen_model': 'Chronos-2', 'criterion': 'lowest macro MAE', 'rationale': '', 'rule': 'validation macro MAE winner', 'validation_macro_mae': {'TiRex-2': 2.438255501556396, 'Chronos-2': 0.26748583333333276}, 'validation_criterion_scores': {'TiRex-2': 2.438255501556396, 'Chronos-2': 0.26748583333333276}}
+[colab] Executing cell 13/19 - 9.1 Check the freeze, then forecast the test period...
+test: tirex
+  [tirex] checking the pinned checkpoint files (the first run downloads them) — 5 s
+  [tirex] loading the model — 5 s
+  [tirex] forecasting 2 series independently — 10 s
+  [tirex] finished in 16 s
+test: chronos
+  [chronos] checking the pinned checkpoint files (the first run downloads them) — 5 s
+  [chronos] loading the model — 5 s
+  [chronos] forecasting 2 series independently — 9 s
+  [chronos] finished in 9 s
+| model | pooled_mae | pooled_rmse | macro_mae | macro_rmse |                   
+macro_mae_skill_vs_seasonal | skill_series | q10_q90_coverage |                 
+mean_interval_width | pinball_q0.1 | pinball_q0.5 | pinball_q0.9                
+---|---|---|---|---|---|---|---|---|---|---|---|---                             
+0 | TiRex-2 | 1.164381 | 1.472912 | 1.164381 | 1.284163 | 0.702102 | 2 | 0.9375 
+| 4.631401 | 0.326672 | 0.582191 | 0.140976                                     
+1 | Chronos-2 | 0.175389 | 0.223948 | 0.175389 | 0.218251 | 0.952009 | 2 |      
+1.0000 | 1.983034 | 0.134246 | 0.087695 | 0.064057                              
+2 | last_value | 5.534783 | 7.192069 | 5.534783 | 6.945930 | -0.686023 | 2 |    
+0.0000 | 0.000000 | 3.265652 | 2.767392 | 2.269132                              
+3 | seasonal_naive | 3.600000 | 3.671294 | 3.600000 | 3.600000 | 0.000000 | 2 | 
+0.0000 | 0.000000 | 0.360000 | 1.800000 | 3.240000                              
+| model | series_id | mae | rmse | seasonal_naive_mae | mae_skill_vs_seasonal | 
+pinball_q0.1 | pinball_q0.5 | pinball_q0.9 | q10_q90_coverage |                 
+mean_interval_width                                                             
+---|---|---|---|---|---|---|---|---|---|---|---                                 
+0 | TiRex-2 | A | 1.838617 | 2.005548 | 4.32 | 0.574394 | 0.415790 | 0.919309 | 
+0.087814 | 0.875 | 4.945897                                                     
+1 | TiRex-2 | B | 0.490145 | 0.562777 | 2.88 | 0.829811 | 0.237553 | 0.245073 | 
+0.194137 | 1.000 | 4.316905                                                     
+2 | Chronos-2 | A | 0.223045 | 0.268444 | 4.32 | 0.948369 | 0.167258 | 0.111522 
+| 0.059197 | 1.000 | 2.264548                                                   
+3 | Chronos-2 | B | 0.127734 | 0.168059 | 2.88 | 0.955648 | 0.101234 | 0.063867 
+| 0.068918 | 1.000 | 1.701520                                                   
+4 | last_value | A | 4.074217 | 5.080475 | 4.32 | 0.056894 | 0.515948 | 2.037108
+| 3.558268 | 0.000 | 0.000000                                                   
+5 | last_value | B | 6.995350 | 8.811385 | 2.88 | -1.428941 | 6.015355 |        
+3.497675 | 0.979995 | 0.000 | 0.000000                                          
+6 | seasonal_naive | A | 4.320000 | 4.320000 | 4.32 | 0.000000 | 0.432000 |     
+2.160000 | 3.888000 | 0.000 | 0.000000                                          
+7 | seasonal_naive | B | 2.880000 | 2.880000 | 2.88 | 0.000000 | 0.288000 |     
+1.440000 | 2.592000 | 0.000 | 0.000000                                          
+Frozen choice: Chronos-2; criterion: lowest macro MAE; validation macro MAE winner
+1. Best among the foundation models, on this one test origin (macro MAE, lower is better):
+   Chronos-2: 0.1754 (+0.0000 against Chronos-2)
+   TiRex-2: 1.1644 (+0.9890 against Chronos-2)
+   Chronos-2 had the lowest observed macro MAE on this test origin.
+2. Against the baselines (a separate question), Chronos-2:
+   macro MAE minus seasonal naive -3.4246; minus last value -5.3594
+   mean per-series skill vs seasonal naive +0.952 over 2 series; positive skill on 2 of 2 series
+One origin with correlated errors cannot establish a reliable ranking: treat this as evidence for further evaluation.
+[colab] Executing cell 14/19 - 9.2 Plot the test forecasts...
+<Figure size 1300x600 with 1 Axes>
+
+[Image saved to: /tmp/tmpkwj1aimn.png]
+<Figure size 1200x500 with 1 Axes>
+
+[Image saved to: /tmp/tmpcbbzd9mi.png]
+[colab] Executing cell 15/19 - 10.1 Compare model size and measured runtime...
+| model | checkpoint_MiB | device | load_seconds | inference_seconds |          
+wall_seconds                                                                    
+---|---|---|---|---|---|---                                                     
+0 | TiRex-2 | 363.0 | cpu | 7.204389 | 6.724727 | 15.872477                     
+1 | Chronos-2 | 455.8 | cuda | 6.108025 | 1.888287 | 9.331610                   
+[colab] Executing cell 16/19 - 11.1 Forecast 24 hours beyond the supplied data...
+beyond the supplied data: tirex
+  [tirex] checking the pinned checkpoint files (the first run downloads them) — 5 s
+  [tirex] loading the model — 5 s
+  [tirex] forecasting 2 series independently — 10 s
+  [tirex] finished in 16 s
+beyond the supplied data: chronos
+  [chronos] checking the pinned checkpoint files (the first run downloads them) — 5 s
+  [chronos] loading the model — 5 s
+  [chronos] forecasting 2 series independently — 9 s
+  [chronos] finished in 9 s
+| model | partition | forecast_origin | series_id | timestamp | step | q0.1 |   
+q0.5 | q0.9 | prediction                                                        
+---|---|---|---|---|---|---|---|---|---|---                                     
+0 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 00:00:00 | 1 |      
+136.673645 | 137.342880 | 137.935425 | 137.342880                               
+1 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 01:00:00 | 2 |      
+138.023193 | 138.897781 | 139.609558 | 138.897781                               
+2 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 02:00:00 | 3 |      
+139.221680 | 140.180328 | 141.041397 | 140.180328                               
+3 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 03:00:00 | 4 |      
+140.374496 | 141.552032 | 142.556564 | 141.552032                               
+4 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 04:00:00 | 5 |      
+141.112244 | 142.358902 | 143.685501 | 142.358902                               
+5 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 05:00:00 | 6 |      
+141.610443 | 143.168579 | 144.640320 | 143.168579                               
+6 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 06:00:00 | 7 |      
+141.776840 | 143.316803 | 144.883743 | 143.316803                               
+7 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 07:00:00 | 8 |      
+141.635132 | 143.365845 | 145.012222 | 143.365845                               
+8 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 08:00:00 | 9 |      
+140.944229 | 142.782333 | 144.513855 | 142.782333                               
+9 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 09:00:00 | 10 |     
+140.098526 | 141.986282 | 143.796814 | 141.986282                               
+10 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 10:00:00 | 11 |    
+138.937180 | 140.833694 | 142.779099 | 140.833694                               
+11 | TiRex-2 | future | 2026-01-04 23:00:00 | A | 2026-01-05 11:00:00 | 12 |    
+137.575974 | 139.571152 | 141.520264 | 139.571152                               
+Forecast covers 2026-01-05 00:00:00 to 2026-01-05 23:00:00. Evidence status: not evaluated: matching future targets were not provided.
+[colab] Executing cell 17/19 - 13.1 Export the experiment record...
+{'experiment_id': '20261014T142133Z-4a813b', 'output_directory': '/content/outputs/20261014T142133Z-4a813b', 'files_in_report': 37, 'report_bundle': '/content/outputs/20261014T142133Z-4a813b_DIMER_TimeSeries_FM_Workshop_Report.zip', 'report_bundle_sha256': 'fc2655b9e22d45af5184fd8b0985515f43e0df9f4188dcaf51c5997c777b1e02'}
+The report includes a copy of the input data (data/validated_panel_source.csv).
+[colab] Executing cell 18/19 - 13.2 Run-all completion summary...
+| value                                                                         
+---|---                                                                         
+notebook_revision | 0.2.0-candidate                                             
+experiment_id | 20261014T142133Z-4a813b                                         
+notebook_spec | 2.5                                                             
+profile | TASK-INFERENCE                                                        
+mode | WORKSHOP                                                                 
+tier | STANDARD                                                                 
+models | [TiRex-2, Chronos-2]                                                   
+sample_kind | synthetic                                                         
+sample_sha256 | 6f12f1475411aaab13a2de860ba50f008bd7185a9266f9...               
+validation_context | 48                                                         
+validation_horizon | 24                                                         
+test_context | 72                                                               
+test_horizon | 24                                                               
+future_horizon | 24                                                             
+future_forecast_status | not evaluated: matching future targets were no...      
+output_directory | /content/outputs/20261014T142133Z-4a813b                     
+Default notebook path complete. Treat all metrics from these samples as tutorial/sanity evidence, not benchmark evidence.
+[colab] Executing cell 19/19 - Optional validation-only seasonal-period comparison...
+Optional activity skipped; the frozen experiment is unchanged.
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-3629edd-b7471e/DIMER_MultiModel_TimeSeries_Forecasting_Workshop_3629edd_colab-cli-t4_output.ipynb'...

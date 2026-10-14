@@ -20,9 +20,10 @@ def test_generator_parity():
         check=True,
     )
 
-def test_notebook_declares_spec_2_1_workshop():
+def test_notebook_declares_spec_2_5_workshop():
     meta = load()["metadata"]["dimer"]
-    assert meta["notebook_spec"] == "2.1"
+    assert meta["notebook_spec"] == "2.5"
+    assert meta["notebook_kind"] == "WORKSHOP"
     assert meta["notebook_profile"] == "TASK-INFERENCE"
     assert meta["notebook_mode"] == "WORKSHOP"
     assert meta["standalone"] is True
