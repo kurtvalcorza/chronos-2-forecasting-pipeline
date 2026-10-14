@@ -1,0 +1,315 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-56ebffc-0faf7d/DIMER_Philippine_Reef_Heat_Stress_Capstone_56ebffc_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/14 - reef-003...
+  child pid 533 launched
+Downloading cpython-3.12.13-linux-x86_64-gnu (download) (32.3MiB)
+ Downloaded cpython-3.12.13-linux-x86_64-gnu (download)
+Using CPython 3.12.13
+Creating virtual environment at: reef_capstone_run/environment
+Activate with: source reef_capstone_run/environment/bin/activate
+Installing the hash-locked environment (a few minutes on a fresh runtime)...
+  ... setup_sync still working, 30 s (RAM available 11.4/12.7 GB, unwritten 0.1 GB, disk free 204 GB)
+  ... setup_sync still working, 60 s (RAM available 11.5/12.7 GB, unwritten 0.2 GB, disk free 201 GB)
+Locked packages installed in 74 s (log: /content/reef_capstone_run/logs/setup_sync.log).
+Installed files flushed to disk in 1 s (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB).
+Isolated Python 3.12.13 dependencies ready (kernel Python 3.13.15); the notebook kernel does not need a restart.
+[colab] Executing cell 2/14 - reef-005...
+NOAA Coral Reef Watch 1985-01-01 through 2026-09-26
+[colab] Executing cell 3/14 - reef-007...
+[colab] Executing cell 4/14 - reef-008...
+[colab] Executing cell 5/14 - reef-009...
+[colab] Executing cell 6/14 - reef-010...
+[14:48:40] stage prepare started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 909 launched
+[runner pid 909] imports loaded; stage prepare
+Loaded 76220 regional daily records from the verified archive.
+split      test  validation
+region_id                  
+central      46          23
+eastern      46          23
+northern     46          23
+southern     23          23
+western      23          23
+DHW reconstructed within 0.0001 °C-weeks. Frozen origins and settings saved.
+[14:48:44] stage prepare finished in 4 s
+[colab] Executing cell 7/14 - reef-012...
+[14:48:44] stage baselines started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 931 launched
+[runner pid 931] imports loaded; stage baselines
+baselines: 25/299 origins
+baselines: 50/299 origins
+baselines: 75/299 origins
+baselines: 100/299 origins
+baselines: 125/299 origins
+baselines: 150/299 origins
+baselines: 175/299 origins
+baselines: 200/299 origins
+baselines: 225/299 origins
+baselines: 250/299 origins
+  ... stage_baselines still working, 30 s (RAM available 11.4/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+baselines: 275/299 origins
+{'stage': 'baselines', 'origins': 299, 'seconds': 36.225066045999995, 'complete': True, 'rows': 16744}
+[14:49:21] stage baselines finished in 37 s
+Baseline forecasts saved. Both arms use exactly the planned contexts and outcomes.
+[colab] Executing cell 8/14 - reef-014...
+[14:49:21] stage validation started (RAM available 11.4/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1077 launched
+[runner pid 1077] imports loaded; stage validation
+validation: 25/115 origins
+validation: 50/115 origins
+validation: 75/115 origins
+  ... stage_validation still working, 30 s (RAM available 10.6/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+validation: 100/115 origins
+{'stage': 'validation', 'origins': 115, 'seconds': 34.98488382099998, 'complete': True, 'rows': 3220, 'quantile_crossing_days': 0, 'quantile_crossing_max_c': 0.0, 'peak_gpu_bytes': 513587712}
+[14:50:00] stage validation finished in 39 s
+[colab] Executing cell 9/14 - reef-016...
+[14:50:00] stage activity started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1240 launched
+[runner pid 1240] imports loaded; stage activity
+activity: 25/115 origins
+activity: 50/115 origins
+activity: 75/115 origins
+activity: 100/115 origins
+{'stage': 'activity', 'origins': 115, 'seconds': 19.286859461000006, 'complete': True, 'rows': 3220, 'context_days': 180, 'quantile_crossing_days': 1, 'quantile_crossing_max_c': 2.3096799850463867e-05, 'peak_gpu_bytes': 513145856}
+[14:50:20] stage activity finished in 20 s
+[14:50:20] stage compare started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1327 launched
+[runner pid 1327] imports loaded; stage compare
+Validation 2023 only. Test baseline records exist, but test scores have not been inspected and model choices are fixed.
+Macro HotSpot MAE (°C) and DHW endpoint MAE (°C-weeks) with support:
+            arm  horizon  hotspot_mae  dhw_endpoint_mae  regions  origins  days
+        chronos        7        0.122             0.094        5      115   805
+    chronos_180        7        0.127             0.099        5      115   805
+dhw_persistence        7          n/a             0.246        5      115   115
+    persistence        7        0.118             0.098        5      115   805
+       seasonal        7        0.196             0.188        5      115   805
+        chronos       14        0.162             0.260        5      115  1610
+    chronos_180       14        0.176             0.271        5      115  1610
+dhw_persistence       14          n/a             0.533        5      115   115
+    persistence       14        0.158             0.254        5      115  1610
+       seasonal       14        0.184             0.311        5      115  1610
+        chronos       28        0.229             0.727        5      115  3220
+    chronos_180       28        0.258             0.744        5      115  3220
+dhw_persistence       28          n/a             1.016        5      115   115
+    persistence       28        0.232             0.756        5      115  3220
+       seasonal       28        0.187             0.562        5      115  3220
+
+14-day HotSpot MAE by region: 365-day default (chronos) vs 180-day activity:
+region_id  chronos  chronos_180  180 minus 365  origins
+  central    0.140        0.150          0.010       23
+  eastern    0.179        0.198          0.019       23
+ northern    0.176        0.189          0.013       23
+ southern    0.163        0.172          0.009       23
+  western    0.149        0.169          0.020       23
+
+Trace a valid context: central, origin 2023-01-01.
+  365-day context 2022-01-02 to 2023-01-01;
+  180-day context 2022-07-06 to 2023-01-01 (its final 180 days);
+  targets 2023-01-02 to 2023-01-29.
+Trace a rejected origin: southern, 2025-01-15: incomplete_365_day_context.
+The 365-day test default stays fixed whichever validation context wins.
+[14:50:23] stage compare finished in 3 s
+[14:50:23] stage lock started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1341 launched
+[runner pid 1341] imports loaded; stage lock
+365-day context retained. Test settings locked.
+[14:50:24] stage lock finished in 1 s
+[colab] Executing cell 10/14 - reef-018...
+[14:50:24] stage test started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1347 launched
+[runner pid 1347] imports loaded; stage test
+test: 25/184 origins
+test: 50/184 origins
+test: 75/184 origins
+test: 100/184 origins
+test: 125/184 origins
+test: 150/184 origins
+  ... stage_test still working, 30 s (RAM available 10.6/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+test: 175/184 origins
+{'stage': 'test', 'origins': 184, 'seconds': 32.76884753499996, 'complete': True, 'rows': 5152, 'quantile_crossing_days': 0, 'quantile_crossing_max_c': 0.0, 'peak_gpu_bytes': 513587712}
+[14:50:58] stage test finished in 34 s
+[14:50:58] stage score started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1490 launched
+[runner pid 1490] imports loaded; stage score
+A. Test HotSpot MAE (°C) and DHW endpoint MAE (°C-weeks); equal-region macro means.
+   HotSpot MAE averages every lead from 1 to the horizon; DHW MAE is scored at the
+   endpoint lead only. Support counts show which regions and origins each score covers;
+   'target records' counts forecast days, and overlapping windows repeat target dates.
+   dhw_persistence carries DHW forward and has no HotSpot score (n/a).
+                 panel             arm  HotSpot MAE, leads 1–7  HotSpot MAE, leads 1–14  HotSpot MAE, leads 1–28  DHW MAE, lead-14 endpoint  DHW MAE, lead-28 endpoint  regions  origins  target records, leads 1–14
+Full test (unbalanced)     persistence                   0.107                    0.152                    0.211                      0.263                      0.742        5      184                        2576
+Full test (unbalanced)        seasonal                   0.216                    0.213                    0.212                      0.463                      0.887        5      184                        2576
+Full test (unbalanced)         chronos                   0.107                    0.153                    0.212                      0.276                      0.770        5      184                        2576
+Full test (unbalanced) dhw_persistence                     n/a                      n/a                      n/a                      0.948                      1.768        5      184                         184
+           Common 2024     persistence                   0.104                    0.153                    0.222                      0.281                      0.829        5      115                        1610
+           Common 2024        seasonal                   0.239                    0.237                    0.234                      0.563                      1.102        5      115                        1610
+           Common 2024         chronos                   0.104                    0.157                    0.228                      0.303                      0.891        5      115                        1610
+           Common 2024 dhw_persistence                     n/a                      n/a                      n/a                      1.166                      2.171        5      115                         115
+      2025 (3 regions)     persistence                   0.105                    0.139                    0.178                      0.178                      0.474        3       69                         966
+      2025 (3 regions)        seasonal                   0.153                    0.150                    0.153                      0.206                      0.351        3       69                         966
+      2025 (3 regions)         chronos                   0.105                    0.137                    0.172                      0.165                      0.425        3       69                         966
+      2025 (3 regions) dhw_persistence                     n/a                      n/a                      n/a                      0.538                      1.008        3       69                          69
+
+B. HotSpot MAE, leads 1–14, by region, full test panel (°C).
+region_id  chronos  persistence  seasonal  origins
+  central    0.139        0.140     0.184       46
+  eastern    0.147        0.147     0.187       46
+ northern    0.147        0.140     0.196       46
+ southern    0.157        0.156     0.263       23
+  western    0.174        0.176     0.237       23
+
+C. Chronos q10–q90 marginal interval: coverage (nominal 0.80), width and pinball loss.
+   q10/q50/q90 forecast each future day's 10th, 50th and 90th percentile on its own;
+   they are not a joint path. coverage is the observed fraction of days inside q10–q90;
+   width is the mean q90 minus q10 in °C. Pinball loss scores each quantile, penalising
+   misses asymmetrically; lower is better. Many observed values are exactly 0, so an
+   inclusive interval can cover more than 80% even with correct quantiles. These are
+   diagnostics; no probabilistic baseline is scored. Crossing quantiles are sorted and
+   negative values clipped to 0 before scoring.
+   Test Chronos forecast days: 0 with crossing quantiles (rearranged), 141 with a negative median (clipped to 0), of 5152.
+period  horizon  coverage_10_90  width_10_90  pinball_q10  pinball_q50  pinball_q90
+  2024        7           0.830        0.339        0.022        0.052        0.025
+  2024       14           0.807        0.462        0.032        0.079        0.038
+  2024       28           0.797        0.632        0.039        0.114        0.064
+  2025        7           0.853        0.347        0.019        0.052        0.030
+  2025       14           0.849        0.466        0.027        0.068        0.043
+  2025       28           0.850        0.617        0.031        0.086        0.068
+  full        7           0.820        0.342        0.021        0.054        0.026
+  full       14           0.806        0.463        0.030        0.076        0.040
+  full       28           0.806        0.628        0.037        0.106        0.064
+
+D. Errors on observed high-stress days (HotSpot >= 1 °C), full test panel.
+   high_stress_mae is the equal-region mean over regions with such days.
+        arm  horizon  high_stress_days  high_stress_mae
+    chronos        7               279            0.153
+    chronos       14               568            0.227
+    chronos       28              1127            0.334
+persistence        7               279            0.150
+persistence       14               568            0.216
+persistence       28              1127            0.316
+   seasonal        7               279            0.463
+   seasonal       14               568            0.454
+   seasonal       28              1127            0.452
+
+E. DHW threshold events at the endpoint, pooled over region-origins (full test panel).
+   new_exceedance keeps origins that were below the threshold at the origin.
+   Unavailable precision/recall is n/a with a reason; it is never perfect performance.
+ horizon threshold         subset             arm   n  tp  fp  fn  tn  observed_pos  precision  recall                                        note
+      14   4 °C-wk            all         chronos 184  57   1   4 122            61      0.983   0.934                                            
+      14   4 °C-wk            all dhw_persistence 184  55   9   6 114            61      0.859   0.902                                            
+      14   4 °C-wk            all     persistence 184  57   1   4 122            61      0.983   0.934                                            
+      14   4 °C-wk            all        seasonal 184  55   1   6 122            61      0.982   0.902                                            
+      14   4 °C-wk new_exceedance         chronos 120   5   1   1 113             6      0.833   0.833                                            
+      14   4 °C-wk new_exceedance dhw_persistence 120   0   0   6 114             6        n/a   0.000 no predicted positives: precision undefined
+      14   4 °C-wk new_exceedance     persistence 120   5   1   1 113             6      0.833   0.833                                            
+      14   4 °C-wk new_exceedance        seasonal 120   4   1   2 113             6      0.800   0.667                                            
+      14   8 °C-wk            all         chronos 184  28   0   1 155            29      1.000   0.966                                            
+      14   8 °C-wk            all dhw_persistence 184  23   6   6 149            29      0.793   0.793                                            
+      14   8 °C-wk            all     persistence 184  28   1   1 154            29      0.966   0.966                                            
+      14   8 °C-wk            all        seasonal 184  27   1   2 154            29      0.964   0.931                                            
+      14   8 °C-wk new_exceedance         chronos 155   5   0   1 149             6      1.000   0.833                                            
+      14   8 °C-wk new_exceedance dhw_persistence 155   0   0   6 149             6        n/a   0.000 no predicted positives: precision undefined
+      14   8 °C-wk new_exceedance     persistence 155   5   1   1 148             6      0.833   0.833                                            
+      14   8 °C-wk new_exceedance        seasonal 155   5   1   1 148             6      0.833   0.833                                            
+      28   4 °C-wk            all         chronos 184  53   3   8 120            61      0.946   0.869                                            
+      28   4 °C-wk            all dhw_persistence 184  48  16  13 107            61      0.750   0.787                                            
+      28   4 °C-wk            all     persistence 184  54   2   7 121            61      0.964   0.885                                            
+      28   4 °C-wk            all        seasonal 184  46   3  15 120            61      0.939   0.754                                            
+      28   4 °C-wk new_exceedance         chronos 120  11   2   2 105            13      0.846   0.846                                            
+      28   4 °C-wk new_exceedance dhw_persistence 120   0   0  13 107            13        n/a   0.000 no predicted positives: precision undefined
+      28   4 °C-wk new_exceedance     persistence 120  11   2   2 105            13      0.846   0.846                                            
+      28   4 °C-wk new_exceedance        seasonal 120   6   3   7 104            13      0.667   0.462                                            
+      28   8 °C-wk            all         chronos 184  25   5   4 150            29      0.833   0.862                                            
+      28   8 °C-wk            all dhw_persistence 184  20   9   9 146            29      0.690   0.690                                            
+      28   8 °C-wk            all     persistence 184  27   5   2 150            29      0.844   0.931                                            
+      28   8 °C-wk            all        seasonal 184  21   4   8 151            29      0.840   0.724                                            
+      28   8 °C-wk new_exceedance         chronos 155   8   4   1 142             9      0.667   0.889                                            
+      28   8 °C-wk new_exceedance dhw_persistence 155   0   0   9 146             9        n/a   0.000 no predicted positives: precision undefined
+      28   8 °C-wk new_exceedance     persistence 155   8   4   1 142             9      0.667   0.889                                            
+      28   8 °C-wk new_exceedance        seasonal 155   5   4   4 142             9      0.556   0.556                                            
+
+E2. Paired endpoint event predictions, Chronos vs persistence, same region-origins
+    (full test panel, all origins). Counts of region-origins where both, only one or
+    neither arm predicted DHW at or above the threshold; observed_pos is the support.
+ horizon threshold  pairs  both  chronos_only  persistence_only  neither  observed_pos
+      14   4 °C-wk    184    57             1                 1      125            61
+      14   8 °C-wk    184    28             0                 1      155            29
+      28   4 °C-wk    184    55             1                 1      127            61
+      28   8 °C-wk    184    29             1                 3      151            29
+
+F. Paired HotSpot MAE difference (leads 1–14), Chronos minus baseline (°C).
+   equal_region_difference averages within each region, then across regions equally:
+   it matches table A. pooled_mean_difference and the other columns pool region-origins,
+   so regions with more origins weigh more. Negative values mean lower Chronos MAE on
+   these cases. The last three columns are shares of region-origins where Chronos was
+   better, tied or worse. Descriptive only; no significance test.
+period    baseline  pairs  equal_region_difference  pooled_mean_difference  median_difference  chronos_better   tie  chronos_worse
+  2024 persistence    115                    0.004                   0.004              0.001           0.400 0.000          0.600
+  2024    seasonal    115                   -0.079                  -0.079             -0.002           0.513 0.000          0.487
+  2025 persistence     69                   -0.002                  -0.002              0.002           0.391 0.000          0.609
+  2025    seasonal     69                   -0.013                  -0.013              0.002           0.435 0.000          0.565
+  full persistence    184                    0.001                   0.001              0.001           0.397 0.000          0.603
+  full    seasonal    184                   -0.060                  -0.055              0.000           0.484 0.000          0.516
+
+Complete tables: metrics.csv (scope/table columns) inside reef_evidence.zip.
+Saved metrics for independent fresh-process reconstruction.
+[14:51:12] stage score finished in 13 s
+[colab] Executing cell 11/14 - reef-020...
+[14:51:12] stage future started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1544 launched
+[runner pid 1544] imports loaded; stage future
+Illustrative origin 2026-09-26; 2 regions excluded for missing context.
+[14:51:19] stage future finished in 8 s
+[colab] Executing cell 12/14 - reef-022...
+[14:51:20] stage reload started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1580 launched
+[runner pid 1580] imports loaded; stage reload
+Fresh-process baseline, DHW and real-model reload parity passed.
+[14:51:45] stage reload finished in 25 s
+[14:51:45] stage report started (RAM available 11.5/12.7 GB, unwritten 0.0 GB, disk free 200 GB)
+  child pid 1691 launched
+[runner pid 1691] imports loaded; stage report
+Exported /content/reef_capstone_run/reef_evidence.zip. Results are evidence, not release approval.
+[14:52:05] stage report finished in 20 s
+[colab] Executing cell 13/14 - reef-023...
+Primary summary with support: HotSpot MAE over leads 1–14 and DHW MAE at the    
+lead-14 endpoint; target records count forecast days. Tables A–F printed by the 
+scoring cell hold the detail.                                                   
+
+                                                                                
+                                HotSpot                                         
+                                   MAE,  DHW MAE,                               
+                                  leads   lead-14                        Target 
+ Split      Period  Arm            1–14  endpoint  Regions  Origins     records 
+ ────────────────────────────────────────────────────────────────────────────── 
+ test       2024    chronos       0.157     0.303        5      115        1610 
+ test       2024    dhw_per…        n/a     1.166        5      115         115 
+ test       2024    persist…      0.153     0.281        5      115        1610 
+ test       2024    seasonal      0.237     0.563        5      115        1610 
+ test       2025    chronos       0.137     0.165        3       69         966 
+ test       2025    dhw_per…        n/a     0.538        3       69          69 
+ test       2025    persist…      0.139     0.178        3       69         966 
+ test       2025    seasonal      0.150     0.206        3       69         966 
+ test       full    chronos       0.153     0.276        5      184        2576 
+ test       full    dhw_per…        n/a     0.948        5      184         184 
+ test       full    persist…      0.152     0.263        5      184        2576 
+ test       full    seasonal      0.213     0.463        5      184        2576 
+ validati…  full    chronos       0.162     0.260        5      115        1610 
+ validati…  full    chronos…      0.176     0.271        5      115        1610 
+ validati…  full    dhw_per…        n/a     0.533        5      115         115 
+ validati…  full    persist…      0.158     0.254        5      115        1610 
+ validati…  full    seasonal      0.184     0.311        5      115        1610 
+                                                                                
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmpcqucidy8.png]
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmpag27q1yz.png]
+<IPython.core.display.Image object>
+
+[Image saved to: /tmp/tmpn0ef3fl7.png]
+/content/reef_capstone_run/reef_evidence.zip                                    
+All mandatory stages completed. Preserve this executed notebook and the evidence bundle.
+[colab] Executing cell 14/14 - reef-026...
+BYOD disabled. The complete default experiment is unchanged.
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/chronos-2-forecasting-pipeline-56ebffc-0faf7d/DIMER_Philippine_Reef_Heat_Stress_Capstone_56ebffc_colab-cli-t4_output.ipynb'...

@@ -42,7 +42,7 @@ QUANTILE_COLUMNS = [
     "q50",
     "q90",
 ]
-QUANTILE_ARMS = {"chronos", "chronos_180"}
+QUANTILE_ARMS = {"chronos", "chronos_90", "chronos_180", "chronos_270"}
 
 
 def json_native(value: object) -> object:

@@ -16,6 +16,39 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+REEF_REFUSED_EXIT = 3  # a BYOD input refused with one learner-facing message; not a crash
+
+
+class ReefInputRefused(ValueError):
+    """A BYOD file refused with one actionable message naming the file and the failed rule."""
+
+
+# Learner setting of the validation-only context-length activity (Section 6). The 365-day test
+# context is fixed; this value never reaches the test stage.
+REEF_ACTIVITY_DAYS = (90, 180, 270)
+REEF_ACTIVITY_DEFAULT = 180
+
+
+def reef_activity_arm(days: int) -> str:
+    return f"chronos_{days}"
+
+
+def reef_activity_days(root: Path) -> int:
+    """Context length the activity stage used, as recorded in its summary (default if absent)."""
+    path = root / "activity_summary.json"
+    if path.exists():
+        return int(reef_read(path).get("context_days", REEF_ACTIVITY_DEFAULT))
+    return REEF_ACTIVITY_DEFAULT
+
+
+def reef_check_activity_days(days) -> int:
+    if days not in REEF_ACTIVITY_DAYS:
+        raise ReefInputRefused(
+            f"ACTIVITY_CONTEXT_DAYS={days!r}: choose 90, 180 or 270 days. Fix the setting in "
+            "Section 6 and re-run that cell, then the cells below it in order."
+        )
+    return int(days)
+
 
 def reef_json(path: Path, value: object) -> None:
     path.write_text(
@@ -133,6 +166,8 @@ def reef_plan(root: Path) -> pd.DataFrame:
 
 def reef_stage_forecasts(root: Path, panel: pd.DataFrame, plan: pd.DataFrame, stage: str):
     splits, arms = REEF_STAGE_ARMS[stage]
+    if stage == "activity":
+        arms = [reef_activity_arm(reef_activity_days(root))]
     frame = reef_records(root / f"{stage}_forecasts.csv")
     try:
         validate_forecast_grid(frame, plan[plan.split.isin(splits)], arms, panel)
@@ -157,7 +192,8 @@ def reef_prepare(root: Path) -> None:
         root / "experiment_config.json",
         {
             "context_days": 365,
-            "activity_context_days": 180,
+            "activity_context_days_allowed": list(REEF_ACTIVITY_DAYS),
+            "activity_context_days_default": REEF_ACTIVITY_DEFAULT,
             "horizons": [7, 14, 28],
             "primary": "14-day HotSpot MAE; equal-region macro mean",
             "validation_years": [2023],
@@ -208,8 +244,13 @@ def reef_prepare(root: Path) -> None:
     print("DHW reconstructed within 0.0001 °C-weeks. Frozen origins and settings saved.")
 
 
-def reef_experiment(root: Path, stage: str) -> None:
+def reef_experiment(root: Path, stage: str, context_days: int | None = None) -> None:
     start = time.perf_counter()
+    if stage != "activity" and context_days is not None:
+        raise ValueError("Only the validation activity takes a context-length setting")
+    activity_days = reef_check_activity_days(
+        REEF_ACTIVITY_DEFAULT if context_days is None else context_days
+    )
     panel = reef_load_data(root)
     manifest = origin_manifest(panel)
     config = reef_read(root / "experiment_config.json")
@@ -231,7 +272,7 @@ def reef_experiment(root: Path, stage: str) -> None:
     output = []
     for number, row in enumerate(selected.itertuples(), 1):
         origin = pd.Timestamp(row.origin)
-        length = 180 if stage == "activity" else 365
+        length = activity_days if stage == "activity" else 365
         context = context_at(panel, row.region_id, origin, length=length)
         values = np.asarray(context, dtype=float)
         if stage == "baselines":
@@ -243,7 +284,7 @@ def reef_experiment(root: Path, stage: str) -> None:
                 )
         else:
             q = reef_predict(model, values)
-            arm = "chronos_180" if stage == "activity" else "chronos"
+            arm = reef_activity_arm(activity_days) if stage == "activity" else "chronos"
             output.append(
                 forecast_frame(panel, row.region_id, origin, arm, q[:, 1], row.split, quantiles=q)
             )
@@ -267,6 +308,8 @@ def reef_experiment(root: Path, stage: str) -> None:
         "complete": True,
         "rows": len(result),
     }
+    if stage == "activity":
+        summary["context_days"] = activity_days
     if "quantile_crossing_c" in result:
         crossed = result.quantile_crossing_c > 0
         summary["quantile_crossing_days"] = int(crossed.sum())
@@ -312,6 +355,8 @@ def reef_lock(root: Path) -> None:
         {
             "sha256": {name: reef_sha(root / name) for name in REEF_LOCKED_FILES},
             "selection": "365-day default retained; no test-based tuning",
+            "activity_context_days": reef_activity_days(root),
+            "activity_scope": "validation only; the test stage always uses 365 days",
         },
     )
     print("365-day context retained. Test settings locked.")
@@ -488,10 +533,51 @@ def reef_metrics(root: Path) -> dict:
     return reports
 
 
+def reef_paired_events(joined: pd.DataFrame) -> pd.DataFrame:
+    """Endpoint DHW event predictions of Chronos and persistence on the same region-origins."""
+    test = joined[joined.split == "test"]
+    rows = []
+    for horizon in (14, 28):
+        end = test[test.lead == horizon]
+        keys = ["region_id", "origin"]
+        chronos = end[end.arm == "chronos"].set_index(keys)
+        persistence = end[end.arm == "persistence"].set_index(keys)
+        if chronos.empty or persistence.empty:
+            continue
+        persistence = persistence.reindex(chronos.index)
+        for threshold in (4.0, 8.0):
+            c = chronos.dhw_c_weeks >= threshold
+            q = persistence.dhw_c_weeks >= threshold
+            rows.append(
+                {
+                    "horizon": horizon,
+                    "threshold": f"{threshold:g} °C-wk",
+                    "pairs": int(len(c)),
+                    "both": int((c & q).sum()),
+                    "chronos_only": int((c & ~q).sum()),
+                    "persistence_only": int((~c & q).sum()),
+                    "neither": int((~c & ~q).sum()),
+                    "observed_pos": int((chronos.actual_dhw_c_weeks >= threshold).sum()),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def reef_record_extras(root: Path) -> dict:
+    """Record-level counts for the learner tables; metrics.json is unchanged by these."""
+    joined, _plan = reef_joined(root)
+    chronos = joined[(joined.split == "test") & (joined.arm == "chronos")]
+    extras = {"paired_events": reef_paired_events(joined), "chronos_days": int(len(chronos))}
+    if "quantile_crossing_c" in chronos:
+        extras["crossing_days"] = int((chronos.quantile_crossing_c.fillna(0) > 0).sum())
+        extras["clipped_days"] = int((chronos.raw_hotspot_c < 0).sum())
+    return extras
+
+
 def reef_score(root: Path) -> None:
     reports = reef_metrics(root)
     reef_json(root / "metrics.json", reports)
-    text = reef_results_tables(reports)
+    text = reef_results_tables(reports, reef_record_extras(root))
     (root / "results_tables.txt").write_text(text, encoding="utf-8")
     print(text)
     print("Saved metrics for independent fresh-process reconstruction.")
@@ -531,8 +617,44 @@ def reef_event_table(records: list[dict], horizons=(14, 28)) -> pd.DataFrame:
     return pooled
 
 
-def reef_results_tables(reports: dict) -> str:
-    """Compact learner views of the frozen comparison; complete tables are in metrics.csv."""
+def reef_paired_summary(report: dict) -> pd.DataFrame:
+    """Table F: paired Chronos-minus-baseline HotSpot MAE (leads 1-14) on the test panels."""
+    paired = pd.DataFrame(report["paired_differences"])
+    paired = paired[(paired.split == "test") & (paired.horizon == 14)]
+    # Equal-region mean: average within each region, then across regions with equal weight,
+    # the same weighting as table A's primary macro MAE.
+    equal_region = (
+        paired.groupby(["period", "baseline", "region_id"])
+        .mae_difference.mean()
+        .groupby(["period", "baseline"])
+        .mean()
+        .rename("equal_region_difference")
+        .reset_index()
+    )
+    summary = (
+        paired.groupby(["period", "baseline"])
+        .mae_difference.agg(
+            pairs="count",
+            pooled_mean_difference="mean",
+            median_difference="median",
+            chronos_better=lambda d: float((d < 0).mean()),
+            tie=lambda d: float((d == 0).mean()),
+            chronos_worse=lambda d: float((d > 0).mean()),
+        )
+        .reset_index()
+    )
+    summary = summary.merge(equal_region, on=["period", "baseline"], how="left")
+    summary.insert(3, "equal_region_difference", summary.pop("equal_region_difference"))
+    return summary
+
+
+def reef_results_tables(reports: dict, extras: dict | None = None) -> str:
+    """Compact learner views of the frozen comparison; complete tables are in metrics.csv.
+
+    extras (optional) adds record-level counts computed from the scored forecasts: quantile
+    crossings and clipping (table C) and paired endpoint event predictions (table E2).
+    """
+    extras = extras or {}
     report = reports["all"]
     macro = pd.DataFrame(report["macro"])
     test = macro[macro.split == "test"]
@@ -548,19 +670,21 @@ def reef_results_tables(reports: dict) -> str:
                 {
                     "panel": label,
                     "arm": arm,
-                    "MAE 7d": sel.hotspot_mae.get(7, np.nan),
-                    "MAE 14d": sel.hotspot_mae.get(14, np.nan),
-                    "MAE 28d": sel.hotspot_mae.get(28, np.nan),
-                    "DHW MAE 14d": sel.dhw_endpoint_mae.get(14, np.nan),
-                    "DHW MAE 28d": sel.dhw_endpoint_mae.get(28, np.nan),
+                    "HotSpot MAE, leads 1–7": sel.hotspot_mae.get(7, np.nan),
+                    "HotSpot MAE, leads 1–14": sel.hotspot_mae.get(14, np.nan),
+                    "HotSpot MAE, leads 1–28": sel.hotspot_mae.get(28, np.nan),
+                    "DHW MAE, lead-14 endpoint": sel.dhw_endpoint_mae.get(14, np.nan),
+                    "DHW MAE, lead-28 endpoint": sel.dhw_endpoint_mae.get(28, np.nan),
                     "regions": int(sel.regions.get(14)),
                     "origins": int(sel.origins.get(14)),
-                    "days@14d": int(sel.days.get(14)),
+                    "target records, leads 1–14": int(sel.days.get(14)),
                 }
             )
     out += [
         "A. Test HotSpot MAE (°C) and DHW endpoint MAE (°C-weeks); equal-region macro means.",
-        "   Support counts show exactly which regions and origins each score covers.",
+        "   HotSpot MAE averages every lead from 1 to the horizon; DHW MAE is scored at the",
+        "   endpoint lead only. Support counts show which regions and origins each score covers;",
+        "   'target records' counts forecast days, and overlapping windows repeat target dates.",
         "   dhw_persistence carries DHW forward and has no HotSpot score (n/a).",
         _fmt(pd.DataFrame(rows)),
         "",
@@ -572,7 +696,7 @@ def reef_results_tables(reports: dict) -> str:
     )
     wide["origins"] = region.groupby("region_id").origins.first()
     out += [
-        "B. 14-day HotSpot MAE by region, full test panel (°C).",
+        "B. HotSpot MAE, leads 1–14, by region, full test panel (°C).",
         _fmt(wide.reset_index()),
         "",
     ]
@@ -582,6 +706,22 @@ def reef_results_tables(reports: dict) -> str:
         unc[col] = chronos[col]
     out += [
         "C. Chronos q10–q90 marginal interval: coverage (nominal 0.80), width and pinball loss.",
+        "   q10/q50/q90 forecast each future day's 10th, 50th and 90th percentile on its own;",
+        "   they are not a joint path. coverage is the observed fraction of days inside q10–q90;",
+        "   width is the mean q90 minus q10 in °C. Pinball loss scores each quantile, penalising",
+        "   misses asymmetrically; lower is better. Many observed values are exactly 0, so an",
+        "   inclusive interval can cover more than 80% even with correct quantiles. These are",
+        "   diagnostics; no probabilistic baseline is scored. Crossing quantiles are sorted and",
+        "   negative values clipped to 0 before scoring.",
+        *(
+            [
+                f"   Test Chronos forecast days: {extras['crossing_days']} with crossing quantiles"
+                f" (rearranged), {extras['clipped_days']} with a negative median (clipped to 0),"
+                f" of {extras['chronos_days']}."
+            ]
+            if "crossing_days" in extras
+            else []
+        ),
         _fmt(unc.sort_values(["period", "horizon"])),
         "",
     ]
@@ -607,24 +747,22 @@ def reef_results_tables(reports: dict) -> str:
         _fmt(events),
         "",
     ]
-    paired = pd.DataFrame(report["paired_differences"])
-    paired = paired[(paired.split == "test") & (paired.horizon == 14)]
-    summary = (
-        paired.groupby(["period", "baseline"])
-        .mae_difference.agg(
-            pairs="count",
-            mean_difference="mean",
-            median_difference="median",
-            chronos_better=lambda d: float((d < 0).mean()),
-            tie=lambda d: float((d == 0).mean()),
-            chronos_worse=lambda d: float((d > 0).mean()),
-        )
-        .reset_index()
-    )
+    if extras.get("paired_events") is not None and len(extras["paired_events"]):
+        out += [
+            "E2. Paired endpoint event predictions, Chronos vs persistence, same region-origins",
+            "    (full test panel, all origins). Counts of region-origins where both, only one or",
+            "    neither arm predicted DHW at or above the threshold; observed_pos is the support.",
+            _fmt(extras["paired_events"]),
+            "",
+        ]
+    summary = reef_paired_summary(report)
     out += [
-        "F. Paired 14-day MAE difference, Chronos minus baseline, per region-origin (°C).",
-        "   Negative values favour Chronos. The last three columns are shares of region-origins",
-        "   where Chronos was better, tied or worse. Descriptive only; no significance test.",
+        "F. Paired HotSpot MAE difference (leads 1–14), Chronos minus baseline (°C).",
+        "   equal_region_difference averages within each region, then across regions equally:",
+        "   it matches table A. pooled_mean_difference and the other columns pool region-origins,",
+        "   so regions with more origins weigh more. Negative values mean lower Chronos MAE on",
+        "   these cases. The last three columns are shares of region-origins where Chronos was",
+        "   better, tied or worse. Descriptive only; no significance test.",
         _fmt(summary),
         "",
         "Complete tables: metrics.csv (scope/table columns) inside reef_evidence.zip.",
@@ -642,9 +780,11 @@ def reef_compare(root: Path) -> None:
     cols = ["arm", "horizon", "hotspot_mae", "dhw_endpoint_mae", "regions", "origins", "days"]
     table = macro[cols].sort_values(["horizon", "arm"])
     region = pd.DataFrame(report["metrics"])
-    region = region[(region.horizon == 14) & region.arm.isin(["chronos", "chronos_180"])]
+    days = reef_activity_days(root)
+    arm = reef_activity_arm(days)
+    region = region[(region.horizon == 14) & region.arm.isin(["chronos", arm])]
     wide = region.pivot(index="region_id", columns="arm", values="hotspot_mae")
-    wide["180 minus 365"] = wide.chronos_180 - wide.chronos
+    wide[f"{days} minus 365"] = wide[arm] - wide.chronos
     wide["origins"] = region.groupby("region_id").origins.first()
     manifest = pd.read_csv(root / "origin_manifest.csv", parse_dates=["origin"])
     valid = plan[plan.split == "validation"].iloc[0]
@@ -653,17 +793,18 @@ def reef_compare(root: Path) -> None:
     preferred = rejected[rejected.reason.str.contains("incomplete_365_day_context")]
     reject = (preferred if len(preferred) else rejected).iloc[0]
     lines = [
-        "Validation 2023 only; the test set is still unopened.",
+        "Validation 2023 only. Test baseline records exist, but test scores have not been "
+        "inspected and model choices are fixed.",
         "Macro HotSpot MAE (°C) and DHW endpoint MAE (°C-weeks) with support:",
         _fmt(table),
         "",
-        "14-day HotSpot MAE by region: 365-day default (chronos) vs 180-day activity:",
+        f"14-day HotSpot MAE by region: 365-day default (chronos) vs {days}-day activity:",
         _fmt(wide.reset_index()),
         "",
         f"Trace a valid context: {valid.region_id}, origin {origin.date()}.",
         f"  365-day context {(origin - pd.Timedelta(days=364)).date()} to {origin.date()};",
-        f"  180-day context {(origin - pd.Timedelta(days=179)).date()} to {origin.date()}"
-        " (its final 180 days);",
+        f"  {days}-day context {(origin - pd.Timedelta(days=days - 1)).date()} to "
+        f"{origin.date()} (its final {days} days);",
         f"  targets {(origin + pd.Timedelta(days=1)).date()} to "
         f"{(origin + pd.Timedelta(days=28)).date()}.",
         f"Trace a rejected origin: {reject.region_id}, {pd.Timestamp(reject.origin).date()}: "
@@ -800,9 +941,16 @@ def reef_report(root: Path) -> None:
     }
     reef_json(root / "run_summary.json", summary)
     (root / "conclusion.md").write_text(
-        "# Interpretation\n\nUse metrics.csv: compare 14-day HotSpot MAE on identical origins. "
-        "Report the winning arm and error, persistence/seasonal errors, common-2024 comparison, "
-        "and the sign of the paired difference. A loss or inconclusive result is valid.\n\n"
+        "# Interpretation\n\nUse metrics.csv: compare HotSpot MAE over leads 1-14 (and DHW MAE "
+        "at the lead-14 endpoint) on identical origins, equal-region means. Report each arm's "
+        "error and the signed Chronos-minus-baseline difference, and describe it only as lower "
+        "or higher MAE on these evaluated cases, against the named baselines (persistence and "
+        "the development-period seasonal mean). Statistical distinguishability and equivalence "
+        "have not been assessed: overlapping 28-day windows and shared weather across regions "
+        "make the cases dependent, and no uncertainty analysis is run. The share of origins one "
+        "arm wins is descriptive, not a significance test. Quantile scores (coverage, width, "
+        "pinball loss) are diagnostics, not evidence of probabilistic skill over a baseline. "
+        "Also report the common-2024 comparison. A loss or inconclusive result is valid.\n\n"
         "Explain one failure mode, interval coverage and event support. Separate already "
         "accumulated DHW from newly predicted stress. These are regional satellite summaries, "
         "not reef-level observations or bleaching diagnoses. Missing contexts exclude two "
@@ -835,9 +983,19 @@ def reef_report(root: Path) -> None:
 
 def reef_byod(root: Path, source: Path) -> Path:
     """Forward-only BYOD: literal IDs, unscored forecasts and a per-input receipt."""
-    raw = source.read_bytes()
+    try:
+        raw = source.read_bytes()
+    except OSError as exc:
+        reason = exc.strerror or type(exc).__name__
+        raise ReefInputRefused(
+            f"{source.name}: cannot read {source} ({reason}). Upload the CSV with the Files pane "
+            "and set BYOD_CSV_PATH to the path it shows, e.g. /content/" + source.name
+        ) from exc
     digest = hashlib.sha256(raw).hexdigest()
-    frame = validate_byod(read_byod_csv(source), units="degC", semantics_confirmed=True)
+    try:
+        frame = validate_byod(read_byod_csv(source), units="degC", semantics_confirmed=True)
+    except ValueError as exc:  # includes unreadable text and CSV parser errors
+        raise ReefInputRefused(f"{source.name}: {exc}") from exc
     panel = daily_panel([frame])
     manifest = reef_read(root / "model_manifest.json")
     out = root / "byod" / digest[:16]
@@ -896,16 +1054,38 @@ def reef_main() -> None:
     )
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--csv", type=Path)
+    parser.add_argument("--context-days", type=int)
     args = parser.parse_args()
     # Checkpoint: the child started and its imports loaded (separates launch from stage failures).
     print(f"[runner pid {os.getpid()}] imports loaded; stage {args.stage}", flush=True)
     root = args.root.resolve()
     if args.stage == "byod":
-        reef_byod(root, args.csv)
+        try:
+            reef_byod(root, args.csv)
+        except ReefInputRefused as exc:  # a refused file is not a crash: one message, no traceback
+            print(f"Refused: {exc}", flush=True)
+            print(
+                "Nothing was forecast or saved for this file. Fix the file (or BYOD_CSV_PATH) "
+                "and re-run the BYOD cell; the default results are unchanged.",
+                flush=True,
+            )
+            raise SystemExit(REEF_REFUSED_EXIT) from None
         return
+    if args.context_days is not None:
+        try:
+            if args.stage != "activity":
+                raise ReefInputRefused(
+                    f"--context-days is only for the validation activity, not stage {args.stage}"
+                )
+            reef_check_activity_days(args.context_days)
+        except ReefInputRefused as exc:  # refused before anything is cleared or run
+            print(f"Refused: {exc}", flush=True)
+            raise SystemExit(REEF_REFUSED_EXIT) from None
     reef_invalidate(root, args.stage)
-    if args.stage in {"baselines", "validation", "activity", "test"}:
+    if args.stage in {"baselines", "validation", "test"}:
         reef_experiment(root, args.stage)
+    elif args.stage == "activity":
+        reef_experiment(root, args.stage, args.context_days)
     else:
         {
             "prepare": reef_prepare,
