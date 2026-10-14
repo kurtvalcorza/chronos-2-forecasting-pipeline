@@ -203,6 +203,15 @@ Earlier runs of this notebook (2026-09-28 and 2026-10-03) are recorded in [the d
 |---|---|---|---|---|---|
 | 2026-10-12 | `6eb5062` / `714070a35c00` | Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4 (not a browser `Run all`) | Default path, no toggles changed; forms and uploads not exercised | 574.5 s | **PASSED** — 9/9 code cells, 0 errors; every stage `PASS`, reload and `consume: PASS (32 predictions)` with max difference 0.0; test MAE persistence 59.05, Mitra + weather 64.79, Mitra case-only 71.40, weather difference −6.61 [−21.48, 6.44], all equal to the `08b2343` run. Status stays Candidate. Details in [dengue-capstone.md](dengue-capstone.md#colab-cli-execution-of-6eb5062-blob-714070a3--2026-10-12) |
 
+### Philippine reef heat-stress capstone
+
+Notebook identity is the Git blob id of `tutorials/DIMER_Philippine_Reef_Heat_Stress_Capstone.ipynb`.
+Earlier runs of this notebook (2026-09-28 to 2026-10-03) are recorded in the reef sections below.
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-10-14 | `56ebffc` / `7179c5bda1ac` | Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4 (not a browser `Run all`) | Default path, no toggles changed (`ACTIVITY_CONTEXT_DAYS` 180, `USE_BYOD` off); forms and uploads not exercised | 333.1 s | **PASSED** — 14/14 code cells in order, 0 errors; DHW reconstructed within 0.0001 °C-weeks, every stage complete, "365-day context retained. Test settings locked.", "All mandatory stages completed." Every metric equals the `d55d51c` run. Details in "Colab CLI execution of `56ebffc`" below |
+
 ## Current status
 
 Use the per-notebook, per-blob execution tables above for historical outcomes;
@@ -738,6 +747,20 @@ paired event table and quantile explanations; no earlier computed number changed
 above is of an earlier blob (REL14). Local checks are CPU-only with a model double and are not clean-runtime
 evidence. Needed before release: a Colab CLI T4 run of the new blob, a browser BYOD run with one valid and one
 invalid CSV (REL12), and maintainer review. Status remains Candidate.
+
+### Colab CLI execution of `56ebffc` (blob `7179c5bd`) — 2026-10-14
+
+The default path of the 2026-10-12 review-fix revision (REEF-m1 to m8, REEF-m4 option A, peer-review fixes CX1 to CX7) ran on a fresh Colab T4 through the Colab CLI. The executed copy is preserved byte-for-byte as [evidence](execution-evidence/2026-10-14/DIMER_Philippine_Reef_Heat_Stress_Capstone_56ebffc_colab-cli-t4.ipynb), with its [execution log](execution-evidence/2026-10-14/DIMER_Philippine_Reef_Heat_Stress_Capstone_56ebffc_colab-cli-t4_exec.log) and [run summary](execution-evidence/2026-10-14/DIMER_Philippine_Reef_Heat_Stress_Capstone_56ebffc_colab-cli-t4_run_summary.json).
+
+- **Source:** PR #27 head `56ebffcf05d2b9fb4470918e5e865a14004d21d2`, notebook blob `7179c5bda1ac8c484013d6376404a621ef85f17a`, fetched at that commit and checked against the blob before upload; all 28 cell sources in the executed copy match the blob.
+- **Executed-file SHA-256:** `364f1f6967a52b970986007bcea1ca32dae4e07f678c81d93b8b349cb9c4a5f0`.
+- **Executor:** Colab CLI 0.7.4, `colab exec -f` on a fresh Colab Tesla T4 session via the workspace `colab-cli-serial-test-suite`, released after the run. The CLI records no execution counts; order is evidenced by its `Executing cell k/N` log. Isolated hash-locked environment on uv-managed CPython 3.12.13 (kernel Python 3.13), installed in 74 s.
+- **Path:** default; `ACTIVITY_CONTEXT_DAYS` left at 180, `USE_BYOD` and `HOTSPOT_SEMANTICS_CONFIRMED` off.
+- **Execution:** 14 of 14 code cells, in order, with no error outputs (`reef-007` to `reef-009` print nothing); 14:47:16–14:52:06 UTC, wall 333.1 s. Baselines 299/299 origins, validation 115/115 and activity 115/115 (`context_days` 180) complete; the lock printed "365-day context retained. Test settings locked."; test Chronos forecast days: 0 with crossing quantiles, 141 with a negative median clipped to 0, of 5152; the notebook ended with "All mandatory stages completed." and `reef_evidence.zip`.
+- **Results:** compared line by line with the 2026-09-29 Colab run of `d55d51c` after removing clock times, RAM and disk readings, durations and progress lines. Every computed value is identical: the validation comparison (including the 180-day activity arm, now the default of the new setting) and tables A, B and F. The differences are the lines this revision adds or relabels: the validation sentence about test records (CX3); estimand headers in table A (HotSpot MAE over leads 1 to the horizon, DHW MAE at the endpoint lead, target records); the quantile explanation with crossing and clipping counts; the new paired DHW threshold-event table; and table F's `equal_region_difference` column (CX2), which matches table A (full test vs seasonal −0.060 = 0.153 − 0.213) while `pooled_mean_difference` keeps the earlier pooled value (−0.055). No output says "indistinguishable" (CX1).
+- **Evidence boundary:** CLI sequential execution, not a browser `Run all`; forms and uploads were not exercised. The 90- and 270-day settings, the BYOD accept/refuse run (REL12) and the semantics toggle remain pending.
+
+**Status: Candidate.**
 
 ## Primary tutorial: Notebook Review Framework v1 findings — row 11 fixes (2026-10-03)
 
