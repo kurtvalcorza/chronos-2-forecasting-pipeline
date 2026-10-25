@@ -165,6 +165,14 @@ TEMPLATE = {
                 '\n'
                 "The default sample is **synthetic**: one hourly series of 96 steps built from a fixed formula (a linear trend of +0.25 per hour plus a 24-step and a 12-step sinusoid, with no noise), rendered to CSV bytes exactly as the repository's `examples/sample-data/generate_samples.py` writes them, so its SHA-256 is asserted against the digest the repository checks in — the notebook proves it is forecasting the very bytes the repository tests. It is deterministic teaching data, not benchmark evidence.\n"
                 '\n'
+                "**Overlap with the pretraining data (DAT9).** The model card and the Chronos-2 paper [1] describe the "
+                "pretraining data as a mixture of real-world and synthetic time series; the full mixture is not published in a "
+                "form this repository can check. This exact series is generated here and is not in it, but a noiseless trend plus "
+                "daily and half-daily sinusoids is the kind of signal synthetic pretraining generators produce, so the model has "
+                "probably seen many near-identical patterns. That is **inferred** from the upstream descriptions, not verified. "
+                "If you bring a public dataset, it may be part of the real-world pretraining corpus; that cannot be ruled out, "
+                "and if it is, the held-out score overstates how the model does on unseen data.\n"
+                '\n'
                 "**Bring your own data:** set `BYOD_PATH` to a CSV already in this runtime (automation may set the `DIMER_BYOD_PATH` environment variable instead), or tick `USE_BYOD` to upload one CSV. If your columns are not called `series_id`, `timestamp` and `target`, set `ID_COLUMN`, `TIMESTAMP_COLUMN` and `TARGET_COLUMN` to your own names. The file must be UTF-8 with unique headers; duplicate headers are rejected **before pandas can rename them**, and a missing column is reported with the field to set. Additional numeric covariates are permitted by the pipeline. After any change here, run this cell and every cell after it. Look for the input source, its SHA-256 and the first rows."
             ),
             "code": (
@@ -318,7 +326,7 @@ print({{"n_forecast_rows": len(result.forecast), "quantile_columns": [c for c in
                 '\n'
                 '<details><summary>Sample answer (default sample)</summary>\n'
                 '\n'
-                '12 rows (one series × one target × 12 steps) and an effective context of 84 steps (96 − 12). The first rows start at `2026-01-04T12:00`, the hour after the cut-off. If you predicted 96 steps of context, remember that the 12 held-out steps are removed before the model sees anything.\n'
+                '12 rows (one series × one target × 12 steps) and an effective context of 84 steps (96 − 12), as the 2026-10-03 Colab T4 run of revision `33a2f53` (notebook blob `607ba0e5`, recorded in `docs/release-verification.md`) printed. The first rows start at `2026-01-04T12:00`, the hour after the cut-off. If you predicted 96 steps of context, remember that the 12 held-out steps are removed before the model sees anything.\n'
                 '\n'
                 '</details>'
             ),
@@ -373,7 +381,7 @@ if report["verdict"] == "not-measurable":
                 '\n'
                 '<details><summary>Sample answer (default sample)</summary>\n'
                 '\n'
-                'Seasonal-naive has the largest MAE (6.0), just above last-value (5.92): last-value repeats one number while the curve keeps moving, and seasonal-naive misses by the full day of trend. Chronos-2 has MAE 0.33 and RMSE 0.35, with coverage 1.0. On a BYOD series with noise, expect the gaps to shrink and coverage to fall below 1.0.\n'
+                'In the 2026-10-03 Colab T4 run of revision `33a2f53` (notebook blob `607ba0e5`, recorded in `docs/release-verification.md`), seasonal-naive has the largest MAE (6.0), just above last-value (5.92): last-value repeats one number while the curve keeps moving, and seasonal-naive misses by the full day of trend. Chronos-2 has MAE 0.33 and RMSE 0.35, with coverage 1.0. On a BYOD series with noise, expect the gaps to shrink and coverage to fall below 1.0.\n'
                 '\n'
                 '</details>'
             ),
@@ -473,7 +481,7 @@ print("largest |aux median - (0.5 x target median + 10)|:", round(float((mode_c_
                 '\n'
                 '<details><summary>Sample answer (default sample)</summary>\n'
                 '\n'
-                '24 rows: 12 steps for `target` and 12 for `target_aux`. The `target_aux` medians equal 0.5 × `target` median + 10 to rounding (largest gap 0.0 at four decimals). Chronos-2 scales each target by its own history before forecasting, so an exact rescaled copy of a series looks identical to the model and gets the same forecast, rescaled back. With a second target that carries its own information, the two forecasts would differ.\n'
+                '24 rows: 12 steps for `target` and 12 for `target_aux`. In the 2026-10-03 Colab T4 run of revision `33a2f53` (notebook blob `607ba0e5`, recorded in `docs/release-verification.md`), the `target_aux` medians equal 0.5 × `target` median + 10 to rounding (largest gap 0.0 at four decimals). Chronos-2 scales each target by its own history before forecasting, so an exact rescaled copy of a series looks identical to the model and gets the same forecast, rescaled back. With a second target that carries its own information, the two forecasts would differ.\n'
                 '\n'
                 '</details>'
             ),
@@ -626,7 +634,7 @@ else:
                 '\n'
                 '<details><summary>Sample answer (default sample, HORIZONS "12, 24, 48", FIXED_CONTEXT 48)</summary>\n'
                 '\n'
-                'Every row reports a context of 48 steps (local CPU run). Chronos-2\'s MAE rises with the horizon — 0.27 at 12 steps, 0.57 at 24 and 2.69 at 48 — because small errors in the extrapolated trend and cycles add up the further ahead it forecasts; it stays well below last-value. Last-value goes up and down instead (6.57, 4.67, 7.15): it repeats one number, so its error depends on which part of the daily cycle the window covers (a full 24-step day averages out part of the swing) as well as on the trend. With `FIXED_CONTEXT = 24` and the same horizons, Chronos-2\'s MAE is 3.50, 4.65 and 7.41 and its coverage falls below 1.0: with only one day of history it cannot see the trend clearly, so less context hurts at every horizon.\n'
+                'Every row reports a context of 48 steps. In the 2026-10-03 Colab T4 run of revision `33a2f53` (notebook blob `607ba0e5`, recorded in `docs/release-verification.md`), Chronos-2\'s MAE rises with the horizon — 0.27 at 12 steps, 0.57 at 24 and 2.69 at 48 — because small errors in the extrapolated trend and cycles add up the further ahead it forecasts; it stays well below last-value. Last-value goes up and down instead (6.57, 4.67, 7.15): it repeats one number, so its error depends on which part of the daily cycle the window covers (a full 24-step day averages out part of the swing) as well as on the trend. With `FIXED_CONTEXT = 24` and the same horizons (not part of any recorded run; read your own table above), Chronos-2\'s MAE is higher at every horizon and its coverage can fall below 1.0: with only one day of history it cannot see the trend clearly, so less context hurts at every horizon.\n'
                 '\n'
                 '</details>'
             ),
@@ -707,7 +715,7 @@ else:
                 '\n'
                 '<details><summary>Sample answer</summary>\n'
                 '\n'
-                'Yes, by a lot here (local CPU run): MAE 2.46 with the known-future covariates against 9.60 without them, and interval coverage 0.67 against 0.13. The history ends on a weekend (`holiday = 1`, which adds 10 to demand) and the 24 future hours are a Monday (`holiday = 0`); only the run that is told the future holiday flag expects demand to drop. On real data the gain depends on how strongly, and how reliably, the covariate drives the target, and known-future values must really be known in advance.\n'
+                'Yes, by a lot here. In the 2026-10-03 local Windows CPU check of the row 11 review fix (torch 2.11 CPU build; recorded in `docs/release-verification.md`; this optional section has not been run on a hosted runtime), MAE was 2.46 with the known-future covariates against 9.60 without them, and interval coverage 0.67 against 0.13. The history ends on a weekend (`holiday = 1`, which adds 10 to demand) and the 24 future hours are a Monday (`holiday = 0`); only the run that is told the future holiday flag expects demand to drop. On real data the gain depends on how strongly, and how reliably, the covariate drives the target, and known-future values must really be known in advance.\n'
                 '\n'
                 '</details>'
             ),
@@ -766,7 +774,7 @@ else:
         '\n'
         "A successful default run **proves** that the recorded repository revision's package, carried in this notebook, can install the pinned runtime, acquire and digest-verify the pinned model, preserve the chronological evaluation boundary, validate the demonstrated input, execute the public API for univariate and primary multi-target forecasting, compute the documented tutorial metrics/baselines, and export machine-readable forecasts/provenance in the tested runtime — without the repository being reachable — and no more.\n"
         '\n'
-        'It **does not prove** accuracy, calibration, robustness, fairness, safety, or production readiness for your domain. It does **not** establish benchmark superiority, deployment calibration, safety for high-consequence decisions, or production fitness on an unseen domain. The synthetic sample is intentionally simple; its metrics are not benchmark evidence and the evaluation report says `sample-sanity` for that reason. `prediction` is the median of an uncalibrated quantile forecast; the requested quantiles are not calibrated intervals and the pipeline ships no threshold. BYOD requires representative multi-origin backtesting, leakage controls, domain baselines, calibration checks, and operational review.\n'
+        'It **does not prove** accuracy, calibration, robustness, fairness, safety, or production readiness for your domain. It does **not** establish benchmark superiority, deployment calibration, safety for high-consequence decisions, or production fitness on an unseen domain. The synthetic sample is intentionally simple and probably resembles the synthetic series Chronos-2 was pretrained on (Section 4), so a low MAE here shows that the pipeline works, not that the model forecasts unfamiliar series as well; its metrics are not benchmark evidence and the evaluation report says `sample-sanity` for that reason. `prediction` is the median of an uncalibrated quantile forecast; the requested quantiles are not calibrated intervals and the pipeline ships no threshold. BYOD requires representative multi-origin backtesting, leakage controls, domain baselines, calibration checks, and operational review.\n'
         '\n'
         'Current limits include fixed-width regular frequencies; monthly/quarterly/yearly/business-day, irregular, and gappy calendars are outside this path, and the pipeline provides no classification, anomaly-detection, imputation, embedding, or training capability.\n'
         '\n'
@@ -785,11 +793,16 @@ else:
         '\n'
         '## References\n'
         '\n'
-        '- Repository README: https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/README.md\n'
-        '- Repository model card: https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/MODEL_CARD.md\n'
-        '- Sample dataset card: https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/examples/sample-data/DATASET_CARD.md\n'
-        '- Upstream model: https://huggingface.co/{MODEL_ID}\n'
-        '- Upstream library: https://github.com/amazon-science/chronos-forecasting\n'
-        '- Chronos-2: From Univariate to Universal Forecasting: https://arxiv.org/abs/2510.15821'
+        '[1] A. F. Ansari et al., "Chronos-2: From univariate to universal forecasting," arXiv:2510.15821, 2025. [Online]. Available: https://arxiv.org/abs/2510.15821\n'
+        '\n'
+        '[2] Amazon Science, "Chronos-2," Hugging Face model repository. [Online]. Available: https://huggingface.co/{MODEL_ID}\n'
+        '\n'
+        '[3] Amazon Science, "chronos-forecasting," GitHub repository. [Online]. Available: https://github.com/amazon-science/chronos-forecasting\n'
+        '\n'
+        '[4] K. Valcorza, "chronos-2-forecasting-pipeline: model card," GitHub repository. [Online]. Available: https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/MODEL_CARD.md\n'
+        '\n'
+        '[5] K. Valcorza, "chronos-2-forecasting-pipeline: sample dataset card," GitHub repository. [Online]. Available: https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/examples/sample-data/DATASET_CARD.md\n'
+        '\n'
+        '[6] K. Valcorza, "chronos-2-forecasting-pipeline: README," GitHub repository. [Online]. Available: https://github.com/kurtvalcorza/chronos-2-forecasting-pipeline/blob/main/README.md'
     ),
 }

@@ -36,7 +36,7 @@ def test_notebook_declares_task_inference_profile_and_spec() -> None:
     notebook, text = notebook_text()
     dimer = notebook["metadata"]["dimer"]
     assert dimer["notebook_profile"] == "TASK-INFERENCE"
-    assert dimer["notebook_spec"] == "2.2"
+    assert dimer["notebook_spec"] == "2.5"
     # NOTEBOOK_SPEC 2.2 §4 standalone carrier; parity lives in test_notebook_parity.py
     assert dimer["standalone"] is True
     assert dimer["generated_from"]["repository"] == "chronos-2-forecasting-pipeline"
