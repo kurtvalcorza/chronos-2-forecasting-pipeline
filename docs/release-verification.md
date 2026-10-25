@@ -214,6 +214,8 @@ Earlier runs of this notebook (2026-09-28 to 2026-10-03) are recorded in the ree
 
 ## Current status
 
+**Tier C wording revision (2026-10-25, branch `fix/chronos-2-forecasting-tier-c-2026-10-25`, code commit `88916d6`).** Markdown, header and metadata only for `tutorials/chronos_2_forecasting_colab.ipynb`: pretraining-overlap statement (DAT9), run-labelled numbers (REL13), use notice, `notebook_kind`, IEEE references and the DIMER Notebook Specification 2.5 declaration. The regenerated notebook blob `d6949e43265f608a43722be717a21ade1faeba08` is **Candidate** and its hosted runs are **pending** (REL14); the 2026-10-03 Colab T4 run of `33a2f53` is evidence for blob `607ba0e5` only.
+
 Use the per-notebook, per-blob execution tables above for historical outcomes;
 the earlier blanket statement that no clean-runtime execution had been recorded
 was stale. The revised multi-model notebook's hosted rerun and full BYOD gate
