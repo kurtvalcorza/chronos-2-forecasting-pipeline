@@ -84,6 +84,8 @@ for the release gate.
 standalone tutorial is pending; complete `docs/release-verification.md` against the exact release revision before
 calling the notebook release-grade. See `STATUS.md`.
 
+The current blob `f1381e18` (code commit `931a880`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); its hosted Colab T4 runs (the default path and a scripted refusal, `USE_BYOD=True;BYOD_PATH='/etc/hostname'`) are pending, and the hosted runs of earlier blobs, including `d6949e43`, are history for it (REL14).
+
 ## Quickstart
 
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). `uv.lock` is the contributor/runtime

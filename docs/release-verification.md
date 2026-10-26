@@ -216,6 +216,8 @@ Earlier runs of this notebook (2026-09-28 to 2026-10-03) are recorded in the ree
 
 **Tier C wording revision (2026-10-25, branch `fix/chronos-2-forecasting-tier-c-2026-10-25`, code commit `88916d6`).** Markdown, header and metadata only for `tutorials/chronos_2_forecasting_colab.ipynb`: pretraining-overlap statement (DAT9), run-labelled numbers (REL13), use notice, `notebook_kind`, IEEE references and the DIMER Notebook Specification 2.5 declaration. The regenerated notebook blob `d6949e43265f608a43722be717a21ade1faeba08` (PR #29 head `2251ad3`) is **Candidate**; it passed a Colab CLI sequential execution on a fresh Colab Tesla T4 on 2026-10-25 (21/21 code cells, one pass, no restart, 0 errors, 106.5 s; default path only; see "Colab CLI execution of `2251ad3` (blob `d6949e43`) — 2026-10-25"). Remaining gates: REL12 (a BYOD run, one input accepted and one refused) and REL2 (a browser run of the interactive journeys). Under REL14 the 2026-10-03 Colab T4 run of `33a2f53` is history for blob `607ba0e5`.
 
+The current blob `f1381e18` (code commit `931a880`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); its hosted Colab T4 runs (the default path and a scripted refusal, `USE_BYOD=True;BYOD_PATH='/etc/hostname'`) are pending, and the hosted runs of earlier blobs, including `d6949e43`, are history for it (REL14).
+
 Use the per-notebook, per-blob execution tables above for historical outcomes;
 the earlier blanket statement that no clean-runtime execution had been recorded
 was stale. The revised multi-model notebook's hosted rerun and full BYOD gate
