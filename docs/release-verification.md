@@ -214,6 +214,8 @@ Earlier runs of this notebook (2026-09-28 to 2026-10-03) are recorded in the ree
 
 ## Current status
 
+**Tier C wording revision (2026-10-25, branch `fix/chronos-2-forecasting-tier-c-2026-10-25`, code commit `88916d6`).** Markdown, header and metadata only for `tutorials/chronos_2_forecasting_colab.ipynb`: pretraining-overlap statement (DAT9), run-labelled numbers (REL13), use notice, `notebook_kind`, IEEE references and the DIMER Notebook Specification 2.5 declaration. The regenerated notebook blob `d6949e43265f608a43722be717a21ade1faeba08` (PR #29 head `2251ad3`) is **Candidate**; it passed a Colab CLI sequential execution on a fresh Colab Tesla T4 on 2026-10-25 (21/21 code cells, one pass, no restart, 0 errors, 106.5 s; default path only; see "Colab CLI execution of `2251ad3` (blob `d6949e43`) — 2026-10-25"). Remaining gates: REL12 (a BYOD run, one input accepted and one refused) and REL2 (a browser run of the interactive journeys). Under REL14 the 2026-10-03 Colab T4 run of `33a2f53` is history for blob `607ba0e5`.
+
 Use the per-notebook, per-blob execution tables above for historical outcomes;
 the earlier blanket statement that no clean-runtime execution had been recorded
 was stale. The revised multi-model notebook's hosted rerun and full BYOD gate
@@ -830,3 +832,26 @@ notebook blob changed from that attempt's to `607ba0e5818d`; `src/` and the carr
   named in procedure step 5.
 - **Not exercised:** BYOD (positive and negative), Mode D (`RUN_COVARIATE_DEMO`), Section 13 (`FORECAST_FUTURE`), the
   form and upload widgets (the CLI renders no forms). Status remains **Candidate**.
+### Colab CLI execution of `2251ad3` (blob `d6949e43`) — 2026-10-25
+
+- **Files** (copies of the CLI's output in `execution-evidence/2026-10-25/`, local run directory redacted to `<local-run-dir>`; the executed
+  notebook was checked against `run_summary.json`'s `executed_sha256` before any edit):
+  - [`chronos_2_forecasting_colab_2251ad3_colab-cli-t4_default.ipynb`](execution-evidence/2026-10-25/chronos_2_forecasting_colab_2251ad3_colab-cli-t4_default.ipynb), SHA-256 captured `8bcd331da40043040f14231ce9bfd4ac2bd91b513025d0c62efcfb26a2b14cf4` (committed unchanged, no local path)
+  - [`chronos_2_forecasting_colab_2251ad3_colab-cli-t4_default_exec.log`](execution-evidence/2026-10-25/chronos_2_forecasting_colab_2251ad3_colab-cli-t4_default_exec.log), SHA-256 captured `68ab28e1d7f6faab540d2b79cea8c6765cbb30f70d01b6282cebcca9c90b5bb5`, committed `c0a902e2f3e48c51d11986a59fab6025b2991ab6aa4144b6e664aa18091b2545` (2 local-path replacements)
+  - [`chronos_2_forecasting_colab_2251ad3_colab-cli-t4_default_run_summary.json`](execution-evidence/2026-10-25/chronos_2_forecasting_colab_2251ad3_colab-cli-t4_default_run_summary.json), SHA-256 captured `985c260e7b86657b3709a27995d6a1991d9d7f63083ff4441b30e60390d1bcc5` (committed unchanged, no local path)
+- **Executor:** Colab CLI sequential execution (`colab exec -f`), fresh Colab Tesla T4 (session `suite-chronos-2251ad3-e5c0`), PR #29 head
+  `2251ad3e4fc76c598c3efaf02b22d2da3d6449d6`; the notebook fetched at that commit with git blob
+  `d6949e43265f608a43722be717a21ade1faeba08` checked before the session was created; input notebook unchanged. Not a browser `Run all`;
+  order is evidenced by the `Executing cell k/21` lines in `exec.log`.
+- **Path:** default settings only (`USE_BYOD = False`, `PREDICTION_LENGTH = 12`, `HORIZONS = "12, 24, 48"`, `FIXED_CONTEXT = 48`,
+  `RUN_COVARIATE_DEMO = False`, `FORECAST_FUTURE = False`).
+- **Outcome:** **one pass, no restart, 0 errors** — 21/21 code cells, 106.5 s wall, verdict PASS.
+- **Observed stages:** `NOTEBOOK_SOURCE.repository_revision` `0064a13`; `amazon/chronos-2` at `95a9710e2596287d08352589f42634fa5abdf0a7`
+  fetched (3 files, 477,931,570 bytes) and loaded on `cuda:0` from the local snapshot; runtime Python 3.12.12, chronos-forecasting 2.3.1,
+  torch 2.14.0, transformers 4.57.6; synthetic sample SHA-256 `eff96b1a…c7f7`, 84 history rows, holdout 12; input manifest `accepted`
+  with the probe `rejected`; Mode C largest |aux median − (0.5 × target median + 10)| 0.0.
+- **Metrics printed:** Chronos-2 MAE 0.33015 / RMSE 0.34603 / interval coverage 1.0; last-value MAE 5.91665 / RMSE 6.69292;
+  seasonal-naive 6.0 / 6.0; verdict `sample-sanity`. Section 11 at fixed context 48: MAE 0.269 / 0.569 / 2.694 at 12 / 24 / 48 steps
+  (last-value 6.569 / 4.668 / 7.153), coverage 1.0. These equal the `33a2f53` run and the numbers the notebook's prose quotes; the
+  optional covariate demo was not run.
+
