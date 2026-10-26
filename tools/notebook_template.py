@@ -181,6 +181,7 @@ import hashlib
 import io
 import json
 import os
+import shutil
 from collections import Counter
 from pathlib import Path
 
@@ -227,21 +228,89 @@ def synthetic_univariate_csv() -> bytes:
     return frame.to_csv(index=False, date_format="%Y-%m-%dT%H:%M:%S", float_format="%.4f", lineterminator="\n").encode("utf-8")
 
 
-if BYOD_PATH:
-    byod_file = Path(BYOD_PATH)
-    if not byod_file.is_file():
-        raise FileNotFoundError(f"BYOD_PATH {{BYOD_PATH!r}} is not a file in this runtime. Copy the CSV into the runtime (or tick USE_BYOD and leave BYOD_PATH empty to upload it) and run this cell again.")
-    payload = byod_file.read_bytes()
-    input_source = f"BYOD path: {{BYOD_PATH}}"
-    sample_kind = "BYOD"
-elif USE_BYOD:
-    from google.colab import files
-    uploaded = files.upload()
-    if len(uploaded) != 1:
-        raise ValueError("Upload exactly one CSV (the upload was empty or cancelled, or held several files); run this cell again.")
-    name, payload = next(iter(uploaded.items()))
-    input_source = f"BYOD upload: {{name}}"
-    sample_kind = "BYOD"
+class BYODRefusal(ValueError):
+    """A refused BYOD input: ``BYODRefusal(file_name, reason_and_fix)``."""
+
+    dimer_refusal = True
+
+    def __init__(self, file_name, reason):
+        super().__init__(f"{{file_name}}: {{reason}}")
+        self.file_name = file_name
+        self.reason = reason
+
+    def _render_traceback_(self):
+        return [f"Refused: {{self}}"]
+
+
+# What an earlier run of Sections 4-14 left in this session. A refused input removes these results and the
+# outputs/ files below (DAT20), so nothing from that run can pass as a result of the refused file.
+RUN_RESULT_NAMES = (
+    'byod_file', 'payload', 'input_source', 'sample_kind', 'uploaded', 'observed', 'frame', 'missing_columns',
+    'input_sha256', 'config', 'split', 'sid', 'h', 't', 'versions', 'series_names', 'input_manifest', 'broken',
+    'result', 'evaluation', 'last_value', 'last_value_evaluation', 'ordered', 'steps', 'minimum_history',
+    'can_use_daily_seasonal', 'seasonal_evaluation', 'seasonal', 'seasonal_metrics', 'report', 'plot_series',
+    'plot_target', 'plot_forecast', 'plot_truth', 'values', 'low', 'high', 'span', 'width', 'height', 'left', 'right',
+    'top', 'bottom', 'layers', 'strokes', 'svg', 'title', 'idx', 'label', 'series', 'stroke', 'svg_path',
+    'aux_target', 'mode_c_frame', 'mode_c_config', 'mode_c_split', 'mode_c_result', 'observed_targets', 'mode_c_wide',
+    'provenance', 'metrics', 'payload_out', 'horizons', 'shortest', 'activity_rows', 'activity_skipped',
+    'activity_config', 'activity_split', 'horizon', 'horizon_config', 'horizon_truth', 'horizon_result',
+    'chronos_metrics', 'last_value_metrics', 'activity_table', 'n', 'step', 'future_step', 'timestamps',
+    'future_timestamps', 'history_parts', 'future_parts', 'truth_parts', 'series_id', 'base', 'phase', 'temperature',
+    'holiday', 'demand', 'future_temperature', 'future_holiday', 'future_demand', 'cov_history', 'cov_future',
+    'cov_truth', 'cov_config', 'cov_manifest', 'cov_result', 'plain_result', 'known_future', 'comparison',
+    'mode_d_provenance', 'removed', 'future_result', 'future_report', 'last_input', 'first_forecast', 'byod_name',
+)
+RUN_OUTPUTS = (
+    'outputs/chronos_*',
+)
+
+
+def refuse_byod(file_name, reason):
+    """Remove the earlier run's results and outputs/ files, then stop the cell with one Refused: line naming the file and the fix."""
+    for name in RUN_RESULT_NAMES:
+        globals().pop(name, None)
+    for pattern in RUN_OUTPUTS:
+        for path in Path('.').glob(pattern):
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                path.unlink()
+    reason = str(reason).rstrip('. ')
+    if 'again' not in reason:
+        reason += '; fix the file, then run this cell and every cell after it again'
+    raise BYODRefusal(file_name, reason + ' (the earlier results of this session and their outputs/ files were removed).') from None
+
+
+if BYOD_PATH or USE_BYOD:
+    # DAT20: every problem with your file (path, upload, encoding, header, columns) stops here as one Refused: line.
+    byod_name = (Path(BYOD_PATH).name or BYOD_PATH) if BYOD_PATH else "(no file)"
+    try:
+        if BYOD_PATH:
+            byod_file = Path(BYOD_PATH)
+            if not byod_file.is_file():
+                raise BYODRefusal(byod_name, f"BYOD_PATH {{BYOD_PATH!r}} is not a file in this runtime. Copy the CSV into the runtime (or tick USE_BYOD and leave BYOD_PATH empty to upload it) and run this cell again.")
+            payload = byod_file.read_bytes()
+            input_source = f"BYOD path: {{BYOD_PATH}}"
+        else:
+            try:
+                from google.colab import files
+            except ImportError:
+                raise BYODRefusal("(no file)", "USE_BYOD opens the Colab upload dialog, and this runtime is not Colab. Set BYOD_PATH to the path of your CSV and run this cell again.") from None
+            uploaded = files.upload()
+            if len(uploaded) != 1:
+                raise BYODRefusal(", ".join(sorted(uploaded)) or "(no file)", f"Upload exactly one CSV (received {{len(uploaded)}} files: the upload was empty or cancelled, or held several files); run this cell again.")
+            name, payload = next(iter(uploaded.items()))
+            byod_name = name
+            input_source = f"BYOD upload: {{name}}"
+        sample_kind = "BYOD"
+        frame = read_checked_csv(payload)
+        missing_columns = [name for name in (ID_COLUMN, TIMESTAMP_COLUMN, TARGET_COLUMN) if name not in frame.columns]
+        if missing_columns:
+            raise BYODRefusal(byod_name, f"The CSV has no column named {{missing_columns}}; its columns are {{list(frame.columns)}}. Set ID_COLUMN, TIMESTAMP_COLUMN and TARGET_COLUMN in this cell to your own column names and run this cell again.")
+    except BYODRefusal as exc:
+        refuse_byod(exc.file_name, exc.reason)
+    except (TypeError, ValueError, OSError) as exc:
+        refuse_byod(byod_name, f"{{type(exc).__name__}}: {{exc}}")
 else:
     payload = synthetic_univariate_csv()
     observed = hashlib.sha256(payload).hexdigest()
@@ -249,11 +318,10 @@ else:
         raise ValueError(f"Synthetic sample digest mismatch: {{observed}} != {{SAMPLE_SHA256}}")
     input_source = "synthetic sample generated in code (== examples/sample-data/chronos_univariate.csv)"
     sample_kind = "synthetic"
-
-frame = read_checked_csv(payload)
-missing_columns = [name for name in (ID_COLUMN, TIMESTAMP_COLUMN, TARGET_COLUMN) if name not in frame.columns]
-if missing_columns:
-    raise ValueError(f"The CSV has no column named {{missing_columns}}; its columns are {{list(frame.columns)}}. Set ID_COLUMN, TIMESTAMP_COLUMN and TARGET_COLUMN in this cell to your own column names and run this cell again.")
+    frame = read_checked_csv(payload)
+    missing_columns = [name for name in (ID_COLUMN, TIMESTAMP_COLUMN, TARGET_COLUMN) if name not in frame.columns]
+    if missing_columns:
+        raise ValueError(f"The CSV has no column named {{missing_columns}}; its columns are {{list(frame.columns)}}. Set ID_COLUMN, TIMESTAMP_COLUMN and TARGET_COLUMN in this cell to your own column names and run this cell again.")
 input_sha256 = hashlib.sha256(payload).hexdigest()
 print({{"sample_kind": sample_kind, "input_source": input_source, "input_sha256": input_sha256, "rows": len(frame), "columns": list(frame.columns)}})
 print(frame.head())'''
@@ -272,7 +340,12 @@ print(frame.head())'''
 
 os.makedirs('outputs', exist_ok=True)
 config = ForecastConfig(id_column=ID_COLUMN, timestamp_column=TIMESTAMP_COLUMN, target=TARGET_COLUMN, prediction_length=PREDICTION_LENGTH, quantile_levels=[0.1, 0.5, 0.9])
-split = chronological_holdout(frame, config)
+try:
+    split = chronological_holdout(frame, config)
+except (TypeError, ValueError) as exc:  # ValidationError is a ValueError
+    if sample_kind != "BYOD":
+        raise
+    refuse_byod(byod_name, f"{{type(exc).__name__}}: {{exc}}; set PREDICTION_LENGTH or the file so that every series keeps enough history, then run Section 4 and every cell after it again")
 for sid in split.history[config.id_column].drop_duplicates():
     h = split.history[split.history[config.id_column] == sid]
     t = split.truth[split.truth[config.id_column] == sid]
@@ -287,7 +360,12 @@ print("Pinned-model native prediction length: 1024")
 print({{"ceilings": {{"min_observations_per_series": MIN_OBSERVATIONS, "max_ids": DEFAULT_LIMITS.max_ids, "max_targets": DEFAULT_LIMITS.max_targets, "max_covariates": DEFAULT_LIMITS.max_covariates, "max_rows": DEFAULT_LIMITS.max_rows, "max_context_length": DEFAULT_LIMITS.max_context_length, "max_prediction_length": DEFAULT_LIMITS.max_prediction_length, "model_context_length": pipe.model_context_length, "model_prediction_length": pipe.model_prediction_length}}}})
 
 series_names = [str(sid) for sid in split.history[config.id_column].drop_duplicates()]
-input_manifest = validate_inputs(split.history, config, pipe, names=series_names)
+try:
+    input_manifest = validate_inputs(split.history, config, pipe, names=series_names)
+except (TypeError, ValueError) as exc:  # ValidationError is a ValueError
+    if sample_kind != "BYOD":
+        raise
+    refuse_byod(byod_name, f"{{type(exc).__name__}}: {{exc}}; fix the file, then run Section 4 and every cell after it again")
 # Demonstrate rejection on a history that breaks a rule; the finding is recorded, not swallowed.
 broken = split.history.copy()
 broken.loc[broken.index[0], config.target] = float("nan")

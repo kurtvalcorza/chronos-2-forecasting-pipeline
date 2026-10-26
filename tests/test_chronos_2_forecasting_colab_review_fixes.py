@@ -359,7 +359,7 @@ def test_byod_non_utf8_is_refused_with_a_utf8_message(nb: dict, tmp_path: Path, 
 
 
 def test_byod_missing_path_names_the_field(nb: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    with pytest.raises(FileNotFoundError, match="BYOD_PATH"):
+    with pytest.raises(ValueError, match="BYOD_PATH"):
         _run(nb, tmp_path, monkeypatch, env={"DIMER_BYOD_PATH": str(tmp_path / "absent.csv")})
 
 
