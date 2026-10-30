@@ -212,11 +212,53 @@ Earlier runs of this notebook (2026-09-28 to 2026-10-03) are recorded in the ree
 |---|---|---|---|---|---|
 | 2026-10-14 | `56ebffc` / `7179c5bda1ac` | Colab CLI 0.7.4 sequential execution, fresh Colab Tesla T4 (not a browser `Run all`) | Default path, no toggles changed (`ACTIVITY_CONTEXT_DAYS` 180, `USE_BYOD` off); forms and uploads not exercised | 333.1 s | **PASSED** — 14/14 code cells in order, 0 errors; DHW reconstructed within 0.0001 °C-weeks, every stage complete, "365-day context retained. Test settings locked.", "All mandatory stages completed." Every metric equals the `d55d51c` run. Details in "Colab CLI execution of `56ebffc`" below |
 
+### Hosted Colab T4 runs of blob `f1381e18` (2026-10-29)
+
+These runs executed the PR head `9181c3e7a504c6f2212ef526cda89220141a9c0a`, notebook `tutorials/chronos_2_forecasting_colab.ipynb` blob `f1381e1875a9f6fea079e68b146e98b6f93ad61f`, fetched at the 40-character SHA and Git-blob verified, with the Colab CLI (`colab exec -f`) on a fresh Colab Tesla T4 session (not a browser `Run all`). Each `run_summary.json` records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released), and the SHA-256 of each executed notebook equals the summary's `executed_sha256`.
+
+**Default path (2026-10-29 01:41:14 UTC start).** Default settings, no overrides; session `suite-chronos-9181c3e-e5c0`; wall 113.9 s (`wall_s`); `code_cells` 21, `executed_cells` 14, 0 errors. Retained evidence: [`docs/execution-evidence/2026-10-29/`](execution-evidence/2026-10-29/).
+
+Printed by the default run (verbatim lines from the executed outputs):
+
+```text
+{'verified_files': 3, 'revision': '95a9710e2596287d08352589f42634fa5abdf0a7'}
+Chronos-2: {'n': 12, 'mae': 0.3301503153483054, 'rmse': 0.3460319431029174, 'interval_lower_quantile': 0.1, 'interval_upper_quantile': 0.9, 'interval_coverage': 1.0}
+Last-value: {'n': 12, 'mae': 5.91665, 'rmse': 6.69291900033162}
+Seasonal-naive: {'n': 12, 'mae': 6.0, 'rmse': 6.0}
+  "verdict": "sample-sanity",
+largest |aux median - (0.5 x target median + 10)|: 0.0
+```
+
+**DAT20 refusal record (2026-10-29, blob `f1381e18`).** Overrides, set by `--set` on a copy of the blob: `USE_BYOD` `False` → `True` and `BYOD_PATH` `""` → `'/etc/hostname'` (the run copy differs from the blob in exactly those 2 source lines). The suite cut the run copy right after the refusing cell `chronos_2_forecasting-26`, dropping 25 cells (9 of them code cells), which reproduces `Run all` stopping at the first error; the cut copy is `run_copy.ipynb`, SHA-256 `a96eff2f9e179fbdeb128690dd476b7ac7ecd77938cc8db756ce53dba7aabc4e` (Git blob `666874b7`), equal to the summary's `run_copy_sha256`. The cut copy's earlier code cells completed without an error output; the refusing cell's only error output has `ename` `IsolatedCellRefusal` and no traceback, and its output holds exactly one `Refused:` line:
+
+```text
+Refused: hostname: The CSV has no column named ['series_id', 'timestamp', 'target']; its columns are ['7d8ec35137da']. Set ID_COLUMN, TIMESTAMP_COLUMN and TARGET_COLUMN in this cell to your own column names and run this cell again (the earlier results of this session and their outputs/ files were removed).
+```
+
+This run says nothing about the 25 cut cells, which did not run in it. Session `suite-chronos-9181c3e-e5c0`, wall 94.7 s. Retained evidence: [`docs/execution-evidence/2026-10-29/`](execution-evidence/2026-10-29/).
+
+**Local-path redaction.** Local paths were replaced byte-wise by `<local-run-dir>` (and the Colab CLI install path by `<colab-cli-tool-dir>/`) before the first commit; each executed notebook and run copy was checked against its `run_summary.json` before any edit.
+
+| File (under `docs/execution-evidence/2026-10-29/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `chronos_2_forecasting_colab_9181c3e_colab-cli-t4_default.ipynb` | `7b950006fedc0f373402866ed042ef5b528ac91ecd5c99ca43cdb3bb4e3d0a37` | `7b950006fedc0f373402866ed042ef5b528ac91ecd5c99ca43cdb3bb4e3d0a37` (unchanged, no local path) |
+| `chronos_2_forecasting_colab_9181c3e_colab-cli-t4_default_exec.log` | `64638aeb8b5ff41d7626669467627232b3a90ab8b8061f59a87161bb4af9816a` | `ca1e66bd3f1a50e451fed21e59d241a6356a40142fbdbb63b6dba4cc7eef1a48` (2 local-path replacements) |
+| `chronos_2_forecasting_colab_9181c3e_colab-cli-t4_default_run_summary.json` | `aca174b2a7423e2dcf8017f5d195f22200fa85cd11888baaa9b253453a09191a` | `aca174b2a7423e2dcf8017f5d195f22200fa85cd11888baaa9b253453a09191a` (unchanged, no local path) |
+
+| File (under `docs/execution-evidence/2026-10-29/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `chronos_2_forecasting_colab_9181c3e_colab-cli-t4_refusal.ipynb` | `72bf61f0e61fa55133220e1d4ab5e12aaa8f8d9a94d2a427fc1fef15670b9e96` | `72bf61f0e61fa55133220e1d4ab5e12aaa8f8d9a94d2a427fc1fef15670b9e96` (unchanged, no local path) |
+| `chronos_2_forecasting_colab_9181c3e_colab-cli-t4_refusal_exec.log` | `8ed40ce2b6b2cca24d4a0a73fd2d3d298dc1f423cd6dd0b43f76a4b03d9f8ff4` | `e56f7b91d7b39a593c00208b907dafbc21e6f13a0905cec80dd25a7fe081b24d` (2 local-path replacements) |
+| `chronos_2_forecasting_colab_9181c3e_colab-cli-t4_refusal_run_summary.json` | `cb76a5044353c6865abcbeb6b74057e33918c01464f80e931f37cf4e64cc5050` | `cb76a5044353c6865abcbeb6b74057e33918c01464f80e931f37cf4e64cc5050` (unchanged, no local path) |
+| `chronos_2_forecasting_colab_9181c3e_colab-cli-t4_refusal_run_copy.ipynb` | `a96eff2f9e179fbdeb128690dd476b7ac7ecd77938cc8db756ce53dba7aabc4e` | `a96eff2f9e179fbdeb128690dd476b7ac7ecd77938cc8db756ce53dba7aabc4e` (unchanged, no local path) |
+
+Not exercised by these runs: an accepted BYOD input (REL12) and a browser `Run all` of the interactive journeys (REL2).
+
 ## Current status
 
 **Tier C wording revision (2026-10-25, branch `fix/chronos-2-forecasting-tier-c-2026-10-25`, code commit `88916d6`).** Markdown, header and metadata only for `tutorials/chronos_2_forecasting_colab.ipynb`: pretraining-overlap statement (DAT9), run-labelled numbers (REL13), use notice, `notebook_kind`, IEEE references and the DIMER Notebook Specification 2.5 declaration. The regenerated notebook blob `d6949e43265f608a43722be717a21ade1faeba08` (PR #29 head `2251ad3`) is **Candidate**; it passed a Colab CLI sequential execution on a fresh Colab Tesla T4 on 2026-10-25 (21/21 code cells, one pass, no restart, 0 errors, 106.5 s; default path only; see "Colab CLI execution of `2251ad3` (blob `d6949e43`) — 2026-10-25"). Remaining gates: REL12 (a BYOD run, one input accepted and one refused) and REL2 (a browser run of the interactive journeys). Under REL14 the 2026-10-03 Colab T4 run of `33a2f53` is history for blob `607ba0e5`.
 
-The current blob `f1381e18` (code commit `931a880`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); its hosted Colab T4 runs (the default path and a scripted refusal, `USE_BYOD=True;BYOD_PATH='/etc/hostname'`) are pending, and the hosted runs of earlier blobs, including `d6949e43`, are history for it (REL14).
+The current blob `f1381e18` (code commit `931a880`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); on 2026-10-29 its default path (21 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `chronos_2_forecasting-26`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`). The remaining gates are REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys); earlier blobs' runs are history (REL14).
 
 Use the per-notebook, per-blob execution tables above for historical outcomes;
 the earlier blanket statement that no clean-runtime execution had been recorded
