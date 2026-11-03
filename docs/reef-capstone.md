@@ -2,7 +2,7 @@
 
 **Status: Candidate.** Hosted runs: complete Run all at `d55d51c` on Colab T4 and on Kaggle T4 (with BYOD), and a
 Colab CLI T4 run of `08b2343` (blob `90dfa21f`). The 2026-10-12 review fixes changed the notebook blob; that
-revision needs its own hosted runs ([release verification](release-verification.md)). Promotion is the maintainer's decision.
+revision needs its own hosted runs ([release verification](release-verification.md)). Promotion is the maintainer's decision. The current blob `3f59f202` (after the lock upgrades `d77c52d` of 2026-10-31 and `c1f7363` of 2026-11-02) has no hosted run yet, so that gate is open; the 2026-10-14 run of `7179c5bd` is history (REL14).
 
 The standalone guided notebook compares Chronos-2, persistence and a seasonal reference
 on five NOAA Coral Reef Watch Philippine regional HotSpot series. It forecasts 28 daily

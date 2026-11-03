@@ -254,11 +254,55 @@ This run says nothing about the 25 cut cells, which did not run in it. Session `
 
 Not exercised by these runs: an accepted BYOD input (REL12) and a browser `Run all` of the interactive journeys (REL2).
 
+### Hosted Colab T4 runs of blob `6a5c4ac3` (2026-11-02)
+
+These runs executed `main` at `7d4b947fb5a38b815e4c8f3dc416cfd7fbd05274`, notebook `tutorials/chronos_2_forecasting_colab.ipynb` blob `6a5c4ac37603dd01b58ed50dfa10a39e9fdb0ddc`, fetched at the 40-character SHA and Git-blob verified, with the Colab CLI (`colab exec -f`) on a fresh Colab Tesla T4 session: sequential CLI execution, not a browser `Run all` (the Colab CLI version is not recorded in `exec.log` or `run_summary.json`). Each `run_summary.json` records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released), and the SHA-256 of each executed notebook equals the summary's `executed_sha256`.
+
+**One pass, no restart, 0 errors** (default path, 2026-11-02 16:01:44 UTC start). Default settings, no overrides; session `suite-chronos-7d4b947-e5c0`; wall 112.5 s (`wall_s`); `code_cells` 21, all logged in order by `exec.log` (`executed_cells` 14: the cells that printed output); 0 errors. Retained evidence: [`execution-evidence/2026-11-02/`](execution-evidence/2026-11-02/).
+
+Printed by the default run (verbatim lines from the executed outputs):
+
+```text
+{'verified_files': 3, 'revision': '95a9710e2596287d08352589f42634fa5abdf0a7'}
+Chronos-2: {'n': 12, 'mae': 0.3301503153483054, 'rmse': 0.3460319431029174, 'interval_lower_quantile': 0.1, 'interval_upper_quantile': 0.9, 'interval_coverage': 1.0}
+Last-value: {'n': 12, 'mae': 5.91665, 'rmse': 6.69291900033162}
+Seasonal-naive: {'n': 12, 'mae': 6.0, 'rmse': 6.0}
+  "verdict": "sample-sanity",
+largest |aux median - (0.5 x target median + 10)|: 0.0
+```
+
+**Refused as designed** (DAT20 refusal record, 2026-11-02 16:04:32 UTC start, blob `6a5c4ac3`). Overrides, set by `--set` on a copy of the blob: `USE_BYOD` `False` → `True` and `BYOD_PATH` `""` → `'/etc/hostname'`. The suite cut the run copy right after the refusing cell `chronos_2_forecasting-26`, dropping 25 cells (9 of them code cells), which reproduces `Run all` stopping at the first error; the cut copy is `run_copy.ipynb`, SHA-256 `41f6b9a2c7fef8a67076ee174c3819f11788e04234046ee1b5b83803d496ace7` (Git blob `1062bdbc`), equal to the summary's `run_copy_sha256`. Its 12 code cells were logged in order by `exec.log`; the earlier code cells completed without an error output; the refusing cell's only error output has `ename` `IsolatedCellRefusal` and no Python stack trace (its traceback is the single refusal line), and its output holds exactly one `Refused:` line:
+
+```text
+Refused: hostname: The CSV has no column named ['series_id', 'timestamp', 'target']; its columns are ['b2f7feedac24']. Set ID_COLUMN, TIMESTAMP_COLUMN and TARGET_COLUMN in this cell to your own column names and run this cell again (the earlier results of this session and their outputs/ files were removed).
+```
+
+This run says nothing about the 25 cut cells, which did not run in it. Session `suite-chronos-7d4b947-e5c0`, wall 83.6 s. Retained evidence: [`execution-evidence/2026-11-02/`](execution-evidence/2026-11-02/).
+
+**Local-path redaction.** Local paths were replaced byte-wise by `<local-run-dir>` (and the Colab CLI install path by `<colab-cli-tool-dir>/`, where present) before the first commit; each executed notebook and run copy was checked against its `run_summary.json` before any edit.
+
+| File (under `docs/execution-evidence/2026-11-02/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `chronos_2_forecasting_colab_7d4b947_colab-cli-t4_default.ipynb` | `f97a441aeaa53d85fa27a5da40920c0744a7f50a320b0b81e7892be9b9fcb8ba` | `f97a441aeaa53d85fa27a5da40920c0744a7f50a320b0b81e7892be9b9fcb8ba` (unchanged, no local path) |
+| `chronos_2_forecasting_colab_7d4b947_colab-cli-t4_default_exec.log` | `e4aabf5b21f028f70da2ed847cdfea8c1f5042a699c1313185be0160a6c38cd8` | `3f83aa7c09e85789d09032857e2308a611e27a0aa4761b36fb19bb36d7ca5963` (2 local-path replacements) |
+| `chronos_2_forecasting_colab_7d4b947_colab-cli-t4_default_run_summary.json` | `26d2d3720baec880a52837695aa8296065e5cc2ca93e745945051dd82d1a63b2` | `26d2d3720baec880a52837695aa8296065e5cc2ca93e745945051dd82d1a63b2` (unchanged, no local path) |
+
+| File (under `docs/execution-evidence/2026-11-02/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `chronos_2_forecasting_colab_7d4b947_colab-cli-t4_refusal.ipynb` | `d31ead66fdd5a5954be07ac2cf05c34d899fd64e0a134aa1a882f2d89ec400fa` | `d31ead66fdd5a5954be07ac2cf05c34d899fd64e0a134aa1a882f2d89ec400fa` (unchanged, no local path) |
+| `chronos_2_forecasting_colab_7d4b947_colab-cli-t4_refusal_exec.log` | `9e11840b3d7df02fa5e5cb34b24d216f474b342ebb3846be0285f74d9b1b30fa` | `541a4b42b6a0d468e8e53f00aefafce7d26638d156381ecf1c63a20ef69c18a1` (2 local-path replacements) |
+| `chronos_2_forecasting_colab_7d4b947_colab-cli-t4_refusal_run_summary.json` | `4102d9f58e83b05effe1978499d15e9384c66294c229748e4b5b9b2e382344d9` | `4102d9f58e83b05effe1978499d15e9384c66294c229748e4b5b9b2e382344d9` (unchanged, no local path) |
+| `chronos_2_forecasting_colab_7d4b947_colab-cli-t4_refusal_run_copy.ipynb` | `41f6b9a2c7fef8a67076ee174c3819f11788e04234046ee1b5b83803d496ace7` | `41f6b9a2c7fef8a67076ee174c3819f11788e04234046ee1b5b83803d496ace7` (unchanged, no local path) |
+
+Not exercised by these runs: an accepted BYOD input (REL12), a browser `Run all` of the interactive journeys (REL2), and every other open gate named in this file; these runs close none of them.
+
 ## Current status
 
-**Tier C wording revision (2026-10-25, branch `fix/chronos-2-forecasting-tier-c-2026-10-25`, code commit `88916d6`).** Markdown, header and metadata only for `tutorials/chronos_2_forecasting_colab.ipynb`: pretraining-overlap statement (DAT9), run-labelled numbers (REL13), use notice, `notebook_kind`, IEEE references and the DIMER Notebook Specification 2.5 declaration. The regenerated notebook blob `d6949e43265f608a43722be717a21ade1faeba08` (PR #29 head `2251ad3`) is **Candidate**; it passed a Colab CLI sequential execution on a fresh Colab Tesla T4 on 2026-10-25 (21/21 code cells, one pass, no restart, 0 errors, 106.5 s; default path only; see "Colab CLI execution of `2251ad3` (blob `d6949e43`) — 2026-10-25"). Remaining gates: REL12 (a BYOD run, one input accepted and one refused) and REL2 (a browser run of the interactive journeys). Under REL14 the 2026-10-03 Colab T4 run of `33a2f53` is history for blob `607ba0e5`.
+**Candidate.** The current blob `6a5c4ac3` (`main` at `7d4b947`, after the 2026-11 lock upgrades) shows a refused BYOD input as exactly one `Refused: <file>: <reason>` line, with no traceback, and stops Run all at that cell. Its default path (2026-11-02; 21 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (2026-11-02; `USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `chronos_2_forecasting-26`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`), and the hosted runs of earlier blobs, including `f1381e18`, are history for it (REL14). REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys) stay open for this blob. Three other notebooks have their own gates open: the workshop `DIMER_MultiModel_TimeSeries_Forecasting_Workshop.ipynb` (current blob `caacbd5b`, `c1f7363`, the pillow 13 lock upgrade of 2026-11-02), the dengue capstone (current blob `3c7ec320`) and the reef capstone (current blob `3f59f202`), both after the lock upgrades `d77c52d` of 2026-10-31 and `c1f7363`; none has a hosted run yet, and the runs of `d76495c3` (2026-10-14), `714070a3` (2026-10-12) and `7179c5bd` (2026-10-14) are history (REL14).
 
-The current blob `f1381e18` (code commit `931a880`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); on 2026-10-29 its default path (21 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `chronos_2_forecasting-26`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`). The remaining gates are REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys); earlier blobs' runs are history (REL14).
+**History (earlier blob; REL14).** The blob `f1381e18` (the current blob on 2026-10-29; history since the 2026-11 lock upgrades) (code commit `931a880`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); on 2026-10-29 its default path (21 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `chronos_2_forecasting-26`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`). The remaining gates then were REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys); earlier blobs' runs are history (REL14).
+
+**History (earlier blob; REL14).** **Tier C wording revision (2026-10-25, branch `fix/chronos-2-forecasting-tier-c-2026-10-25`, code commit `88916d6`).** Markdown, header and metadata only for `tutorials/chronos_2_forecasting_colab.ipynb`: pretraining-overlap statement (DAT9), run-labelled numbers (REL13), use notice, `notebook_kind`, IEEE references and the DIMER Notebook Specification 2.5 declaration. The regenerated notebook blob `d6949e43265f608a43722be717a21ade1faeba08` (PR #29 head `2251ad3`) was then **Candidate**; it passed a Colab CLI sequential execution on a fresh Colab Tesla T4 on 2026-10-25 (21/21 code cells, one pass, no restart, 0 errors, 106.5 s; default path only; see "Colab CLI execution of `2251ad3` (blob `d6949e43`) — 2026-10-25"). Remaining gates then: REL12 (a BYOD run, one input accepted and one refused) and REL2 (a browser run of the interactive journeys). Under REL14 the 2026-10-03 Colab T4 run of `33a2f53` is history for blob `607ba0e5`.
 
 Use the per-notebook, per-blob execution tables above for historical outcomes;
 the earlier blanket statement that no clean-runtime execution had been recorded
