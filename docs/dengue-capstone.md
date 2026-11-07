@@ -3,7 +3,7 @@
 Status: **Candidate**, revision `0.2.0-candidate` (see the review sections at the end). The
 default path has passed fresh Colab T4 runs (2026-09-28 browser run of blob `a8a4348b`;
 2026-10-03 Colab CLI run of blob `de007324`). The 2026-10-12 review fixes change the notebook and
-need a new hosted run; hosted BYOD and learner observation remain pending. No GPU or pretrained
+need a new hosted run; hosted BYOD and learner observation remain pending. (2026-11-07: that run was recorded on 2026-10-12 for blob `714070a3`, below; the current blob `3c7ec320`, after the lock upgrades `d77c52d` and `c1f7363`, has no hosted run yet, so that gate is open.) No GPU or pretrained
 weights were used locally for any build.
 
 ## Approved interpretation
